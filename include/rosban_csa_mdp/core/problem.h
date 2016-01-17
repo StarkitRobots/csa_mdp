@@ -11,6 +11,9 @@ namespace csa_mdp
 
 class Problem
 {
+public:
+  std::function<Eigen::VectorXd(const Eigen::VectorXd &state)> Policy;
+
 private:
   Eigen::MatrixXd state_limits;
   Eigen::MatrixXd action_limits;
@@ -39,11 +42,19 @@ public:
   virtual Eigen::VectorXd getSuccessor(const Eigen::VectorXd & state,
                                        const Eigen::VectorXd & action) = 0;
 
-  /// Provide a random action in [min,max]
+  /// Provide a random state in state_limits (uniformous distribution)
+  Eigen::VectorXd getRandomState();
+  /// Provide a random action in action_limits (uniformous distribution)
   Eigen::VectorXd getRandomAction();
-  /// Provide a sample using a random action in [min,max]
+  /// Provide a sample starting from state and using a random action
   Sample getRandomSample(const Eigen::VectorXd & state);
-  std::vector<Sample> getSamples(Eigen::VectorXd );
+  /// Compute a random trajectory starting at the given state
+  std::vector<Sample> getRandomTrajectory(const Eigen::VectorXd & initial_state,
+                                          int max_length);
+  /// Compute several random trajectories starting from the same state
+  std::vector<Sample> getRandomBatch(const Eigen::VectorXd & initial_state,
+                                     int max_length,
+                                     int nb_trajectories);
 };
 
 }

@@ -24,7 +24,6 @@ public:
       return true;
     }
 
-
   double getReward(const Eigen::VectorXd & state,
                    const Eigen::VectorXd & action,
                    const Eigen::VectorXd & dst) override

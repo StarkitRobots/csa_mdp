@@ -63,4 +63,35 @@ Sample Problem::getRandomSample(const Eigen::VectorXd & state)
   return Sample(state, action, result, reward);
 }
 
+std::vector<Sample> Problem::getRandomTrajectory(const Eigen::VectorXd & initial_state,
+                                                 int max_length)
+{
+  std::vector<Sample> result;
+  Eigen::VectorXd state = initial_state;
+  while(result.size() < max_length)
+  {
+    Sample new_sample = getRandomSample(state);
+    result.push_back(new_sample);
+    if (isTerminal(new_sample.next_state))
+      break;
+    state = new_sample.next_state;
+  }
+  return result;
+}
+
+std::vector<Sample> Problem::getRandomBatch(const Eigen::VectorXd & initial_state,
+                                            int max_length,
+                                            int nb_trajectories)
+{
+  std::vector<Sample> result;
+  for (int i = 0; i < nb_trajectories; i++)
+  {
+    for (const Sample & s : getRandomTrajectory(initial_state, max_length))
+    {
+      result.push_back(s);
+    }
+  }
+  return result;
+}
+
 }
