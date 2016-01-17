@@ -1,0 +1,66 @@
+#include "rosban_csa_mdp/core/problem.h"
+
+#include <chrono>
+
+namespace csa_mdp
+{
+
+Problem::Problem()
+{
+  unsigned long seed = std::chrono::system_clock::now().time_since_epoch().count();
+  random_engine = std::default_random_engine(seed);
+}
+
+int Problem::stateDims() const
+{
+  return state_limits.rows();
+}
+
+int Problem::actionDims() const
+{
+  return action_limits.rows();
+}
+
+void Problem::setStateLimits(const Eigen::MatrixXd & new_limits)
+{
+  state_limits = new_limits;
+  state_distribution.clear();
+  for (int row = 0; row < new_limits.rows(); row++)
+  {
+    double min = new_limits(row, 0);
+    double max = new_limits(row, 1);
+    state_distribution.push_back(std::uniform_real_distribution<double>(min, max));
+  }
+}
+
+void Problem::setActionLimits(const Eigen::MatrixXd & new_limits)
+{
+  action_limits = new_limits;
+  action_distribution.clear();
+  for (int row = 0; row < new_limits.rows(); row++)
+  {
+    double min = new_limits(row, 0);
+    double max = new_limits(row, 1);
+    action_distribution.push_back(std::uniform_real_distribution<double>(min, max));
+  }
+}
+
+Eigen::VectorXd Problem::getRandomAction()
+{
+  Eigen::VectorXd action(actionDims());
+  for (int i = 0; i < actionDims(); i++)
+  {
+    action(i) = action_distribution[i](random_engine);
+  }
+  return action;
+}
+
+Sample Problem::getRandomSample(const Eigen::VectorXd & state)
+{
+  Eigen::VectorXd action = getRandomAction();
+  Eigen::VectorXd result = getSuccessor(state, action);
+  double reward = getReward(state, action, result);
+  return Sample(state, action, result, reward);
+}
+
+}

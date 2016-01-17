@@ -8,6 +8,11 @@ find_package(catkin REQUIRED COMPONENTS
   rosban_regression_forests
 )
 
+find_package(PkgConfig)
+pkg_search_module(Eigen3 REQUIRED eigen3>=3.2.3)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -98,9 +103,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
-#  LIBRARIES rosban_csa_mdp
-#  CATKIN_DEPENDS rosban_regression_forests
+  INCLUDE_DIRS include
+  LIBRARIES rosban_csa_mdp
+  CATKIN_DEPENDS rosban_regression_forests
 #  DEPENDS system_lib
 )
 
@@ -108,34 +113,47 @@ catkin_package(
 ## Build ##
 ###########
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-# include_directories(include)
 include_directories(
-  ${catkin_INCLUDE_DIRS}
-)
+  include
+  ${EIGEN3_INCLUDE_DIR}
+  )
 
-## Declare a C++ library
-# add_library(rosban_csa_mdp
-#   src/${PROJECT_NAME}/rosban_csa_mdp.cpp
-# )
+# Directories containing sources files
+set(DIRECTORIES
+  src/rosban_csa_mdp/core
+  )
 
-## Add cmake target dependencies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
-# add_dependencies(rosban_csa_mdp ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# Build ALL_SOURCES
+set (SOURCES)
+set (ALL_SOURCES)
+set (PREFIXED_SOURCES)
+foreach (DIRECTORY ${DIRECTORIES})
+    include_directories("${CMAKE_CURRENT_SOURCE_DIR}/${DIRECTORY}")
+    include (${DIRECTORY}/sources.cmake)
 
-## Declare a C++ executable
-# add_executable(rosban_csa_mdp_node src/rosban_csa_mdp_node.cpp)
+    foreach (SOURCE ${SOURCES})
+        set (PREFIXED_SOURCES ${PREFIXED_SOURCES} ${DIRECTORY}/${SOURCE})
+    endforeach (SOURCE)
 
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(rosban_csa_mdp_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+    set (ALL_SOURCES ${ALL_SOURCES} ${PREFIXED_SOURCES})
+endforeach (DIRECTORY)
 
-## Specify libraries to link a library or executable target against
-# target_link_libraries(rosban_csa_mdp_node
-#   ${catkin_LIBRARIES}
-# )
+# Declare a C++ library
+add_library(rosban_csa_mdp
+  ${ALL_SOURCES}
+  )
+
+# Declare a C++ executable
+add_executable(test_double_integrator src/test_double_integrator.cpp)
+
+# Specify libraries to link a library or executable target against
+target_link_libraries(rosban_csa_mdp
+  ${catkin_LIBRARIES}
+  )
+target_link_libraries(test_double_integrator
+  rosban_csa_mdp
+  ${catkin_LIBRARIES}
+  )
 
 #############
 ## Install ##
