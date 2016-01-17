@@ -116,11 +116,13 @@ catkin_package(
 include_directories(
   include
   ${EIGEN3_INCLUDE_DIR}
+  ${catkin_INCLUDE_DIRS}
   )
 
 # Directories containing sources files
 set(DIRECTORIES
   src/rosban_csa_mdp/core
+  src/rosban_csa_mdp/solvers
   )
 
 # Build ALL_SOURCES

@@ -21,6 +21,16 @@ int Problem::actionDims() const
   return action_limits.rows();
 }
 
+const Eigen::MatrixXd & Problem::getStateLimits() const
+{
+  return state_limits;
+}
+
+const Eigen::MatrixXd & Problem::getActionLimits() const
+{
+  return action_limits;
+}
+
 void Problem::setStateLimits(const Eigen::MatrixXd & new_limits)
 {
   state_limits = new_limits;

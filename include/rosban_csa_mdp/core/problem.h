@@ -30,10 +30,13 @@ public:
   int stateDims() const;
   int actionDims() const;
 
+  const Eigen::MatrixXd & getStateLimits() const;
+  const Eigen::MatrixXd & getActionLimits() const;
+
   void setStateLimits(const Eigen::MatrixXd & new_limits);
   void setActionLimits(const Eigen::MatrixXd & new_limits);
   
-  virtual bool isTerminal(const Eigen::VectorXd &) = 0;
+  virtual bool isTerminal(const Eigen::VectorXd &) const = 0;
   /// This function is allowed to be stochastic
   virtual double getReward(const Eigen::VectorXd & state,
                            const Eigen::VectorXd & action,

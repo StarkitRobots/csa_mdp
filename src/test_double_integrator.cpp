@@ -1,5 +1,8 @@
 #include "rosban_csa_mdp/core/problem.h"
 
+#include "rosban_csa_mdp/solvers/extra_trees.h"
+
+using csa_mdp::ExtraTrees;
 using csa_mdp::Problem;
 
 class DoubleIntegrator : public Problem
@@ -14,7 +17,7 @@ public:
       setActionLimits(action_limits);
     }
 
-  bool isTerminal(const Eigen::VectorXd & state) override
+  bool isTerminal(const Eigen::VectorXd & state) const override
     {
       for (int i = 0; i < 2; i++)
       {
@@ -63,4 +66,27 @@ public:
 int main()
 {
   DoubleIntegrator di;
+  Eigen::VectorXd initial_state(2);
+  initial_state << 1, 0;
+  int trajectory_max_length = 200;
+  int nb_trajectories = 500;
+  std::vector<csa_mdp::Sample> mdp_samples = di.getRandomBatch(initial_state,
+                                                               trajectory_max_length,
+                                                               nb_trajectories);
+  ExtraTrees::Config conf;
+  conf.horizon = 10;
+  conf.discount = 0.98;
+  conf.preFilter = false;
+  conf.parallelMerge =true;
+  conf.maxActionTiles = 100;
+  conf.ETConf.k = 3;
+  conf.ETConf.nMin = 1;
+  conf.ETConf.nbTrees = 25;
+  conf.ETConf.minVar = std::pow(10, -6);
+  conf.ETConf.apprType = regression_forests::ApproximationType::PWC;
+  ExtraTrees solver(di.getStateLimits(),
+                    di.getActionLimits());
+  auto is_terminal = [di](const Eigen::VectorXd &state){return di.isTerminal(state);};
+  solver.solve(mdp_samples, conf, is_terminal);
+  solver.valueForest().save("/tmp/test_di.data");
 }
