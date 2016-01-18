@@ -1,3 +1,3 @@
 set(SOURCES
-  extra_trees.cpp
+  fqi.cpp
   )

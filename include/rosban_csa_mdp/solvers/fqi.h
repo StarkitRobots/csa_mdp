@@ -3,7 +3,7 @@
 #include "rosban_csa_mdp/core/sample.h"
 
 #include "rosban_regression_forests/core/training_set.h"
-#include "rosban_regression_forests/algorithms/randomized_tree.h"
+#include "rosban_regression_forests/algorithms/extra_trees.h"
 
 namespace csa_mdp
 {
@@ -11,60 +11,74 @@ namespace csa_mdp
 class FQI {
 public:
   class Config{
+  private:
+    // Storing x_dim and u_dim is required in order to load properly a configuration
+
+    /// The number of continuous dimensions for the state
+    size_t x_dim;
+    /// The number of continuous dimensions for actions
+    size_t u_dim;
+    /// The state space
+    Eigen::MatrixXd x_limits;
+    /// The action space
+    Eigen::MatrixXd u_limits;
   public:
+    /// Until which horizon should value be computed
     size_t horizon;
+    /// The discount factor of the MDP
     double discount;
-    size_t max_action_tiles;//Max action tiles when computing optimal action
-    double time;
-    regression_forests::RandomizedTrees::Config q_learning_conf;
-    regression_forests::RandomizedTrees::Config policy_learning_conf;
+    /// The final size of the tree when merging the forest into a single tree for a given action
+    size_t max_action_tiles;
+    /// The number of samples generated to learn the policy
+    size_t policy_samples;
+    /// The time spent learning the q_value
+    double q_value_time;
+    /// The time spent learning the policy from the q_value
+    double policy_time;
+    regression_forests::ExtraTrees::Config q_value_conf;
+    regression_forests::ExtraTrees::Config policy_conf;
 
     Config();
     std::vector<std::string> names() const;
     std::vector<std::string> values() const;
     void load(const std::vector<std::string>& names,
               const std::vector<std::string>& values);
+
+    const Eigen::MatrixXd & getStateLimits() const;
+    const Eigen::MatrixXd & getActionLimits() const;
+
+    void setStateLimits(const Eigen::MatrixXd &new_limits);
+    void setActionLimits(const Eigen::MatrixXd &new_limits);
   };
 
 private:
+  /// A forest describing current q_value
   std::unique_ptr<regression_forests::Forest> q_value;
-  Eigen::MatrixXd xLimits;
-  Eigen::MatrixXd uLimits;
-  size_t xDim;
-  size_t uDim;
+  /// Since action might be multi-dimensional, it is necessary to represent the
+  /// policy by one forest for each dimension. This choice might lead to unsatisfying
+  /// results, depending on the shape of the quality function with respect to the action
+  std::vector<std::unique_ptr<regression_forests::Forest>> policies;
 
-public:
-  Config conf;
-
-  FQI(const Eigen::MatrixXd& xLimits,
-      const Eigen::MatrixXd& uLimits);
-
-  const regression_forests::Forest& valueForest();
-
-  void solve(const std::vector<Sample>& samples,
-             size_t horizon, double discount,
-             std::function<bool(const Eigen::VectorXd&)> isTerminal,
-             size_t k, size_t nmin, size_t nbTrees, double minVariance,
-             bool bootstrap, bool preFilter = false, bool parallelMerge = false,
-             regression_forests::ApproximationType apprType =
-             regression_forests::ApproximationType::PWC);
-
-  void solve(const std::vector<Sample>& samples,
-             Config& conf,
-             std::function<bool(const Eigen::VectorXd&)> isTerminal);
-
-  /**
-   * Provide a training set using q_value
-   */
+  /// Create a TrainingSet from current q_value and a collection f mdp samples
   regression_forests::TrainingSet
   getTrainingSet(const std::vector<Sample>& samples,
-                 double discount,
-                 std::function<bool(const Eigen::VectorXd&)> isTerminal,
-                 bool preFilter, bool parallelMerge);
+                 std::function<bool(const Eigen::VectorXd&)> is_terminal);
 
-  static Eigen::VectorXd
-  bestAction(std::unique_ptr<regression_forests::Forest> f,
-             const Eigen::VectorXd& state);
+  /// Compute the bestAction at given state according to the current q_value
+  Eigen::VectorXd bestAction(const Eigen::VectorXd& state);
+
+public:
+  /// The whole configuration of the FQI solver
+  Config conf;
+
+  /// Create a FQI solver with a default configuration
+  FQI();
+
+  const regression_forests::Forest& getValueForest();
+  const regression_forests::Forest& getPolicyForest(int action_index);
+
+  void solve(const std::vector<Sample>& samples,
+             std::function<bool(const Eigen::VectorXd&)> is_terminal);
 };
 
 

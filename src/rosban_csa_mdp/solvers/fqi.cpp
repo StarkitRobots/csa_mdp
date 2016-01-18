@@ -1,9 +1,12 @@
-#include "rosban_csa_mdp/solvers/extra_trees.h"
+#include "rosban_csa_mdp/solvers/fqi.h"
+
+#include "rosban_regression_forests/tools/random.h"
 
 #include <iostream>
+#include <sstream>
 
 using regression_forests::ApproximationType;
-using regression_forests::RandomizedTrees;
+using regression_forests::ExtraTrees;
 using regression_forests::TrainingSet;
 
 namespace csa_mdp
@@ -11,129 +14,249 @@ namespace csa_mdp
 
 FQI::Config::Config()
 {
+  x_dim = 0;
+  u_dim = 0;
   horizon = 1;
   discount = 0.99;
   max_action_tiles = 0;
-  time = 0;
+  policy_samples = 0;
+  q_value_time = 0;
+  policy_time = 0;
 }
 
 std::vector<std::string> FQI::Config::names() const
 {
-  std::vector<std::string> result = {"Horizon"       ,
-                                     "Discount"      ,
-                                     "MaxActionTiles",
-                                     "Time"};
-  std::vector<std::string> etNames = q_learning_conf.names();
-  result.insert(result.end(), etNames.begin(), etNames.end());
+  std::vector<std::string> result = {"x_dim", "u_dim"};
+  for (int i = 0; i < x_dim; i++)
+  {
+    result.push_back("x_" + std::to_string(i) + "_min");
+    result.push_back("x_" + std::to_string(i) + "_max");
+  }
+  for (int i = 0; i < u_dim; i++)
+  {
+    result.push_back("u_" + std::to_string(i) + "_min");
+    result.push_back("u_" + std::to_string(i) + "_max");
+  }
+  result.push_back("horizon"         );
+  result.push_back("discount"        );
+  result.push_back("max_action_tiles");
+  result.push_back("policy_samples"  );
+  result.push_back("q_value_time"    );
+  result.push_back("policy_time"     );
+
+  // Add q_value_conf with prefix
+  int offset = result.size();
+  std::vector<std::string> q_value_names = q_value_conf.names();
+  for (const std::string &name : q_value_names)
+    result.push_back("q_value_" + name);
+  std::vector<std::string> policy_names = policy_conf.names();
+  for (const std::string &name : policy_names)
+    result.push_back("policy_" + name);
   return result;
 }
 
 std::vector<std::string> FQI::Config::values() const
 {
-  std::vector<std::string> result;
-  result.push_back(std::to_string(horizon       ));
-  result.push_back(std::to_string(discount      ));
+  std::vector<std::string> result = {std::to_string(x_dim), std::to_string(u_dim)};
+  // Use custom to_string for double here
+  for (int i = 0; i < x_dim; i++)
+  {
+    result.push_back(std::to_string(x_limits(i,0)));
+    result.push_back(std::to_string(x_limits(i,1)));
+  }
+  for (int i = 0; i < u_dim; i++)
+  {
+    result.push_back(std::to_string(u_limits(i,0)));
+    result.push_back(std::to_string(u_limits(i,1)));
+  }
+  result.push_back(std::to_string(horizon         ));
+  result.push_back(std::to_string(discount        ));
   result.push_back(std::to_string(max_action_tiles));
-  result.push_back(std::to_string(time          ));
-  std::vector<std::string> etValues = q_learning_conf.values();
-  result.insert(result.end(), etValues.begin(), etValues.end());
+  result.push_back(std::to_string(policy_samples  ));
+  result.push_back(std::to_string(q_value_time    ));
+  result.push_back(std::to_string(policy_time     ));
+  std::vector<std::string> q_value_values = q_value_conf.values();
+  result.insert(result.end(), q_value_values.begin(), q_value_values.end());
+  std::vector<std::string> policy_values = policy_conf.values();
+  result.insert(result.end(), policy_values.begin(), policy_values.end());
   return result;
 }
 
-void FQI::Config::load(const std::vector<std::string>& colNames,
-                       const std::vector<std::string>& colValues)
+void FQI::Config::load(const std::vector<std::string>& col_names,
+                       const std::vector<std::string>& col_values)
 {
-  auto expectedNames = names();
-  if (colNames.size() != expectedNames.size()) {
-    throw std::runtime_error("Failed to load extraTreesConfig, mismatch of vector size");
+  // start by reading the 2 first entries
+  if (col_names.size() < 2)
+  {
+    throw std::runtime_error("Failed to load FQI::Config, size must be at least 2");
   }
-  for (size_t colNo = 0;  colNo < colNames.size(); colNo++) {
-    auto givenName = colNames[colNo];
+  x_dim = std::stoi(col_values[0]);
+  u_dim = std::stoi(col_values[1]);
+  // Now names will be valid
+  auto expectedNames = names();
+  if (col_names.size() != expectedNames.size()) {
+    throw std::runtime_error("Failed to load FQI::Config, unexpected size");
+  }
+  // Check if names matches the description
+  for (size_t colNo = 0;  colNo < col_names.size(); colNo++) {
+    auto givenName = col_names[colNo];
     auto expectedName = expectedNames[colNo];
     if (givenName.find(expectedName) == std::string::npos) {
       throw std::runtime_error("Given name '" + givenName + "' does not match '"
                                + expectedName + "'");
     }
   }
-  horizon        = std::stoi(colValues[0]);
-  discount       = std::stoi(colValues[1]);
-  max_action_tiles = std::stoi(colValues[2]);
-  time           = std::stod(colValues[3]);
-  std::vector<std::string> etNames, etValues;
-  etNames.insert (etNames.end() , colNames.begin() + 4 , colNames.end() );
-  etValues.insert(etValues.end(), colValues.begin() + 4, colValues.end());
-  q_learning_conf.load(etNames, etValues);
+  // Read limits
+  int col_idx = 2;
+  for (int i = 0; i < x_dim; i++)
+  {
+    x_limits(i,0) = std::stoi(col_values[col_idx++]);
+    x_limits(i,1) = std::stoi(col_values[col_idx++]);
+  }
+  for (int i = 0; i < u_dim; i++)
+  {
+    u_limits(i,0) = std::stoi(col_values[col_idx++]);
+    u_limits(i,1) = std::stoi(col_values[col_idx++]);
+  }
+  horizon          = std::stoi(col_values[col_idx++]);
+  discount         = std::stoi(col_values[col_idx++]);
+  max_action_tiles = std::stoi(col_values[col_idx++]);
+  q_value_time     = std::stod(col_values[col_idx++]);
+  policy_time      = std::stod(col_values[col_idx++]);
+  /// reading q_value_conf
+  int q_conf_size = q_value_conf.names().size();
+  std::vector<std::string> q_value_names, q_value_values;
+  q_value_names.insert (q_value_names.end() ,
+                        col_names.begin() + col_idx ,
+                        col_names.begin() + col_idx + q_conf_size);
+  q_value_values.insert(q_value_values.end(),
+                        col_values.begin() + col_idx,
+                        col_values.begin() + col_idx + q_conf_size);
+  q_value_conf.load(q_value_names, q_value_values);
+  col_idx += q_conf_size;
+  /// reading policy_conf
+  int policy_conf_size = policy_conf.names().size();
+  std::vector<std::string> policy_names, policy_values;
+  policy_names.insert (policy_names.end() ,
+                       col_names.begin() + col_idx ,
+                       col_names.begin() + col_idx + policy_conf_size);
+  policy_values.insert(policy_values.end(),
+                       col_values.begin() + col_idx,
+                       col_values.begin() + col_idx + policy_conf_size);
+  policy_conf.load(policy_names, policy_values);
 }
 
-
-FQI::FQI(const Eigen::MatrixXd& xLimits_,
-                       const Eigen::MatrixXd& uLimits_)
-  : xLimits(xLimits_), uLimits(uLimits_)
+const Eigen::MatrixXd & FQI::Config::getStateLimits() const
 {
-  xDim = xLimits.rows();
-  uDim = uLimits.rows();
+  return x_limits;
 }
 
-const regression_forests::Forest& FQI::valueForest()
+const Eigen::MatrixXd & FQI::Config::getActionLimits() const
+{
+  return u_limits;
+}
+
+void FQI::Config::setStateLimits(const Eigen::MatrixXd &new_limits)
+{
+  x_limits = new_limits;
+  x_dim = x_limits.rows();
+}
+
+void FQI::Config::setActionLimits(const Eigen::MatrixXd &new_limits)
+{
+  u_limits = new_limits;
+  u_dim = u_limits.rows();
+}
+
+
+FQI::FQI()
+{
+}
+
+const regression_forests::Forest& FQI::getValueForest()
 {
   return *q_value;
 }
+const regression_forests::Forest& FQI::getPolicyForest(int action_index)
+{
+  return *(policies[action_index]);
+}
 
 void FQI::solve(const std::vector<Sample>& samples,
-                size_t horizon, double discount,
-                std::function<bool(const Eigen::VectorXd&)> isTerminal,
-                size_t k, size_t nmin, size_t nbTrees,
-                double minVariance,
-                bool bootstrap, bool preFilter, bool parallelMerge,
-                ApproximationType apprType)
+                std::function<bool(const Eigen::VectorXd&)> isTerminal)
 {
   q_value.release();
-  for (size_t h = 1; h <= horizon; h++) {
-    // Compute learningSet with last q_value
-    TrainingSet ls = getTrainingSet(samples, discount, isTerminal, preFilter, parallelMerge);
-    // Compute q_value from learningSet
-    q_value = RandomizedTrees::extraTrees(ls, k, nmin, nbTrees, minVariance, bootstrap, apprType);
+  regression_forests::ExtraTrees q_learner;
+  q_learner.conf = conf.q_value_conf;
+  for (size_t h = 1; h <= conf.horizon; h++) {
+    // Compute TrainingSet with last q_value
+    TrainingSet ts = getTrainingSet(samples, isTerminal);
+    // Compute q_value from TrainingSet
+    q_value = q_learner.solve(ts);
+  }
+  // If required, learn policy from the q_value
+  if (conf.policy_samples > 0)
+  {
+    int x_dim = conf.getStateLimits().rows();
+    int u_dim = conf.getActionLimits().rows();
+    // First generate the starting states
+    std::vector<Eigen::VectorXd> states;
+    states = regression_forests::getUniformSamples(conf.getStateLimits(), conf.policy_samples);
+    // Then get corresponding actions
+    std::vector<Eigen::VectorXd> actions;
+    for (const Eigen::VectorXd &state : states)
+    {
+      // Establishing limits for projection
+      Eigen::MatrixXd limits(x_dim + u_dim, 2);
+      limits.block(    0, 0, x_dim, 1) = state;
+      limits.block(    0, 1, x_dim, 1) = state;
+      limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
+      std::unique_ptr<regression_forests::Tree> sub_tree;
+      sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
+      actions.push_back(sub_tree->getArgMax(limits).segment(x_dim, u_dim));
+    }
+    // Train a policy for each dimension
+    policies.clear();
+    regression_forests::ExtraTrees policy_learner;
+    policy_learner.conf = conf.policy_conf;
+    for (int dim = 0; dim < u_dim; dim++)
+    {
+      // First build training set
+      TrainingSet ts(x_dim + u_dim);
+      for (size_t sample_idx = 0; sample_idx < states.size(); sample_idx++)
+      {
+        ts.push(regression_forests::Sample(states[sample_idx], actions[sample_idx](dim)));
+      }
+      regression_forests::ExtraTrees policy_learner;
+      policies.push_back(policy_learner.solve(ts));
+    }
   }
 }
 
-void FQI::solve(const std::vector<Sample>& samples,
-                Config& conf,
-                std::function<bool(const Eigen::VectorXd&)> isTerminal)
+TrainingSet FQI::getTrainingSet(const std::vector<Sample>& samples,
+                                std::function<bool(const Eigen::VectorXd&)> is_terminal)
 {
-  solve(samples,
-        conf.horizon, conf.discount,
-        isTerminal,
-        conf.q_learning_conf.k, conf.q_learning_conf.nMin, conf.q_learning_conf.nbTrees,
-        conf.q_learning_conf.minVar,
-        conf.q_learning_conf.bootstrap, conf.preFilter, conf.parallelMerge,
-        conf.q_learning_conf.apprType);
-}
-
-TrainingSet
-FQI::getTrainingSet(const std::vector<Sample>& samples,
-                    double discount,
-                    std::function<bool(const Eigen::VectorXd&)> isTerminal,
-                    bool preFilter, bool parallelMerge)
-{
-  TrainingSet ls(xDim + uDim);
+  int x_dim = conf.getStateLimits().rows();
+  int u_dim = conf.getActionLimits().rows();
+  TrainingSet ls(x_dim + u_dim);
   for (size_t i = 0; i < samples.size(); i++) {
     const Sample& sample = samples[i];
-    int xDim = sample.state.rows();
-    int uDim = sample.action.rows();
-    Eigen::VectorXd input(xDim + uDim);
-    input.segment(0, xDim) = sample.state;
-    input.segment(xDim, uDim) = sample.action;
-    Eigen::VectorXd nextState = sample.next_state;
+    int x_dim = sample.state.rows();
+    int u_dim = sample.action.rows();
+    Eigen::VectorXd input(x_dim + u_dim);
+    input.segment(0, x_dim) = sample.state;
+    input.segment(x_dim, u_dim) = sample.action;
+    Eigen::VectorXd next_state = sample.next_state;
     double reward = sample.reward;
-    if (q_value && !isTerminal(nextState)) {
+    if (q_value && !is_terminal(next_state)) {
       // Establishing limits for projection
-      Eigen::MatrixXd limits(xDim + uDim, 2);
-      limits.block(0, 0, xDim, 1) = nextState;
-      limits.block(0, 1, xDim, 1) = nextState;
-      limits.block(xDim, 0, uDim, 2) = uLimits;
-      std::unique_ptr<regression_forests::Tree> subTree;
-      subTree = q_value->unifiedProjectedTree(limits, max_action_tiles, preFilter, parallelMerge);
-      reward += discount * subTree->getMax(limits);
+      Eigen::MatrixXd limits(x_dim + u_dim, 2);
+      limits.block(    0, 0, x_dim, 1) = next_state;
+      limits.block(    0, 1, x_dim, 1) = next_state;
+      limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
+      std::unique_ptr<regression_forests::Tree> sub_tree;
+      sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
+      reward += conf.discount * sub_tree->getMax(limits);
     }
     ls.push(regression_forests::Sample(input, reward));
   }

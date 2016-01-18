@@ -1,8 +1,8 @@
 #include "rosban_csa_mdp/core/problem.h"
 
-#include "rosban_csa_mdp/solvers/extra_trees.h"
+#include "rosban_csa_mdp/solvers/fqi.h"
 
-using csa_mdp::ExtraTrees;
+using csa_mdp::FQI;
 using csa_mdp::Problem;
 
 class DoubleIntegrator : public Problem
@@ -21,10 +21,10 @@ public:
     {
       for (int i = 0; i < 2; i++)
       {
-        if (state(i) < state(i,0) || state(i) > state(i,1))
-          return false;
+        if (state(i) < getStateLimits()(i,0) || state(i) > getStateLimits()(i,1))
+          return true;
       }
-      return true;
+      return false;
     }
 
   double getReward(const Eigen::VectorXd & state,
@@ -69,38 +69,31 @@ int main()
   Eigen::VectorXd initial_state(2);
   initial_state << 1, 0;
   int trajectory_max_length = 200;
-  int nb_trajectories = 500;
+  int nb_trajectories = 200;
   std::vector<csa_mdp::Sample> mdp_samples = di.getRandomBatch(initial_state,
                                                                trajectory_max_length,
                                                                nb_trajectories);
-  ExtraTrees::Config conf;
+  FQI::Config conf;
+  conf.setStateLimits(di.getStateLimits());
+  conf.setActionLimits(di.getActionLimits());
   conf.horizon = 10;
   conf.discount = 0.98;
-  conf.preFilter = false;
-  conf.parallelMerge =true;
-  conf.maxActionTiles = 100;
-  conf.ETConf.k = 3;
-  conf.ETConf.nMin = 1;
-  conf.ETConf.nbTrees = 25;
-  conf.ETConf.minVar = std::pow(10, -6);
-  conf.ETConf.apprType = regression_forests::ApproximationType::PWC;
-  ExtraTrees solver(di.getStateLimits(),
-                    di.getActionLimits());
+  conf.max_action_tiles = 40;
+  conf.q_value_conf.k = 3;
+  conf.q_value_conf.n_min = 1;
+  conf.q_value_conf.nb_trees = 25;
+  conf.q_value_conf.min_var = std::pow(10, -4);
+  conf.q_value_conf.appr_type = regression_forests::ApproximationType::PWC;
+  conf.policy_samples = 10000;
+  conf.policy_conf.k = 2;
+  conf.policy_conf.n_min = 1500;
+  conf.policy_conf.nb_trees = 25;
+  conf.policy_conf.min_var = std::pow(10, -4);
+  conf.policy_conf.appr_type = regression_forests::ApproximationType::PWL;
+  FQI solver;
+  solver.conf = conf;
   auto is_terminal = [di](const Eigen::VectorXd &state){return di.isTerminal(state);};
-  solver.solve(mdp_samples, conf, is_terminal);
-  solver.valueForest().save("/tmp/test_di.data");
-
-//  EvaluationConfig config;
-//  config.forestPolicy = true;
-//  config.maxLeafs = 250;
-//  config.pConf.nbSamples     = 10000;
-//  config.pConf.preFilter     = false;
-//  config.pConf.parallelMerge = true;
-//  config.pConf.ETConf.k         = 2;
-//  config.pConf.ETConf.nMin      = 1500;//PWC: ~130 | PWL: ~1500
-//  config.pConf.ETConf.nbTrees   = 25;
-//  config.pConf.ETConf.minVar    = std::pow(10, -8);
-//  config.pConf.ETConf.bootstrap = false;
-//  config.pConf.ETConf.apprType  = ApproximationType::PWL;
-//  Math::Problems::DoubleIntegrator di;
+  solver.solve(mdp_samples, is_terminal);
+  solver.getValueForest().save("/tmp/test_di_values.data");
+  solver.getPolicyForest(0).save("/tmp/test_di_policy.data");
 }
