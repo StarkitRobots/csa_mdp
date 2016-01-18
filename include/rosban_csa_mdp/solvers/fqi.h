@@ -8,17 +8,16 @@
 namespace csa_mdp
 {
 
-class ExtraTrees {
+class FQI {
 public:
   class Config{
   public:
     size_t horizon;
     double discount;
-    bool preFilter;
-    bool parallelMerge;
-    size_t maxActionTiles;
+    size_t max_action_tiles;//Max action tiles when computing optimal action
     double time;
-    regression_forests::RandomizedTrees::Config ETConf;
+    regression_forests::RandomizedTrees::Config q_learning_conf;
+    regression_forests::RandomizedTrees::Config policy_learning_conf;
 
     Config();
     std::vector<std::string> names() const;
@@ -28,16 +27,17 @@ public:
   };
 
 private:
-  std::unique_ptr<regression_forests::Forest> qValue;
+  std::unique_ptr<regression_forests::Forest> q_value;
   Eigen::MatrixXd xLimits;
   Eigen::MatrixXd uLimits;
   size_t xDim;
   size_t uDim;
-  size_t maxActionTiles;
+
 public:
-  ExtraTrees(const Eigen::MatrixXd& xLimits,
-             const Eigen::MatrixXd& uLimits,
-             size_t maxActionTiles = 0);
+  Config conf;
+
+  FQI(const Eigen::MatrixXd& xLimits,
+      const Eigen::MatrixXd& uLimits);
 
   const regression_forests::Forest& valueForest();
 
@@ -54,7 +54,7 @@ public:
              std::function<bool(const Eigen::VectorXd&)> isTerminal);
 
   /**
-   * Provide a training set using qValue
+   * Provide a training set using q_value
    */
   regression_forests::TrainingSet
   getTrainingSet(const std::vector<Sample>& samples,

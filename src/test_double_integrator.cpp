@@ -89,4 +89,18 @@ int main()
   auto is_terminal = [di](const Eigen::VectorXd &state){return di.isTerminal(state);};
   solver.solve(mdp_samples, conf, is_terminal);
   solver.valueForest().save("/tmp/test_di.data");
+
+//  EvaluationConfig config;
+//  config.forestPolicy = true;
+//  config.maxLeafs = 250;
+//  config.pConf.nbSamples     = 10000;
+//  config.pConf.preFilter     = false;
+//  config.pConf.parallelMerge = true;
+//  config.pConf.ETConf.k         = 2;
+//  config.pConf.ETConf.nMin      = 1500;//PWC: ~130 | PWL: ~1500
+//  config.pConf.ETConf.nbTrees   = 25;
+//  config.pConf.ETConf.minVar    = std::pow(10, -8);
+//  config.pConf.ETConf.bootstrap = false;
+//  config.pConf.ETConf.apprType  = ApproximationType::PWL;
+//  Math::Problems::DoubleIntegrator di;
 }
