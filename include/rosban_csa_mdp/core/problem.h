@@ -13,6 +13,11 @@ class Problem
 {
 public:
   typedef std::function<Eigen::VectorXd(const Eigen::VectorXd &state)> Policy;
+  typedef std::function<Eigen::VectorXd(const Eigen::VectorXd &state,
+                                        const Eigen::VectorXd &action)> TransitionFunction;
+  typedef std::function<double(const Eigen::VectorXd &state,
+                               const Eigen::VectorXd &action,
+                               const Eigen::VectorXd &next_state)> RewardFunction;
 
 private:
   Eigen::MatrixXd state_limits;
