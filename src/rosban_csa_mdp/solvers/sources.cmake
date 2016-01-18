@@ -1,3 +1,3 @@
 set(SOURCES
-  fqi.cpp
+  fpf.cpp
   )

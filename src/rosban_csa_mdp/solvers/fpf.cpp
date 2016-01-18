@@ -12,7 +12,7 @@ using regression_forests::TrainingSet;
 namespace csa_mdp
 {
 
-FQI::Config::Config()
+FPF::Config::Config()
 {
   x_dim = 0;
   u_dim = 0;
@@ -24,7 +24,7 @@ FQI::Config::Config()
   policy_time = 0;
 }
 
-std::vector<std::string> FQI::Config::names() const
+std::vector<std::string> FPF::Config::names() const
 {
   std::vector<std::string> result = {"x_dim", "u_dim"};
   for (int i = 0; i < x_dim; i++)
@@ -55,7 +55,7 @@ std::vector<std::string> FQI::Config::names() const
   return result;
 }
 
-std::vector<std::string> FQI::Config::values() const
+std::vector<std::string> FPF::Config::values() const
 {
   std::vector<std::string> result = {std::to_string(x_dim), std::to_string(u_dim)};
   // Use custom to_string for double here
@@ -82,20 +82,20 @@ std::vector<std::string> FQI::Config::values() const
   return result;
 }
 
-void FQI::Config::load(const std::vector<std::string>& col_names,
+void FPF::Config::load(const std::vector<std::string>& col_names,
                        const std::vector<std::string>& col_values)
 {
   // start by reading the 2 first entries
   if (col_names.size() < 2)
   {
-    throw std::runtime_error("Failed to load FQI::Config, size must be at least 2");
+    throw std::runtime_error("Failed to load FPF::Config, size must be at least 2");
   }
   x_dim = std::stoi(col_values[0]);
   u_dim = std::stoi(col_values[1]);
   // Now names will be valid
   auto expectedNames = names();
   if (col_names.size() != expectedNames.size()) {
-    throw std::runtime_error("Failed to load FQI::Config, unexpected size");
+    throw std::runtime_error("Failed to load FPF::Config, unexpected size");
   }
   // Check if names matches the description
   for (size_t colNo = 0;  colNo < col_names.size(); colNo++) {
@@ -146,43 +146,43 @@ void FQI::Config::load(const std::vector<std::string>& col_names,
   policy_conf.load(policy_names, policy_values);
 }
 
-const Eigen::MatrixXd & FQI::Config::getStateLimits() const
+const Eigen::MatrixXd & FPF::Config::getStateLimits() const
 {
   return x_limits;
 }
 
-const Eigen::MatrixXd & FQI::Config::getActionLimits() const
+const Eigen::MatrixXd & FPF::Config::getActionLimits() const
 {
   return u_limits;
 }
 
-void FQI::Config::setStateLimits(const Eigen::MatrixXd &new_limits)
+void FPF::Config::setStateLimits(const Eigen::MatrixXd &new_limits)
 {
   x_limits = new_limits;
   x_dim = x_limits.rows();
 }
 
-void FQI::Config::setActionLimits(const Eigen::MatrixXd &new_limits)
+void FPF::Config::setActionLimits(const Eigen::MatrixXd &new_limits)
 {
   u_limits = new_limits;
   u_dim = u_limits.rows();
 }
 
 
-FQI::FQI()
+FPF::FPF()
 {
 }
 
-const regression_forests::Forest& FQI::getValueForest()
+const regression_forests::Forest& FPF::getValueForest()
 {
   return *q_value;
 }
-const regression_forests::Forest& FQI::getPolicyForest(int action_index)
+const regression_forests::Forest& FPF::getPolicyForest(int action_index)
 {
   return *(policies[action_index]);
 }
 
-void FQI::solve(const std::vector<Sample>& samples,
+void FPF::solve(const std::vector<Sample>& samples,
                 std::function<bool(const Eigen::VectorXd&)> isTerminal)
 {
   q_value.release();
@@ -233,7 +233,7 @@ void FQI::solve(const std::vector<Sample>& samples,
   }
 }
 
-TrainingSet FQI::getTrainingSet(const std::vector<Sample>& samples,
+TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
                                 std::function<bool(const Eigen::VectorXd&)> is_terminal)
 {
   int x_dim = conf.getStateLimits().rows();
