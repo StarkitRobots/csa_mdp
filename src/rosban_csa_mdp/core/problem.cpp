@@ -104,4 +104,30 @@ std::vector<Sample> Problem::getRandomBatch(const Eigen::VectorXd & initial_stat
   return result;
 }
 
+
+Sample Problem::getSample(const Eigen::VectorXd &state,
+                          const Eigen::VectorXd &action)
+{
+  Eigen::VectorXd result = getSuccessor(state, action);
+  double reward = getReward(state, action, result);
+  return Sample(state, action, result, reward);
+}
+
+std::vector<Sample> Problem::simulateTrajectory(const Eigen::VectorXd &initial_state,
+                                                int max_length,
+                                                Problem::Policy p)
+{
+  std::vector<Sample> result;
+  Eigen::VectorXd state = initial_state;
+  while(result.size() < max_length)
+  {
+    Sample new_sample = getSample(state, p(state));
+    result.push_back(new_sample);
+    if (isTerminal(new_sample.next_state))
+      break;
+    state = new_sample.next_state;
+  }
+  return result;
+}
+
 }
