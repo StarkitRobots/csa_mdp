@@ -1,8 +1,8 @@
 #include "rosban_csa_mdp/core/problem.h"
 
-#include "rosban_csa_mdp/solvers/fqi.h"
+#include "rosban_csa_mdp/solvers/fpf.h"
 
-using csa_mdp::FQI;
+using csa_mdp::FPF;
 using csa_mdp::Problem;
 
 class DoubleIntegrator : public Problem
@@ -73,7 +73,7 @@ int main()
   std::vector<csa_mdp::Sample> mdp_samples = di.getRandomBatch(initial_state,
                                                                trajectory_max_length,
                                                                nb_trajectories);
-  FQI::Config conf;
+  FPF::Config conf;
   conf.setStateLimits(di.getStateLimits());
   conf.setActionLimits(di.getActionLimits());
   conf.horizon = 10;
@@ -90,7 +90,7 @@ int main()
   conf.policy_conf.nb_trees = 25;
   conf.policy_conf.min_var = std::pow(10, -4);
   conf.policy_conf.appr_type = regression_forests::ApproximationType::PWL;
-  FQI solver;
+  FPF solver;
   solver.conf = conf;
   auto is_terminal = [di](const Eigen::VectorXd &state){return di.isTerminal(state);};
   solver.solve(mdp_samples, is_terminal);

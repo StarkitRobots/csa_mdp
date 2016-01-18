@@ -1,4 +1,4 @@
-#include "rosban_csa_mdp/solvers/fqi.h"
+#include "rosban_csa_mdp/solvers/fpf.h"
 
 #include "rosban_regression_forests/tools/random.h"
 
@@ -222,7 +222,7 @@ void FQI::solve(const std::vector<Sample>& samples,
     for (int dim = 0; dim < u_dim; dim++)
     {
       // First build training set
-      TrainingSet ts(x_dim + u_dim);
+      TrainingSet ts(x_dim);
       for (size_t sample_idx = 0; sample_idx < states.size(); sample_idx++)
       {
         ts.push(regression_forests::Sample(states[sample_idx], actions[sample_idx](dim)));

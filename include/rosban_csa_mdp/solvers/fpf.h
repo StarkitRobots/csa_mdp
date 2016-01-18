@@ -8,7 +8,13 @@
 namespace csa_mdp
 {
 
-class FQI {
+/// FPF acronym stands for Fitted Policy Forest. This algorithms (unpublished yet) is based
+/// on FQI (cf. Tree-Based Batch Mode Reinforcement Learning. Ernst, Geurts & Wehenkel, 2005).
+/// The main additions over FQI are:
+/// - The choice of the best action for a given state by merging a regression forest into a
+///   single tree. 
+/// - The possibility to learn a fitted policy from the q-value
+class FPF {
 public:
   class Config{
   private:
@@ -68,11 +74,11 @@ private:
   Eigen::VectorXd bestAction(const Eigen::VectorXd& state);
 
 public:
-  /// The whole configuration of the FQI solver
+  /// The whole configuration of the FPF solver
   Config conf;
 
-  /// Create a FQI solver with a default configuration
-  FQI();
+  /// Create a FPF solver with a default configuration
+  FPF();
 
   const regression_forests::Forest& getValueForest();
   const regression_forests::Forest& getPolicyForest(int action_index);
