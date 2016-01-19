@@ -227,7 +227,6 @@ void FPF::solve(const std::vector<Sample>& samples,
       {
         ts.push(regression_forests::Sample(states[sample_idx], actions[sample_idx](dim)));
       }
-      regression_forests::ExtraTrees policy_learner;
       policies.push_back(policy_learner.solve(ts));
     }
   }
