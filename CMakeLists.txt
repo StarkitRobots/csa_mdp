@@ -123,6 +123,7 @@ include_directories(
 set(DIRECTORIES
   src/rosban_csa_mdp/core
   src/rosban_csa_mdp/solvers
+  src/kd_trees# Should be elsewhere...
   )
 
 # Build ALL_SOURCES
