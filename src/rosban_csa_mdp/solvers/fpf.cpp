@@ -177,10 +177,17 @@ const regression_forests::Forest& FPF::getValueForest()
 {
   return *q_value;
 }
+
 const regression_forests::Forest& FPF::getPolicyForest(int action_index)
 {
   return *(policies[action_index]);
 }
+
+std::unique_ptr<regression_forests::Forest> FPF::stealPolicyForest(int action_index)
+{
+  return std::unique_ptr<regression_forests::Forest>(policies[action_index].release());
+}
+
 
 void FPF::solve(const std::vector<Sample>& samples,
                 std::function<bool(const Eigen::VectorXd&)> isTerminal)

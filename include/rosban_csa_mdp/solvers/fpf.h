@@ -57,7 +57,7 @@ public:
     void setActionLimits(const Eigen::MatrixXd &new_limits);
   };
 
-private:
+protected:
   /// A forest describing current q_value
   std::unique_ptr<regression_forests::Forest> q_value;
   /// Since action might be multi-dimensional, it is necessary to represent the
@@ -66,7 +66,9 @@ private:
   std::vector<std::unique_ptr<regression_forests::Forest>> policies;
 
   /// Create a TrainingSet from current q_value and a collection f mdp samples
-  regression_forests::TrainingSet
+  /// Note: this method is virtual, because other algorithms (such as MRE) might need to use a
+  ///       custom way of creating the trainingSet
+  virtual regression_forests::TrainingSet
   getTrainingSet(const std::vector<Sample>& samples,
                  std::function<bool(const Eigen::VectorXd&)> is_terminal);
 
@@ -82,6 +84,9 @@ public:
 
   const regression_forests::Forest& getValueForest();
   const regression_forests::Forest& getPolicyForest(int action_index);
+
+  /// Remove the forest from the memory of the solver!!!
+  std::unique_ptr<regression_forests::Forest> stealPolicyForest(int action_index);
 
   void solve(const std::vector<Sample>& samples,
              std::function<bool(const Eigen::VectorXd&)> is_terminal);
