@@ -2,6 +2,8 @@
 
 #include "rosban_regression_forests/tools/random.h"
 
+#include <iostream>
+
 using regression_forests::TrainingSet;
 
 namespace csa_mdp
@@ -19,8 +21,23 @@ void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
   leafNode->push(point);
   int leafCount = leafNode->getPoints().size();
   if (leafCount > v) {
-    int dim = nextSplitDim;
-    leafNode->split(dim, (leafSpace(dim, 0) + leafSpace(dim,1)) / 2);
+    int split_dim = nextSplitDim;
+    //// Hack, splitting on the biggest dimension
+    //double max_size = 0;
+    //split_dim = -1;
+    //for (int dim = 0; dim < leafSpace.rows(); dim++)
+    //{
+    //  double dim_size = leafSpace(dim,1) - leafSpace(dim,0);
+    //  if (dim_size > max_size)
+    //  {
+    //    max_size = dim_size;
+    //    split_dim = dim;
+    //  }
+    //}
+    //// End of hack
+    double split_val = (leafSpace(split_dim, 0) + leafSpace(split_dim,1)) / 2;
+    leafNode->split(split_dim, split_val);
+    //std::cerr << "Splitting at: (" << split_dim << "," << split_val << ")" << std::endl;
     nextSplitDim++;
     if (nextSplitDim == leafSpace.rows()) { nextSplitDim = 0;}
   }
@@ -86,8 +103,7 @@ MRE::MRE(const Eigen::MatrixXd &state_space_,
     is_terminal(is_terminal_),
     solver(Eigen::MatrixXd(0,0),0,0),
     state_space(state_space_),
-    action_space(action_space_),
-    active_trajectory(false)
+    action_space(action_space_)
 {
   int s_dim = state_space.rows();
   int a_dim = action_space.rows();
@@ -99,38 +115,22 @@ MRE::MRE(const Eigen::MatrixXd &state_space_,
   random_engine = regression_forests::get_random_engine();
 }
 
-void MRE::feed(const Eigen::VectorXd& state,
-               const Eigen::VectorXd& action,
-               double reward)
+void MRE::feed(const Sample &s)
 {
   int s_dim = state_space.rows();
   int a_dim = action_space.rows();
-  // If previous sample is meaningful, add it with its successor state
-  if (active_trajectory)
+  // Add the new 4 tuple
+  samples.push_back(s);
+  // Adding last_point to knownness tree
+  Eigen::VectorXd knownness_point(s_dim + a_dim);
+  knownness_point.segment(    0, s_dim) = s.state;
+  knownness_point.segment(s_dim, a_dim) = s.action;
+  solver.push(knownness_point);
+  // Update policy if required
+  if (samples.size() % plan_period == 0)
   {
-    // Add the new 4 tuple
-    Sample sample(last_state, last_action, state, reward);
-    samples.push_back(sample);
-    // Adding last_point to knownness tree
-    Eigen::VectorXd knownness_point(s_dim + a_dim);
-    knownness_point.segment(    0, s_dim) = last_state;
-    knownness_point.segment(s_dim, a_dim) = last_action;
-    solver.push(knownness_point);
-    // Update policy if required
-    if (samples.size() % plan_period == 0)
-    {
-      updatePolicy();
-    }
+    updatePolicy();
   }
-  // Update informations for next feed
-  active_trajectory = true;
-  last_state = state;
-  last_action = action;
-}
-
-void MRE::endTrajectory()
-{
-  active_trajectory = false;
 }
 
 Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
@@ -140,6 +140,10 @@ Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
     for (size_t i = 0; i < policies.size(); i++)
     {
       action(i) = policies[i]->getValue(state);
+      double min = action_space(i,0);
+      double max = action_space(i,1);
+      if (action(i) < min) action(i) = min;
+      if (action(i) > max) action(i) = max;
     }
     return action;
   }

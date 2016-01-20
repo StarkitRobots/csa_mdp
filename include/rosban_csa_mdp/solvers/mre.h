@@ -79,12 +79,6 @@ private:
   Eigen::MatrixXd state_space;
   Eigen::MatrixXd action_space;
 
-  // Status of current trajectory
-  bool active_trajectory;
-  Eigen::VectorXd last_state;
-  Eigen::VectorXd last_action;
-  double last_reward;
-
   std::default_random_engine random_engine;
 
   // Quick approach for implementation, yet not generic, force the use of FPF
@@ -100,16 +94,8 @@ public:
       const FPF::Config &fpf_conf,
       std::function<bool(const Eigen::VectorXd &)> is_terminal);
 
-  /// Feed the learning process with a new tuple (s,a,r), if a trajectory is
-  /// in progress, add the sample (old_state, old_action, new_state, new_reward) to the
-  /// list of samples, otherwise start a new trajectory with the provided input
-  void feed(const Eigen::VectorXd& state,
-            const Eigen::VectorXd& action,
-            double reward);
-
-  /// Signal to the MRE process to end the current trajectory
-  /// i.e. the last seen state and action have no successors
-  void endTrajectory();
+  /// Feed the learning process with a new sample, update policy if required
+  void feed(const Sample &s);
 
   /// Return the best action according to current policy
   /// if there is no policy available yet, return a random action
