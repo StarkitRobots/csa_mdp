@@ -78,7 +78,7 @@ std::vector<Sample> Problem::getRandomTrajectory(const Eigen::VectorXd & initial
 {
   std::vector<Sample> result;
   Eigen::VectorXd state = initial_state;
-  while(result.size() < max_length)
+  while(result.size() < (size_t)max_length)
   {
     Sample new_sample = getRandomSample(state);
     result.push_back(new_sample);
@@ -119,7 +119,7 @@ std::vector<Sample> Problem::simulateTrajectory(const Eigen::VectorXd &initial_s
 {
   std::vector<Sample> result;
   Eigen::VectorXd state = initial_state;
-  while(result.size() < max_length)
+  while(result.size() < (size_t)max_length)
   {
     Sample new_sample = getSample(state, p(state));
     result.push_back(new_sample);

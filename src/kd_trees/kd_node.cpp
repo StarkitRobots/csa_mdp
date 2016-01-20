@@ -19,9 +19,9 @@ KdNode * KdNode::getLeaf(const Eigen::VectorXd& point)
     return this;
   }
   if (point(splitDim) > splitValue) {
-    return uChild;
+    return uChild->getLeaf(point);
   }
-  return lChild;
+  return lChild->getLeaf(point);
 }
 
 const KdNode * KdNode::getLeaf(const Eigen::VectorXd& point) const

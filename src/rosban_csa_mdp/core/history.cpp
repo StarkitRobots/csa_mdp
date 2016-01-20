@@ -91,7 +91,7 @@ History History::readCSV(const std::string &path,
   // Factorizing code
   History h = History::readCSV(path, state_cols, action_cols, -1, header);
   // Computing rewards
-  for (int i = 1; i < h.states.size(); i++)
+  for (size_t i = 1; i < h.states.size(); i++)
   {
     h.rewards[i] = compute_reward(h.states[i-1], h.actions[i-1], h.states[i]);
   }

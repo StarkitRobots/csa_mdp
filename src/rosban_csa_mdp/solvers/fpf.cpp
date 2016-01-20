@@ -27,12 +27,12 @@ FPF::Config::Config()
 std::vector<std::string> FPF::Config::names() const
 {
   std::vector<std::string> result = {"x_dim", "u_dim"};
-  for (int i = 0; i < x_dim; i++)
+  for (size_t i = 0; i < x_dim; i++)
   {
     result.push_back("x_" + std::to_string(i) + "_min");
     result.push_back("x_" + std::to_string(i) + "_max");
   }
-  for (int i = 0; i < u_dim; i++)
+  for (size_t i = 0; i < u_dim; i++)
   {
     result.push_back("u_" + std::to_string(i) + "_min");
     result.push_back("u_" + std::to_string(i) + "_max");
@@ -45,7 +45,6 @@ std::vector<std::string> FPF::Config::names() const
   result.push_back("policy_time"     );
 
   // Add q_value_conf with prefix
-  int offset = result.size();
   std::vector<std::string> q_value_names = q_value_conf.names();
   for (const std::string &name : q_value_names)
     result.push_back("q_value_" + name);
@@ -59,12 +58,12 @@ std::vector<std::string> FPF::Config::values() const
 {
   std::vector<std::string> result = {std::to_string(x_dim), std::to_string(u_dim)};
   // Use custom to_string for double here
-  for (int i = 0; i < x_dim; i++)
+  for (size_t i = 0; i < x_dim; i++)
   {
     result.push_back(std::to_string(x_limits(i,0)));
     result.push_back(std::to_string(x_limits(i,1)));
   }
-  for (int i = 0; i < u_dim; i++)
+  for (size_t i = 0; i < u_dim; i++)
   {
     result.push_back(std::to_string(u_limits(i,0)));
     result.push_back(std::to_string(u_limits(i,1)));
@@ -108,12 +107,12 @@ void FPF::Config::load(const std::vector<std::string>& col_names,
   }
   // Read limits
   int col_idx = 2;
-  for (int i = 0; i < x_dim; i++)
+  for (size_t i = 0; i < x_dim; i++)
   {
     x_limits(i,0) = std::stoi(col_values[col_idx++]);
     x_limits(i,1) = std::stoi(col_values[col_idx++]);
   }
-  for (int i = 0; i < u_dim; i++)
+  for (size_t i = 0; i < u_dim; i++)
   {
     u_limits(i,0) = std::stoi(col_values[col_idx++]);
     u_limits(i,1) = std::stoi(col_values[col_idx++]);

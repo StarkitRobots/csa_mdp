@@ -59,8 +59,8 @@ public:
 
   private:
     // Ideally properties should be owned by MRE, but the whole concept needs to be rethought
-    double r_max;
     KnownnessTree knownness_tree;
+    double r_max;
     
   };
 
@@ -97,6 +97,7 @@ public:
       int max_points,
       double reward_max,
       int plan_period,
+      const FPF::Config &fpf_conf,
       std::function<bool(const Eigen::VectorXd &)> is_terminal);
 
   /// Feed the learning process with a new tuple (s,a,r), if a trajectory is
@@ -114,6 +115,7 @@ public:
   /// if there is no policy available yet, return a random action
   Eigen::VectorXd getAction(const Eigen::VectorXd &state);
 
+  /// Called automatically on feed each plan_period samples
   void updatePolicy();
 };
 

@@ -61,7 +61,7 @@ TrainingSet MRE::CustomFPF::getTrainingSet(const std::vector<Sample>& samples,
 {
   TrainingSet original_ts = FPF::getTrainingSet(samples, is_terminal);
   TrainingSet new_ts(original_ts.getInputDim());
-  for (int i = 0; i < original_ts.size(); i++)
+  for (size_t i = 0; i < original_ts.size(); i++)
   {
     // Extracting information from original sample
     const regression_forests::Sample & original_sample = original_ts(i);
@@ -70,7 +70,9 @@ TrainingSet MRE::CustomFPF::getTrainingSet(const std::vector<Sample>& samples,
     // Getting knownness of the input
     double knownness = knownness_tree.getValue(input);
     double new_reward = reward * knownness + r_max * (1 - knownness);
+    new_ts.push(regression_forests::Sample(input, new_reward));
   }
+  return new_ts;
 }
 
 MRE::MRE(const Eigen::MatrixXd &state_space_,
@@ -78,12 +80,13 @@ MRE::MRE(const Eigen::MatrixXd &state_space_,
          int max_points,
          double reward_max,
          int plan_period_,
+         const FPF::Config &fpf_conf,
          std::function<bool(const Eigen::VectorXd &)> is_terminal_)
   : plan_period(plan_period_),
     is_terminal(is_terminal_),
+    solver(Eigen::MatrixXd(0,0),0,0),
     state_space(state_space_),
     action_space(action_space_),
-    solver(Eigen::MatrixXd(0,0),0,0),
     active_trajectory(false)
 {
   int s_dim = state_space.rows();
@@ -92,6 +95,7 @@ MRE::MRE(const Eigen::MatrixXd &state_space_,
   q_space.block(    0, 0, s_dim, 2) = state_space;
   q_space.block(s_dim, 0, a_dim, 2) = action_space;
   solver = CustomFPF(q_space, max_points, reward_max);
+  solver.conf = fpf_conf;
   random_engine = regression_forests::get_random_engine();
 }
 
