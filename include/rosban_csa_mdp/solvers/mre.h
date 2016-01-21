@@ -8,6 +8,7 @@
 #include "kd_trees/kd_tree.h"
 
 #include <functional>
+#include <random>
 
 /**
  * From Nouri2008: Multi-resolution Exploration in continuous spaces
@@ -29,9 +30,25 @@ public:
     int nextSplitDim;
     /// Quick access to the total number of points
     int nbPoints;
+    /// Random generator for the Random Type
+    std::default_random_engine random_engine;
 
   public:
-    KnownnessTree(const Eigen::MatrixXd& space, int maxPoints);
+
+    enum Type
+    {
+      // Follows MRE description
+      Original,
+      // Splitting on median of the biggest dimension (using rescaling)
+      Test,
+      // Split on a random dimension at a random position (between min and max found)
+      // Value is based on dimension product
+      Random
+    };
+    /// Which version of knownness tree is activated?
+    Type type;
+
+    KnownnessTree(const Eigen::MatrixXd& space, int maxPoints, Type type);
 
     void push(const Eigen::VectorXd& point);
 
@@ -52,10 +69,16 @@ public:
   public:
     CustomFPF(const Eigen::MatrixXd &q_space,
               int max_points,
-              double reward_max);
+              double reward_max,
+              int nb_trees,
+              KnownnessTree::Type type);
 
     /// push a vector (s,a)
     void push(const Eigen::VectorXd &q_point);
+
+    double getKnownness(const Eigen::VectorXd& point) const;
+
+    std::unique_ptr<regression_forests::Forest> getKnownnessForest();
 
   protected:
     virtual regression_forests::TrainingSet
@@ -64,7 +87,7 @@ public:
 
   public:
     // Ideally properties should be owned by MRE, but the whole concept needs to be rethought
-    KnownnessTree knownness_tree;
+    std::vector<KnownnessTree> knownness_forest;
     double r_max;
     
   };
@@ -97,6 +120,8 @@ public:
       int max_points,
       double reward_max,
       int plan_period,
+      int nb_trees,
+      KnownnessTree::Type knownness_tree_type,
       const FPF::Config &fpf_conf,
       std::function<bool(const Eigen::VectorXd &)> is_terminal);
 

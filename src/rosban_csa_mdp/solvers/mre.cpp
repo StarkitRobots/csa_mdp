@@ -2,6 +2,7 @@
 
 #include "rosban_regression_forests/approximations/pwc_approximation.h"
 #include "rosban_regression_forests/tools/random.h"
+#include "rosban_regression_forests/tools/statistics.h"
 
 #include <iostream>
 
@@ -10,9 +11,10 @@ using regression_forests::TrainingSet;
 namespace csa_mdp
 {
 
-MRE::KnownnessTree::KnownnessTree(const Eigen::MatrixXd& space, int maxPoints)
-  : tree(space), v(maxPoints), nextSplitDim(0), nbPoints(0)
+MRE::KnownnessTree::KnownnessTree(const Eigen::MatrixXd& space, int maxPoints, Type type_)
+  : tree(space), v(maxPoints), nextSplitDim(0), nbPoints(0), type(type_)
 {
+  random_engine = regression_forests::get_random_engine();
 }
 
 void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
@@ -22,23 +24,64 @@ void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
   leafNode->push(point);
   int leafCount = leafNode->getPoints().size();
   if (leafCount > v) {
-    int split_dim = nextSplitDim;
-    //// Hack, splitting on the biggest dimension
-    //double max_size = 0;
-    //split_dim = -1;
-    //for (int dim = 0; dim < leafSpace.rows(); dim++)
-    //{
-    //  double dim_size = leafSpace(dim,1) - leafSpace(dim,0);
-    //  if (dim_size > max_size)
-    //  {
-    //    max_size = dim_size;
-    //    split_dim = dim;
-    //  }
-    //}
-    //// End of hack
-    double split_val = (leafSpace(split_dim, 0) + leafSpace(split_dim,1)) / 2;
+    int split_dim;
+    double split_val;
+    switch(type)
+    {
+      case Original:
+        split_dim = nextSplitDim;
+        split_val = (leafSpace(split_dim, 0) + leafSpace(split_dim,1)) / 2;
+        break;
+      case Test:
+      {
+        const Eigen::MatrixXd &space = tree.getSpace();
+        double highest_ratio = 0;
+        split_dim = -1;
+        for (int dim = 0; dim < leafSpace.rows(); dim++)
+        {
+          double leaf_size = leafSpace(dim,1) - leafSpace(dim,0);
+          double space_size = space(dim,1) - space(dim,0);
+          double ratio = leaf_size / space_size;
+          if (ratio > highest_ratio)
+          {
+            highest_ratio = ratio;
+            split_dim = dim;
+          }
+        }
+        std::vector<double> dim_values;
+        for (const Eigen::VectorXd & p : leafNode->getPoints())
+        {
+          dim_values.push_back(p(split_dim));
+        }
+        split_val = regression_forests::Statistics::median(dim_values);
+        break;
+      }
+      case Random:
+      {
+        std::uniform_int_distribution<int> dim_distrib(0, leafSpace.rows() - 1);
+        split_dim = dim_distrib(random_engine);
+        double s_val_max = std::numeric_limits<double>::lowest();
+        double s_val_min = std::numeric_limits<double>::max();
+        for (const auto & p : leafNode->getPoints())
+        {
+          double val = p(split_dim);
+          if (val < s_val_min) s_val_min = val;
+          if (val > s_val_max) s_val_max = val; 
+        }
+        if (s_val_min == s_val_max)
+        {
+          throw std::runtime_error("All values are the same, cannot operate a random split");
+        }
+        std::uniform_real_distribution<double> val_distrib(s_val_min, s_val_max);
+        split_val = val_distrib(random_engine);
+        // This can really happen
+        if (split_val == s_val_max)
+        {
+          throw std::runtime_error("s_val_max == split_val, forbidden situation");
+        }
+      }
+    }
     leafNode->split(split_dim, split_val);
-    //std::cerr << "Splitting at: (" << split_dim << "," << split_val << ")" << std::endl;
     nextSplitDim++;
     if (nextSplitDim == leafSpace.rows()) { nextSplitDim = 0;}
   }
@@ -48,7 +91,7 @@ void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
 double MRE::KnownnessTree::getMu() const
 {
   int k = tree.dim();
-  return 1.0  / floor(std::pow(nbPoints * k / v ,1.0 / k));
+  return 1.0  / floor(std::pow(nbPoints * k / v ,1.0 / k)) * 5;//Dirty hack
 }
 
 double MRE::KnownnessTree::getValue(const Eigen::VectorXd& point) const
@@ -60,11 +103,41 @@ double MRE::KnownnessTree::getValue(const Eigen::VectorXd& point) const
 }
 
 double MRE::KnownnessTree::getValue(const Eigen::MatrixXd& space,
-                                    int nb_points) const
+                                    int local_points) const
 {
-  Eigen::VectorXd space_sizes = space.block(0, 1, space.rows(), 1) - space.block(0, 0, space.rows(), 1);
-  double size = space_sizes.maxCoeff();
-  return std::min(1.0, (double)nb_points / v * getMu() / size);
+  double max_size = 0;
+  const Eigen::MatrixXd & tree_space = tree.getSpace();
+  switch(type)
+  {
+    case Original:
+    case Test:
+      for (int dim = 0; dim < space.rows(); dim++)
+      {
+        double local_size = space(dim,1) - space(dim,0);
+        double tree_size = tree_space(dim,1) - tree_space(dim,0);
+        // Since forall s, norm_inf(s) <= 1, then the length of a dimension is maximum 2
+        double size = 2 * local_size / tree_size;
+        if (size > max_size)
+        {
+          max_size = size;
+        }
+      }
+      return std::min(1.0, (double)local_points / v * getMu() / max_size);
+    case Random:
+    {
+      double local_size = 1.0;
+      double global_size = 1.0;
+      for (int dim = 0; dim < space.rows(); dim++)
+      {
+        local_size  *= space(dim,1) - space(dim,0);
+        global_size *= tree_space(dim,1) - tree_space(dim,0);
+      }
+      double local_density = local_points / local_size;
+      double global_density = nbPoints / global_size;
+      return std::min(1.0, local_density / global_density);
+    }
+  }
+  throw std::runtime_error("Unhandled type for knownness tree");
 }
 
 regression_forests::Node * MRE::KnownnessTree::convertToRegNode(const kd_trees::KdNode *node,
@@ -108,15 +181,43 @@ std::unique_ptr<regression_forests::Tree> MRE::KnownnessTree::convertToRegTree()
 
 MRE::CustomFPF::CustomFPF(const Eigen::MatrixXd &q_space,
                           int max_points,
-                          double reward_max)
-  : knownness_tree(q_space, max_points),
-    r_max(reward_max)
+                          double reward_max,
+                          int nb_trees,
+                          KnownnessTree::Type type)
+  : r_max(reward_max)
 {
+  for (int i = 0; i < nb_trees; i++)
+  {
+    knownness_forest.push_back(MRE::KnownnessTree(q_space, max_points, type));
+  }
 }
 
 void MRE::CustomFPF::push(const Eigen::VectorXd &q_point)
 {
-  knownness_tree.push(q_point);
+  for (MRE::KnownnessTree &tree : knownness_forest)
+  {
+    tree.push(q_point);
+  }
+}
+
+double MRE::CustomFPF::getKnownness(const Eigen::VectorXd& point) const
+{
+  double sum = 0;
+  for (const MRE::KnownnessTree &tree : knownness_forest)
+  {
+    sum += tree.getValue(point);
+  }
+  return sum / knownness_forest.size();
+}
+
+std::unique_ptr<regression_forests::Forest> MRE::CustomFPF::getKnownnessForest()
+{
+  std::unique_ptr<regression_forests::Forest> forest(new regression_forests::Forest);
+  for (const MRE::KnownnessTree &tree : knownness_forest)
+  {
+    forest->push(tree.convertToRegTree());
+  }
+  return forest;
 }
 
 TrainingSet MRE::CustomFPF::getTrainingSet(const std::vector<Sample>& samples,
@@ -131,7 +232,7 @@ TrainingSet MRE::CustomFPF::getTrainingSet(const std::vector<Sample>& samples,
     Eigen::VectorXd input = original_sample.getInput();
     double reward         = original_sample.getOutput();
     // Getting knownness of the input
-    double knownness = knownness_tree.getValue(input);
+    double knownness = getKnownness(input);
     double new_reward = reward * knownness + r_max * (1 - knownness);
     new_ts.push(regression_forests::Sample(input, new_reward));
   }
@@ -143,11 +244,13 @@ MRE::MRE(const Eigen::MatrixXd &state_space_,
          int max_points,
          double reward_max,
          int plan_period_,
+         int nb_trees,
+         KnownnessTree::Type knownness_tree_type,
          const FPF::Config &fpf_conf,
          std::function<bool(const Eigen::VectorXd &)> is_terminal_)
   : plan_period(plan_period_),
     is_terminal(is_terminal_),
-    solver(Eigen::MatrixXd(0,0),0,0),
+    solver(Eigen::MatrixXd(0,0),0,0, 0, knownness_tree_type),
     state_space(state_space_),
     action_space(action_space_)
 {
@@ -156,7 +259,7 @@ MRE::MRE(const Eigen::MatrixXd &state_space_,
   Eigen::MatrixXd q_space(s_dim + a_dim, 2);
   q_space.block(    0, 0, s_dim, 2) = state_space;
   q_space.block(s_dim, 0, a_dim, 2) = action_space;
-  solver = CustomFPF(q_space, max_points, reward_max);
+  solver = CustomFPF(q_space, max_points, reward_max, nb_trees, knownness_tree_type);
   solver.conf = fpf_conf;
   random_engine = regression_forests::get_random_engine();
 }
@@ -227,8 +330,8 @@ void MRE::saveValue(const std::string &prefix)
 
 void MRE::saveKnownnessTree(const std::string &prefix)
 {
-  std::unique_ptr<regression_forests::Forest> forest(new regression_forests::Forest);
-  forest->push(solver.knownness_tree.convertToRegTree());
+  std::unique_ptr<regression_forests::Forest> forest;
+  forest = solver.getKnownnessForest();
   forest->save(prefix + "knownness.data");
 }
 
