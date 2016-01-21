@@ -37,7 +37,12 @@ public:
 
     double getMu() const;
 
-    double getValue(const Eigen::MatrixXd& point) const;
+    double getValue(const Eigen::VectorXd& point) const;
+    double getValue(const Eigen::MatrixXd& space, int nb_points) const;
+
+    regression_forests::Node * convertToRegNode(const kd_trees::KdNode *node,
+                                                Eigen::MatrixXd &space) const;
+    std::unique_ptr<regression_forests::Tree> convertToRegTree() const;
  
   };
 
@@ -57,7 +62,7 @@ public:
     getTrainingSet(const std::vector<Sample>& samples,
                    std::function<bool(const Eigen::VectorXd&)> is_terminal) override;
 
-  private:
+  public:
     // Ideally properties should be owned by MRE, but the whole concept needs to be rethought
     KnownnessTree knownness_tree;
     double r_max;
@@ -66,6 +71,7 @@ public:
 
 private:
   // Configuration
+  /// If plan_period is less than 0, then caller has to call updatePolicy explicitely
   int plan_period;
   std::function<bool(const Eigen::VectorXd &state)> is_terminal;
 
@@ -103,6 +109,13 @@ public:
 
   /// Called automatically on feed each plan_period samples
   void updatePolicy();
+
+  const regression_forests::Forest & getPolicy(int dim);
+
+  void savePolicies(const std::string &prefix);
+  void saveValue(const std::string &prefix);
+  void saveKnownnessTree(const std::string &prefix);
+  void saveStatus(const std::string &prefix);
 };
 
 }

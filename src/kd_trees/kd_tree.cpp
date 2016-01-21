@@ -8,6 +8,11 @@ KdTree::KdTree(const Eigen::MatrixXd & tree_space)
 {
 }
 
+const KdNode * KdTree::getRoot() const
+{
+  return &root;
+}
+
 int KdTree::dim() const
 {
   return space.rows();
@@ -26,6 +31,11 @@ const KdNode * KdTree::getLeaf(const Eigen::VectorXd& point) const
 void KdTree::push(const Eigen::VectorXd& point)
 {
   getLeaf(point)->push(point);
+}
+
+const Eigen::MatrixXd & KdTree::getSpace() const
+{
+  return space;
 }
 
 Eigen::MatrixXd KdTree::getSpace(const Eigen::VectorXd& point) const

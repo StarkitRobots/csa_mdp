@@ -23,6 +23,11 @@ public:
   // Get the leaf corresponding to the given point
   KdNode * getLeaf(const Eigen::VectorXd &point);
   const KdNode * getLeaf(const Eigen::VectorXd &point) const;
+
+  const KdNode * getLowerChild() const;
+  const KdNode * getUpperChild() const;
+  int getSplitDim() const;
+  double getSplitVal() const;
   
 
   // Add the point to the current tree

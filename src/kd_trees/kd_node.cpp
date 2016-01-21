@@ -35,6 +35,26 @@ const KdNode * KdNode::getLeaf(const Eigen::VectorXd& point) const
   return lChild;
 }
 
+const KdNode * KdNode::getLowerChild() const
+{
+  return lChild;
+}
+
+const KdNode * KdNode::getUpperChild() const
+{
+  return uChild;
+}
+
+int KdNode::getSplitDim() const
+{
+  return splitDim;
+}
+
+double KdNode::getSplitVal() const
+{
+  return splitValue;
+}
+
 void KdNode::push(const Eigen::VectorXd& point)
 {
   points.push_back(point);

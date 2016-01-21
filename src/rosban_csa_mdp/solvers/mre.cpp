@@ -1,5 +1,6 @@
 #include "rosban_csa_mdp/solvers/mre.h"
 
+#include "rosban_regression_forests/approximations/pwc_approximation.h"
 #include "rosban_regression_forests/tools/random.h"
 
 #include <iostream>
@@ -50,14 +51,59 @@ double MRE::KnownnessTree::getMu() const
   return 1.0  / floor(std::pow(nbPoints * k / v ,1.0 / k));
 }
 
-double MRE::KnownnessTree::getValue(const Eigen::MatrixXd& point) const
+double MRE::KnownnessTree::getValue(const Eigen::VectorXd& point) const
 {
   const kd_trees::KdNode * leaf = tree.getLeaf(point);
-  int leafCount = leaf->getPoints().size();
-  Eigen::MatrixXd leafSpace = tree.getSpace(point);
-  Eigen::VectorXd space_sizes = leafSpace.block(0, 1, leafSpace.rows(), 1) - leafSpace.block(0, 0, leafSpace.rows(), 1);
-  double leafSize = space_sizes.maxCoeff();
-  return std::min(1.0, leafCount / v * getMu() / leafSize);
+  int leaf_count = leaf->getPoints().size();
+  Eigen::MatrixXd leaf_space = tree.getSpace(point);
+  return getValue(leaf_space, leaf_count);
+}
+
+double MRE::KnownnessTree::getValue(const Eigen::MatrixXd& space,
+                                    int nb_points) const
+{
+  Eigen::VectorXd space_sizes = space.block(0, 1, space.rows(), 1) - space.block(0, 0, space.rows(), 1);
+  double size = space_sizes.maxCoeff();
+  return std::min(1.0, (double)nb_points / v * getMu() / size);
+}
+
+regression_forests::Node * MRE::KnownnessTree::convertToRegNode(const kd_trees::KdNode *node,
+                                                                Eigen::MatrixXd &space) const
+{
+  if (node == NULL) return NULL;
+  regression_forests::Node * new_node = new regression_forests::Node();
+  // Leaf case
+  if (node->isLeaf())
+  {
+    int nb_points = node->getPoints().size();
+    new_node->a = new regression_forests::PWCApproximation(getValue(space, nb_points));
+    return new_node;
+  }
+  // Node case
+  double split_dim = node->getSplitDim();
+  double split_val = node->getSplitVal();
+  double old_min = space(split_dim, 0);
+  double old_max = space(split_dim, 1);
+  // Update split
+  new_node->s.dim = node->getSplitDim();
+  new_node->s.val = node->getSplitVal();
+  // Update lower child
+  space(split_dim, 1) = split_val;
+  new_node->lowerChild = convertToRegNode(node->getLowerChild(), space);
+  space(split_dim, 1) = old_max;
+  // Update upper child
+  space(split_dim, 0) = split_val;
+  new_node->upperChild = convertToRegNode(node->getUpperChild(), space);
+  space(split_dim, 0) = old_min;
+  return new_node;
+}
+
+std::unique_ptr<regression_forests::Tree> MRE::KnownnessTree::convertToRegTree() const
+{
+  std::unique_ptr<regression_forests::Tree> reg_tree(new regression_forests::Tree);
+  Eigen::MatrixXd space = tree.getSpace();
+  reg_tree->root = convertToRegNode(tree.getRoot(), space);
+  return reg_tree;
 }
 
 MRE::CustomFPF::CustomFPF(const Eigen::MatrixXd &q_space,
@@ -127,7 +173,7 @@ void MRE::feed(const Sample &s)
   knownness_point.segment(s_dim, a_dim) = s.action;
   solver.push(knownness_point);
   // Update policy if required
-  if (samples.size() % plan_period == 0)
+  if (plan_period > 0 && samples.size() % plan_period == 0)
   {
     updatePolicy();
   }
@@ -159,6 +205,38 @@ void MRE::updatePolicy()
     //TODO software design should really be improved
     policies.push_back(solver.stealPolicyForest(dim));
   }
+}
+
+const regression_forests::Forest & MRE::getPolicy(int dim)
+{
+  return *(policies[dim]);
+}
+
+void MRE::savePolicies(const std::string &prefix)
+{
+  for (int dim = 0; dim < action_space.rows(); dim++)
+  {
+    policies[dim]->save(prefix + "policy_d" + std::to_string(dim) + ".data");
+  }
+}
+
+void MRE::saveValue(const std::string &prefix)
+{
+  solver.getValueForest().save(prefix + "q_value.data");
+}
+
+void MRE::saveKnownnessTree(const std::string &prefix)
+{
+  std::unique_ptr<regression_forests::Forest> forest(new regression_forests::Forest);
+  forest->push(solver.knownness_tree.convertToRegTree());
+  forest->save(prefix + "knownness.data");
+}
+
+void MRE::saveStatus(const std::string &prefix)
+{
+  savePolicies(prefix);
+  saveValue(prefix);
+  saveKnownnessTree(prefix);
 }
 
 }
