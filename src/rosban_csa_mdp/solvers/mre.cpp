@@ -19,6 +19,16 @@ MRE::KnownnessTree::KnownnessTree(const Eigen::MatrixXd& space, int maxPoints, T
 
 void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
 {
+  // Checking if the point is in the tree space
+  const Eigen::MatrixXd &tree_space = tree.getSpace(point);
+  for (int dim = 0; dim < point.rows(); dim++)
+  {
+    if (point(dim) < tree_space(dim,0) || point(dim) > tree_space(dim,1))
+    {
+      throw std::runtime_error("Point is outside of space!");
+    }
+  }
+  // Pushing point
   kd_trees::KdNode * leafNode = tree.getLeaf(point);
   Eigen::MatrixXd leafSpace = tree.getSpace(point);
   leafNode->push(point);
@@ -134,7 +144,8 @@ double MRE::KnownnessTree::getValue(const Eigen::MatrixXd& space,
       }
       double local_density = local_points / local_size;
       double global_density = nbPoints / global_size;
-      return std::min(1.0, local_density / global_density);
+      double value = std::min(1.0, local_density / global_density);
+      return value;
     }
   }
   throw std::runtime_error("Unhandled type for knownness tree");
@@ -149,7 +160,8 @@ regression_forests::Node * MRE::KnownnessTree::convertToRegNode(const kd_trees::
   if (node->isLeaf())
   {
     int nb_points = node->getPoints().size();
-    new_node->a = new regression_forests::PWCApproximation(getValue(space, nb_points));
+    double value = getValue(space, nb_points);
+    new_node->a = new regression_forests::PWCApproximation(value);
     return new_node;
   }
   // Node case
@@ -196,7 +208,18 @@ void MRE::CustomFPF::push(const Eigen::VectorXd &q_point)
 {
   for (MRE::KnownnessTree &tree : knownness_forest)
   {
-    tree.push(q_point);
+    // Adding a point can throw a std::runtime_error in two cases:
+    // 1. The point is outside of the tree space (in this case it will be refused by all trees)
+    // 2. The random split fails because all points have the same coordinate along the chosen dimension
+    // In both case, we choose to 'forget' about this case
+    try
+    {
+      tree.push(q_point);
+    }
+    catch (const std::runtime_error & exc)
+    {
+      std::cerr << exc.what() << std::endl;
+    }
   }
 }
 
