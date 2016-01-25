@@ -6,6 +6,7 @@ project(rosban_csa_mdp)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   rosban_regression_forests
+  rosban_utils
 )
 
 find_package(PkgConfig)

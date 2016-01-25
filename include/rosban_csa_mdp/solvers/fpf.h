@@ -37,9 +37,9 @@ public:
     size_t max_action_tiles;
     /// The number of samples generated to learn the policy
     size_t policy_samples;
-    /// The time spent learning the q_value
+    /// The time spent learning the q_value [s]
     double q_value_time;
-    /// The time spent learning the policy from the q_value
+    /// The time spent learning the policy from the q_value [s]
     double policy_time;
     regression_forests::ExtraTrees::Config q_value_conf;
     regression_forests::ExtraTrees::Config policy_conf;

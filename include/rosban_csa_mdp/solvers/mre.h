@@ -146,6 +146,9 @@ public:
   void saveValue(const std::string &prefix);
   void saveKnownnessTree(const std::string &prefix);
   void saveStatus(const std::string &prefix);
+
+  double getQValueTime() const;
+  double getPolicyTime() const;
 };
 
 }

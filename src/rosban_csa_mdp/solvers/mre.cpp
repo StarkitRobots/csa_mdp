@@ -376,4 +376,15 @@ void MRE::saveStatus(const std::string &prefix)
   saveKnownnessTree(prefix);
 }
 
+
+double MRE::getQValueTime() const
+{
+  return solver.conf.q_value_time;
+}
+
+double MRE::getPolicyTime() const
+{
+  return solver.conf.policy_time;
+}
+
 }
