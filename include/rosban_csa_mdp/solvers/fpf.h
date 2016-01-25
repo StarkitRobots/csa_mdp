@@ -72,6 +72,13 @@ protected:
   getTrainingSet(const std::vector<Sample>& samples,
                  std::function<bool(const Eigen::VectorXd&)> is_terminal);
 
+  /// Create a set of states which will be used to build the the policy forest, in the default implementation,
+  /// states are chosen at uniformous random inside the state space
+  /// Note: this method is virtual, because other algorithms (such as MRE) might need to use a
+  ///       custom way of cre
+  virtual std::vector<Eigen::VectorXd>
+  getPolicyTrainingStates(const std::vector<Sample>& samples);
+
   /// Compute the bestAction at given state according to the current q_value
   Eigen::VectorXd bestAction(const Eigen::VectorXd& state);
 

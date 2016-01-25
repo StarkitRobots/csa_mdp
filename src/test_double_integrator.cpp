@@ -31,6 +31,7 @@ public:
                    const Eigen::VectorXd & action,
                    const Eigen::VectorXd & dst) override
     {
+      (void) state;
       if (isTerminal(dst)) {
         return -50;
       }

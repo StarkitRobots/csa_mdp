@@ -262,6 +262,17 @@ TrainingSet MRE::CustomFPF::getTrainingSet(const std::vector<Sample>& samples,
   return new_ts;
 }
 
+std::vector<Eigen::VectorXd> MRE::CustomFPF::getPolicyTrainingStates(const std::vector<Sample>& samples)
+{
+  std::vector<Eigen::VectorXd> result;
+  result.reserve(samples.size());
+  for (const Sample & s : samples)
+  {
+    result.push_back(s.state);
+  }
+  return result;
+}
+
 MRE::MRE(const Eigen::MatrixXd &state_space_,
          const Eigen::MatrixXd &action_space_,
          int max_points,

@@ -206,8 +206,7 @@ void FPF::solve(const std::vector<Sample>& samples,
     int x_dim = conf.getStateLimits().rows();
     int u_dim = conf.getActionLimits().rows();
     // First generate the starting states
-    std::vector<Eigen::VectorXd> states;
-    states = regression_forests::getUniformSamples(conf.getStateLimits(), conf.policy_samples);
+    std::vector<Eigen::VectorXd> states = getPolicyTrainingStates(samples);
     // Then get corresponding actions
     std::vector<Eigen::VectorXd> actions;
     for (const Eigen::VectorXd &state : states)
@@ -266,6 +265,12 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
     ls.push(regression_forests::Sample(input, reward));
   }
   return ls;
+}
+
+std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Sample>& samples)
+{
+  (void) samples;
+  return regression_forests::getUniformSamples(conf.getStateLimits(), conf.policy_samples);
 }
 
 }
