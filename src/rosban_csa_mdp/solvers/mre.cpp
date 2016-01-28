@@ -4,9 +4,11 @@
 #include "rosban_regression_forests/tools/random.h"
 #include "rosban_regression_forests/tools/statistics.h"
 
+#include <set>
 #include <iostream>
 
 using regression_forests::TrainingSet;
+using namespace regression_forests::Statistics;
 
 namespace csa_mdp
 {
@@ -20,7 +22,7 @@ MRE::KnownnessTree::KnownnessTree(const Eigen::MatrixXd& space, int maxPoints, T
 void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
 {
   // Checking if the point is in the tree space
-  const Eigen::MatrixXd &tree_space = tree.getSpace(point);
+  const Eigen::MatrixXd &tree_space = tree.getSpace();
   for (int dim = 0; dim < point.rows(); dim++)
   {
     if (point(dim) < tree_space(dim,0) || point(dim) > tree_space(dim,1))
@@ -30,26 +32,26 @@ void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
   }
   // Pushing point
   kd_trees::KdNode * leafNode = tree.getLeaf(point);
-  Eigen::MatrixXd leafSpace = tree.getSpace(point);
+  Eigen::MatrixXd leaf_space = tree.getSpace(point);
   leafNode->push(point);
   int leafCount = leafNode->getPoints().size();
   if (leafCount > v) {
-    int split_dim;
-    double split_val;
+    int split_dim = -1;
+    double split_val = 0;
     switch(type)
     {
       case Original:
         split_dim = nextSplitDim;
-        split_val = (leafSpace(split_dim, 0) + leafSpace(split_dim,1)) / 2;
+        split_val = (leaf_space(split_dim, 0) + leaf_space(split_dim,1)) / 2;
         break;
       case Test:
       {
         const Eigen::MatrixXd &space = tree.getSpace();
         double highest_ratio = 0;
         split_dim = -1;
-        for (int dim = 0; dim < leafSpace.rows(); dim++)
+        for (int dim = 0; dim < leaf_space.rows(); dim++)
         {
-          double leaf_size = leafSpace(dim,1) - leafSpace(dim,0);
+          double leaf_size = leaf_space(dim,1) - leaf_space(dim,0);
           double space_size = space(dim,1) - space(dim,0);
           double ratio = leaf_size / space_size;
           if (ratio > highest_ratio)
@@ -68,32 +70,76 @@ void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
       }
       case Random:
       {
-        std::uniform_int_distribution<int> dim_distrib(0, leafSpace.rows() - 1);
-        split_dim = dim_distrib(random_engine);
-        double s_val_max = std::numeric_limits<double>::lowest();
-        double s_val_min = std::numeric_limits<double>::max();
-        for (const auto & p : leafNode->getPoints())
+        double best_dim_score = 0;
+        // For every dimension, try a random split, score it and keep it if necessary
+        for (int dim = 0; dim < tree_space.rows(); dim++)
         {
-          double val = p(split_dim);
-          if (val < s_val_min) s_val_min = val;
-          if (val > s_val_max) s_val_max = val; 
+          // choose a random split ensuring there is at least one point on each side
+          double s_val_max = std::numeric_limits<double>::lowest();
+          double s_val_min = std::numeric_limits<double>::max();
+          // Finding min and max points along this dimension
+          for (const auto & p : leafNode->getPoints())
+          {
+            double val = p(dim);
+            if (val < s_val_min) s_val_min = val;
+            if (val > s_val_max) s_val_max = val; 
+          }
+          // Choose another dimension if all the points along this dimension are similars
+          if (s_val_min == s_val_max) break;
+          // Generate random value
+          std::uniform_real_distribution<double> val_distrib(s_val_min, s_val_max);
+          double curr_split_val = val_distrib(random_engine);
+          // This can really happen (even if it not supposed to)
+          if (curr_split_val == s_val_max) break;
+          // Gathering points
+          std::vector<double> values, lower_values, upper_values;
+          for (const auto & p : leafNode->getPoints())
+          {
+            double val = p(dim);
+            values.push_back(val);
+            if (val <= curr_split_val)
+            {
+              lower_values.push_back(val);
+            }
+            else
+            {
+              upper_values.push_back(val);
+            }
+          }
+          // Size of points set
+          int global_size = values.size();
+          int lower_size = lower_values.size();
+          int upper_size = upper_values.size();
+          // variance score [0, 1], 1 is the best
+          double global_var = variance(values);
+          double lower_var = variance(lower_values);
+          double upper_var = variance(upper_values);
+          double var_score = (lower_var * lower_size + upper_var * upper_size) / (global_size * global_var);
+          var_score = std::max(0.0, 1 - var_score);// Normalization
+          // size score [0,1], 1 is the best
+          double dim_size = leaf_space(dim,1) - leaf_space(dim,0);
+          double lower_ratio = (curr_split_val    - leaf_space(dim,0)) / dim_size;
+          double upper_ratio = (leaf_space(dim,1) -    curr_split_val) / dim_size;
+          double size_score = 1 - (lower_size * lower_ratio + upper_size * upper_ratio) / (global_size);
+          // dim_score [0,1], 1 is the best
+          double dim_score = size_score / 2 + var_score / 2;
+          if (dim_score > best_dim_score)
+          {
+            split_dim = dim;
+            best_dim_score = dim_score;
+            split_val = curr_split_val;
+          }
         }
-        if (s_val_min == s_val_max)
+        if (split_dim < 0)
         {
-          throw std::runtime_error("All values are the same, cannot operate a random split");
-        }
-        std::uniform_real_distribution<double> val_distrib(s_val_min, s_val_max);
-        split_val = val_distrib(random_engine);
-        // This can really happen
-        if (split_val == s_val_max)
-        {
-          throw std::runtime_error("s_val_max == split_val, forbidden situation");
+          leafNode->pop_back();
+          throw std::runtime_error("No split candidate found");
         }
       }
     }
     leafNode->split(split_dim, split_val);
     nextSplitDim++;
-    if (nextSplitDim == leafSpace.rows()) { nextSplitDim = 0;}
+    if (nextSplitDim == leaf_space.rows()) { nextSplitDim = 0;}
   }
   nbPoints++;
 }
@@ -144,7 +190,9 @@ double MRE::KnownnessTree::getValue(const Eigen::MatrixXd& space,
       }
       double local_density = local_points / local_size;
       double global_density = nbPoints / global_size;
-      double value = std::min(1.0, local_density / global_density);
+      double density_ratio = local_density / global_density;
+      double raw_value = density_ratio;//std::pow(density_ratio, 1.0 / tree_space.rows());
+      double value = std::min(1.0, raw_value);
       return value;
     }
   }
@@ -246,7 +294,27 @@ std::unique_ptr<regression_forests::Forest> MRE::CustomFPF::getKnownnessForest()
 TrainingSet MRE::CustomFPF::getTrainingSet(const std::vector<Sample>& samples,
                                            std::function<bool(const Eigen::VectorXd&)> is_terminal)
 {
-  TrainingSet original_ts = FPF::getTrainingSet(samples, is_terminal);
+  // Removing samples which have the same starting state
+  std::vector<Sample> filtered_samples;
+  for (const Sample & new_sample : samples)
+  {
+    bool found_similar = false;
+    double tolerance = std::pow(10,-6);
+    for (const Sample & known_sample : filtered_samples)
+    {
+      Eigen::VectorXd diff = known_sample.state - new_sample.state;
+      double max_diff = diff.lpNorm<Eigen::Infinity>();
+      if (max_diff < tolerance)
+      {
+        found_similar = true;
+        break;
+      }
+    }
+    // Do not add similar samples
+    if (found_similar) continue;
+    filtered_samples.push_back(new_sample);
+  }
+  TrainingSet original_ts = FPF::getTrainingSet(filtered_samples, is_terminal);
   TrainingSet new_ts(original_ts.getInputDim());
   for (size_t i = 0; i < original_ts.size(); i++)
   {

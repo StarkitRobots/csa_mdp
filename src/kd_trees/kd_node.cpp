@@ -60,6 +60,11 @@ void KdNode::push(const Eigen::VectorXd& point)
   points.push_back(point);
 }
 
+void KdNode::pop_back()
+{
+  points.pop_back();
+}
+
 void KdNode::split(int dim, double value)
 {
   if (!isLeaf()) {

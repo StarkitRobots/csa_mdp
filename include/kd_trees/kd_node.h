@@ -33,6 +33,9 @@ public:
   // Add the point to the current tree
   void push(const Eigen::VectorXd &point);
 
+  // Remove the last point pushed into this node
+  void pop_back();
+
   // Split node and add separate points to his child
   void split(int splitDim, double splitValue);
 
