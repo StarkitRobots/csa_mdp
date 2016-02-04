@@ -16,7 +16,7 @@ namespace csa_mdp
 /// - The possibility to learn a fitted policy from the q-value
 class FPF {
 public:
-  class Config{
+  class Config : public rosban_utils::Serializable{
   private:
     // Storing x_dim and u_dim is required in order to load properly a configuration
 
@@ -55,6 +55,11 @@ public:
 
     void setStateLimits(const Eigen::MatrixXd &new_limits);
     void setActionLimits(const Eigen::MatrixXd &new_limits);
+
+    // XML stuff
+    virtual std::string class_name() const override;
+    virtual void to_xml(std::ostream &out) const override;
+    virtual void from_xml(TiXmlNode *node) override;
   };
 
 protected:

@@ -5,6 +5,7 @@ project(rosban_csa_mdp)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  roscpp
   rosban_regression_forests
   rosban_utils
 )
@@ -147,17 +148,15 @@ add_library(rosban_csa_mdp
   ${ALL_SOURCES}
   )
 
-# Declare a C++ executable
-add_executable(test_double_integrator src/test_double_integrator.cpp)
-
-# Specify libraries to link a library or executable target against
 target_link_libraries(rosban_csa_mdp
   ${catkin_LIBRARIES}
   )
-target_link_libraries(test_double_integrator
-  rosban_csa_mdp
-  ${catkin_LIBRARIES}
-  )
+
+add_executable(test_double_integrator src/test_double_integrator.cpp)
+target_link_libraries(test_double_integrator rosban_csa_mdp ${catkin_LIBRARIES})
+
+add_executable(generate_xml_config src/generate_xml_config.cpp)
+target_link_libraries(generate_xml_config rosban_csa_mdp ${catkin_LIBRARIES})
 
 #############
 ## Install ##

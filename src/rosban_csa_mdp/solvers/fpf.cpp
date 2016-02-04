@@ -13,6 +13,9 @@ using regression_forests::ApproximationType;
 using regression_forests::ExtraTrees;
 using regression_forests::TrainingSet;
 
+
+using namespace rosban_utils::xml_tools;//Read and writes
+
 namespace csa_mdp
 {
 
@@ -171,6 +174,51 @@ void FPF::Config::setActionLimits(const Eigen::MatrixXd &new_limits)
   u_dim = u_limits.rows();
 }
 
+std::string FPF::Config::class_name() const
+{
+  return "FPFConfig";
+}
+
+void FPF::Config::to_xml(std::ostream &out) const
+{
+  rosban_utils::xml_tools::write<int>("x_dim", x_dim, out);
+  rosban_utils::xml_tools::write<int>("u_dim", u_dim, out);
+  // Gathering limits in a vector
+  std::vector<double> x_limits_vec(x_limits.data(), x_limits.data() + x_limits.size());
+  std::vector<double> u_limits_vec(u_limits.data(), u_limits.data() + u_limits.size());
+  rosban_utils::xml_tools::write_vector<double>("x_limits", x_limits_vec, out);
+  rosban_utils::xml_tools::write_vector<double>("u_limits", u_limits_vec, out);
+  // Writing properties
+  rosban_utils::xml_tools::write<int>("horizon", horizon, out);
+  rosban_utils::xml_tools::write<double>("discount", discount, out);
+  rosban_utils::xml_tools::write<int>("policy_samples", policy_samples, out);
+  rosban_utils::xml_tools::write<int>("max_action_tiles", max_action_tiles, out);
+  rosban_utils::xml_tools::write<double>("q_value_time", q_value_time, out);
+  rosban_utils::xml_tools::write<double>("policy_time", policy_time, out);
+  q_value_conf.write("q_value_conf", out);
+  policy_conf.write("policy_conf", out);
+}
+
+void FPF::Config::from_xml(TiXmlNode *node)
+{
+  x_dim = rosban_utils::xml_tools::read<int>(node, "x_dim");
+  u_dim = rosban_utils::xml_tools::read<int>(node, "u_dim");
+  // Gathering limits in a vector
+  std::vector<double> x_limits_vec, u_limits_vec;
+  x_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "x_limits");
+  u_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "u_limits");
+  x_limits = Eigen::Map<Eigen::MatrixXd>(x_limits_vec.data(),x_dim, 2);
+  u_limits = Eigen::Map<Eigen::MatrixXd>(u_limits_vec.data(),u_dim, 2);
+  // Writing properties
+  horizon          = rosban_utils::xml_tools::read<int>   (node, "horizon");
+  discount         = rosban_utils::xml_tools::read<double>(node, "discount");
+  policy_samples   = rosban_utils::xml_tools::read<int>   (node, "policy_samples");
+  max_action_tiles = rosban_utils::xml_tools::read<int>   (node, "max_action_tiles");
+  q_value_time     = rosban_utils::xml_tools::read<double>(node, "q_value_time");
+  policy_time      = rosban_utils::xml_tools::read<double>(node, "policy_time");
+  q_value_conf.read(node, "q_value_conf");
+  policy_conf.read(node, "policy_conf");
+}
 
 FPF::FPF()
 {
@@ -183,6 +231,8 @@ const regression_forests::Forest& FPF::getValueForest()
 
 const regression_forests::Forest& FPF::getPolicyForest(int action_index)
 {
+  if (action_index > policies.size())
+    throw std::out_of_range("action_index greater than number of policies");
   return *(policies[action_index]);
 }
 
