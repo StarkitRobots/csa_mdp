@@ -30,6 +30,18 @@ std::vector<Sample> History::getBatch() const
   return samples;
 }
 
+std::vector<Sample> History::getBatch(const std::vector<History> &histories)
+{
+  std::vector<Sample> samples;
+  for (const History &h : histories)
+  {
+    std::vector<Sample> new_samples = h.getBatch();
+    samples.reserve(samples.size() + new_samples.size());
+    std::move(new_samples.begin(), new_samples.end(), std::inserter(samples, samples.end()));
+  }
+  return samples;
+}
+
 //TODO externalize to another module
 static std::vector<std::string> split(const std::string &s, char delim) {
   std::vector<std::string> elems;
@@ -41,17 +53,23 @@ static std::vector<std::string> split(const std::string &s, char delim) {
   return elems;
 }
 
-History History::readCSV(const std::string &path,
-                         const std::vector<size_t> &state_cols,
-                         const std::vector<size_t> &action_cols,
-                         int reward_col,
-                         bool header)
+std::vector<History> History::readCSV(const std::string &path,
+                                      int run_col,
+                                      int step_col,
+                                      const std::vector<int> &state_cols,
+                                      const std::vector<int> &action_cols,
+                                      int reward_col,
+                                      bool header)
 {
-  History h;
+  std::vector<History> histories;
   int x_dim = state_cols.size();
   int u_dim = action_cols.size();
   std::ifstream infile(path);
   std::string line;
+  // Temporary variables
+  History curr_history;
+  int curr_run = 1;
+  int expected_step = 0;
   while (std::getline(infile, line))
   {
     // Skipping first line if needed
@@ -62,6 +80,23 @@ History History::readCSV(const std::string &path,
     }
     // Getting columns
     std::vector<std::string> cols = split(line,',');
+    // Checking if a new run is started (if run-col is specified)
+    if (run_col >= 0 && std::stoi(cols[run_col]) != curr_run)
+    {
+      histories.push_back(curr_history);
+      curr_run = std::stoi(cols[run_col]);
+      histories.clear();
+      expected_step = 0;
+    }
+    // Checking
+    if (step_col >= 0 && std::stoi(cols[step_col]) != expected_step)
+    {
+      std::ostringstream oss;
+      oss << "Unexpected step: '" << cols[step_col] << "' expecting step '"
+          << expected_step << "'";
+      throw std::runtime_error(oss.str());
+    }
+
     // Declaring variables
     Eigen::VectorXd state(x_dim);
     Eigen::VectorXd action(u_dim);
@@ -78,25 +113,51 @@ History History::readCSV(const std::string &path,
     if (reward_col >= 0)
       reward = std::stod(cols[reward_col]);
     // Pushing values
-    h.push(state, action, reward);
+    curr_history.push(state, action, reward);
+    expected_step++;
   }
-  return h;
+  histories.push_back(curr_history);
+  return histories;
+}
+
+std::vector<History> History::readCSV(const std::string &path,
+                                      int run_col,
+                                      int step_col,
+                                      const std::vector<int> &state_cols,
+                                      const std::vector<int> &action_cols,
+                                      Problem::RewardFunction compute_reward,
+                                      bool header)
+{
+  // Factorizing code
+  std::vector<History> histories = History::readCSV(path, run_col, step_col,
+                                                    state_cols, action_cols, -1, header);
+  // Computing rewards
+  for (auto & h : histories)
+  {
+    for (int i = 1; i < h.states.size(); i++)
+    {
+      h.rewards[i] = compute_reward(h.states[i-1], h.actions[i-1], h.states[i]);
+    }
+  }
+  return histories;
 }
 
 History History::readCSV(const std::string &path,
-                         const std::vector<size_t> &state_cols,
-                         const std::vector<size_t> &action_cols,
+                         const std::vector<int> &state_cols,
+                         const std::vector<int> &action_cols,
+                         int reward_col,
+                         bool header)
+{
+  return readCSV(path, -1, -1, state_cols, action_cols, reward_col, header)[0];
+}
+
+History History::readCSV(const std::string &path,
+                         const std::vector<int> &state_cols,
+                         const std::vector<int> &action_cols,
                          Problem::RewardFunction compute_reward,
                          bool header)
 {
-  // Factorizing code
-  History h = History::readCSV(path, state_cols, action_cols, -1, header);
-  // Computing rewards
-  for (size_t i = 1; i < h.states.size(); i++)
-  {
-    h.rewards[i] = compute_reward(h.states[i-1], h.actions[i-1], h.states[i]);
-  }
-  return h;
+  return readCSV(path, -1, -1, state_cols, action_cols, compute_reward, header)[0];
 }
 
 }

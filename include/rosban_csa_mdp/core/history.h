@@ -26,6 +26,40 @@ public:
 
   /// Transform the content of the history to a batch format (s,a,s',r)
   std::vector<Sample> getBatch() const;
+  /// Transform the content of several histories
+  static std::vector<Sample> getBatch(const std::vector<History> &histories);
+
+  /// Read the history contained in a csv file
+  /// - path: the location of the file
+  /// - run_col: this column indicate the id of the run
+  /// - step_col: this column indicate the id of the step
+  /// - state_cols: the columns containing the state dimensions
+  /// - action_cols: the columns containing the action dimensions
+  /// - reward_col: the column containing the rewards (if reward_col < 0, reward is not read)
+  /// - header: Does the file contain a header?
+  static std::vector<History> readCSV(const std::string &path,
+                                      int run_col,
+                                      int step_col,
+                                      const std::vector<int> &state_cols,
+                                      const std::vector<int> &action_cols,
+                                      int reward_col,
+                                      bool header);
+
+  /// Read the history contained in a csv file
+  /// - path: the location of the file
+  /// - run_col: this column indicate the id of the run
+  /// - step_col: this column indicate the id of the step
+  /// - state_cols: the columns containing the state dimensions
+  /// - action_cols: the columns containing the action dimensions
+  /// - compute_reward: a function allowing to get the reward from (s,a,s')
+  /// - header: Does the file contain a header?
+  static std::vector<History> readCSV(const std::string &path,
+                                      int run_col,
+                                      int step_col,
+                                      const std::vector<int> &state_cols,
+                                      const std::vector<int> &action_cols,
+                                      Problem::RewardFunction compute_reward,
+                                      bool header);
 
   /// Read the history contained in a csv file
   /// - path: the location of the file
@@ -34,8 +68,8 @@ public:
   /// - reward_col: the column containing the rewards (if reward_col < 0, reward is not read)
   /// - header: Does the file contain a header?
   static History readCSV(const std::string &path,
-                         const std::vector<size_t> &state_cols,
-                         const std::vector<size_t> &action_cols,
+                         const std::vector<int> &state_cols,
+                         const std::vector<int> &action_cols,
                          int reward_col,
                          bool header);
 
@@ -46,8 +80,8 @@ public:
   /// - compute_reward: a function allowing to get the reward from (s,a,s')
   /// - header: Does the file contain a header?
   static History readCSV(const std::string &path,
-                         const std::vector<size_t> &state_cols,
-                         const std::vector<size_t> &action_cols,
+                         const std::vector<int> &state_cols,
+                         const std::vector<int> &action_cols,
                          Problem::RewardFunction compute_reward,
                          bool header);
 };

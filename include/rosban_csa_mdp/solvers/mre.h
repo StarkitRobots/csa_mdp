@@ -35,7 +35,7 @@ public:
 
   public:
 
-    enum Type
+    enum class Type
     {
       // Follows MRE description
       Original,
@@ -45,6 +45,7 @@ public:
       // Value is based on dimension product
       Random
     };
+
     /// Which version of knownness tree is activated?
     Type type;
 
@@ -96,6 +97,23 @@ public:
     double r_max;
     
   };
+public:
+  class Config : public rosban_utils::Serializable
+  {
+  public:
+    Config();
+
+    std::string class_name() const override;
+    void to_xml(std::ostream &out) const override;
+    void from_xml(TiXmlNode *node) override;
+
+    double reward_max;
+    int max_points;
+    int plan_period;
+    int nb_trees;
+    KnownnessTree::Type tree_type;
+    FPF::Config fpf_conf;
+  };
 
 private:
   // Configuration
@@ -120,6 +138,8 @@ private:
       
 
 public:
+  MRE(const Config &conf,
+      std::function<bool(const Eigen::VectorXd &)> is_terminal);
   MRE(const Eigen::MatrixXd& state_space,
       const Eigen::MatrixXd& action_space,
       int max_points,
@@ -150,5 +170,8 @@ public:
   double getQValueTime() const;
   double getPolicyTime() const;
 };
+
+std::string to_string(MRE::KnownnessTree::Type type);
+MRE::KnownnessTree::Type loadType(const std::string &str);
 
 }

@@ -40,11 +40,11 @@ void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
     double split_val = 0;
     switch(type)
     {
-      case Original:
+      case Type::Original:
         split_dim = nextSplitDim;
         split_val = (leaf_space(split_dim, 0) + leaf_space(split_dim,1)) / 2;
         break;
-      case Test:
+      case Type::Test:
       {
         const Eigen::MatrixXd &space = tree.getSpace();
         double highest_ratio = 0;
@@ -68,7 +68,7 @@ void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
         split_val = regression_forests::Statistics::median(dim_values);
         break;
       }
-      case Random:
+      case Type::Random:
       {
         double best_dim_score = 0;
         // For every dimension, try a random split, score it and keep it if necessary
@@ -165,8 +165,8 @@ double MRE::KnownnessTree::getValue(const Eigen::MatrixXd& space,
   const Eigen::MatrixXd & tree_space = tree.getSpace();
   switch(type)
   {
-    case Original:
-    case Test:
+    case Type::Original:
+    case Type::Test:
       for (int dim = 0; dim < space.rows(); dim++)
       {
         double local_size = space(dim,1) - space(dim,0);
@@ -179,7 +179,7 @@ double MRE::KnownnessTree::getValue(const Eigen::MatrixXd& space,
         }
       }
       return std::min(1.0, (double)local_points / v * getMu() / max_size);
-    case Random:
+    case Type::Random:
     {
       double local_size = 1.0;
       double global_size = 1.0;
@@ -341,6 +341,52 @@ std::vector<Eigen::VectorXd> MRE::CustomFPF::getPolicyTrainingStates(const std::
   return result;
 }
 
+MRE::Config::Config()
+{
+}
+
+std::string MRE::Config::class_name() const
+{
+  return "Config";
+}
+
+void MRE::Config::to_xml(std::ostream &out) const
+{
+  rosban_utils::xml_tools::write<double>("reward_max" , reward_max , out);
+  rosban_utils::xml_tools::write<int>   ("max_points" , max_points , out);
+  rosban_utils::xml_tools::write<int>   ("plan_period", plan_period, out);
+  rosban_utils::xml_tools::write<int>   ("nb_trees"   , nb_trees   , out);
+  std::string tree_type_str = to_string(tree_type);
+  rosban_utils::xml_tools::write<std::string>("tree_type", tree_type_str, out);
+  fpf_conf.write("fpf_conf", out);
+}
+
+void MRE::Config::from_xml(TiXmlNode *node)
+{
+  reward_max  = rosban_utils::xml_tools::read<double>(node, "reward_max" );
+  max_points  = rosban_utils::xml_tools::read<int>   (node, "max_points" );
+  plan_period = rosban_utils::xml_tools::read<int>   (node, "plan_period");
+  nb_trees    = rosban_utils::xml_tools::read<int>   (node, "nb_trees"   );
+  std::string tree_type_str;
+  tree_type_str = rosban_utils::xml_tools::read<std::string>(node, "tree_type");
+  tree_type = loadType(tree_type_str);
+  fpf_conf.read(node, "fpf_conf");
+}
+
+MRE::MRE(const MRE::Config &config,
+         std::function<bool(const Eigen::VectorXd &)> is_terminal_)
+  : MRE(config.fpf_conf.getStateLimits(),
+        config.fpf_conf.getActionLimits(),
+        config.max_points,
+        config.reward_max,
+        config.plan_period,
+        config.nb_trees,
+        config.tree_type,
+        config.fpf_conf,
+        is_terminal_)
+{
+}
+
 MRE::MRE(const Eigen::MatrixXd &state_space_,
          const Eigen::MatrixXd &action_space_,
          int max_points,
@@ -453,6 +499,34 @@ double MRE::getQValueTime() const
 double MRE::getPolicyTime() const
 {
   return solver.conf.policy_time;
+}
+
+std::string to_string(MRE::KnownnessTree::Type type)
+{
+  switch (type)
+  {
+    case MRE::KnownnessTree::Type::Original: return "Original";
+    case MRE::KnownnessTree::Type::Test: return "Test";
+    case MRE::KnownnessTree::Type::Random: return "Random";
+  }
+  throw std::runtime_error("Unknown type in to_string(MRE::Type)");
+}
+
+MRE::KnownnessTree::Type loadType(const std::string &type)
+{
+  if (type == "Original")
+  {
+    return MRE::KnownnessTree::Type::Original;
+  }
+  if (type == "Test")
+  {
+    return MRE::KnownnessTree::Type::Test;
+  }
+  if (type == "Random")
+  {
+    return MRE::KnownnessTree::Type::Random;
+  }
+  throw std::runtime_error("Unknown KnownnessTree Type: '" + type + "'");
 }
 
 }
