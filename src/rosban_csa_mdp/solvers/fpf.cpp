@@ -253,7 +253,7 @@ void FPF::solve(const std::vector<Sample>& samples,
     // Compute TrainingSet with last q_value
     TrainingSet ts = getTrainingSet(samples, isTerminal);
     // Compute q_value from TrainingSet
-    q_value = q_learner.solve(ts);
+    q_value = q_learner.solve(ts, conf.getStateLimits());
   }
   TimeStamp q_value_end = TimeStamp::now();
   conf.q_value_time = diffSec(q_value_start, q_value_end);
@@ -289,7 +289,7 @@ void FPF::solve(const std::vector<Sample>& samples,
       {
         ts.push(regression_forests::Sample(states[sample_idx], actions[sample_idx](dim)));
       }
-      policies.push_back(policy_learner.solve(ts));
+      policies.push_back(policy_learner.solve(ts, conf.getStateLimits()));
     }
     TimeStamp policy_end = TimeStamp::now();
     conf.policy_time = diffSec(q_value_end, policy_end);
