@@ -231,7 +231,7 @@ const regression_forests::Forest& FPF::getValueForest()
 
 const regression_forests::Forest& FPF::getPolicyForest(int action_index)
 {
-  if (action_index > policies.size())
+  if (action_index > (int)policies.size())
     throw std::out_of_range("action_index greater than number of policies");
   return *(policies[action_index]);
 }

@@ -1,5 +1,7 @@
 #include "rosban_csa_mdp/core/history.h"
 
+#include "rosban_utils/string_tools.h"
+
 #include <fstream>
 #include <sstream>
 
@@ -42,17 +44,6 @@ std::vector<Sample> History::getBatch(const std::vector<History> &histories)
   return samples;
 }
 
-//TODO externalize to another module
-static std::vector<std::string> split(const std::string &s, char delim) {
-  std::vector<std::string> elems;
-  std::stringstream ss(s);
-  std::string item;
-  while(getline(ss, item, delim)) {
-    elems.push_back(item);
-  }
-  return elems;
-}
-
 std::vector<History> History::readCSV(const std::string &path,
                                       int run_col,
                                       int step_col,
@@ -65,6 +56,7 @@ std::vector<History> History::readCSV(const std::string &path,
   int x_dim = state_cols.size();
   int u_dim = action_cols.size();
   std::ifstream infile(path);
+  if (!infile.good()) throw std::runtime_error("Failed to open file '" + path + "'");
   std::string line;
   // Temporary variables
   History curr_history;
@@ -79,7 +71,7 @@ std::vector<History> History::readCSV(const std::string &path,
       continue;
     }
     // Getting columns
-    std::vector<std::string> cols = split(line,',');
+    std::vector<std::string> cols = rosban_utils::split_string(line,',');
     // Checking if a new run is started (if run-col is specified)
     if (run_col >= 0 && std::stoi(cols[run_col]) != curr_run)
     {
@@ -134,7 +126,7 @@ std::vector<History> History::readCSV(const std::string &path,
   // Computing rewards
   for (auto & h : histories)
   {
-    for (int i = 1; i < h.states.size(); i++)
+    for (size_t i = 1; i < h.states.size(); i++)
     {
       h.rewards[i] = compute_reward(h.states[i-1], h.actions[i-1], h.states[i]);
     }
