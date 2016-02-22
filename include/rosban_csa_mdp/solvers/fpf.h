@@ -35,7 +35,9 @@ public:
     double discount;
     /// The final size of the tree when merging the forest into a single tree for a given action
     size_t max_action_tiles;
-    /// The number of samples generated to learn the policy
+    /// > 0: The number of samples generated to learn the policy
+    /// = 0: States used to learn policy are the same as the state from samples
+    /// < 0: Policy is not learned
     size_t policy_samples;
     /// The time spent learning the q_value [s]
     double q_value_time;

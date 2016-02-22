@@ -33,25 +33,25 @@ void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
   // Pushing point
   kd_trees::KdNode * leafNode = tree.getLeaf(point);
   Eigen::MatrixXd leaf_space = tree.getSpace(point);
-  // Special case on random, avoid reaching a high density
-  if (type == Type::Random)
-  {
-      double local_size = 1.0;
-      double global_size = 1.0;
-      for (int dim = 0; dim < leaf_space.rows(); dim++)
-      {
-        local_size  *= leaf_space(dim,1) - leaf_space(dim,0);
-        global_size *= tree_space(dim,1) - tree_space(dim,0);
-      }
-      int local_points = leafNode->getPoints().size();
-      double local_density  = local_points / local_size;
-      double global_density = nbPoints / global_size;
-      double density_ratio  = local_density / global_density;
-      if (density_ratio > std::pow(10,6))
-      {
-        throw std::runtime_error("Leaf has already a high density");
-      }
-  }
+  // Special case on random, avoid reaching a high density (Disabled)
+  //if (type == Type::Random)
+  //{
+  //    double local_size = 1.0;
+  //    double global_size = 1.0;
+  //    for (int dim = 0; dim < leaf_space.rows(); dim++)
+  //    {
+  //      local_size  *= leaf_space(dim,1) - leaf_space(dim,0);
+  //      global_size *= tree_space(dim,1) - tree_space(dim,0);
+  //    }
+  //    int local_points = leafNode->getPoints().size();
+  //    double local_density  = local_points / local_size;
+  //    double global_density = nbPoints / global_size;
+  //    double density_ratio  = local_density / global_density;
+  //    if (density_ratio > std::pow(10,6))
+  //    {
+  //      throw std::runtime_error("Leaf has already a high density");
+  //    }
+  //}
   leafNode->push(point);
   int leafCount = leafNode->getPoints().size();
   if (leafCount > v) {
@@ -321,8 +321,10 @@ TrainingSet MRE::CustomFPF::getTrainingSet(const std::vector<Sample>& samples,
     double tolerance = std::pow(10,-6);
     for (const Sample & known_sample : filtered_samples)
     {
-      Eigen::VectorXd diff = known_sample.state - new_sample.state;
-      double max_diff = diff.lpNorm<Eigen::Infinity>();
+      Eigen::VectorXd state_diff = known_sample.state - new_sample.state;
+      Eigen::VectorXd action_diff = known_sample.action - new_sample.action;
+      double max_diff = std::max(state_diff.lpNorm<Eigen::Infinity>(),
+                                 action_diff.lpNorm<Eigen::Infinity>());
       if (max_diff < tolerance)
       {
         found_similar = true;
@@ -347,17 +349,6 @@ TrainingSet MRE::CustomFPF::getTrainingSet(const std::vector<Sample>& samples,
     new_ts.push(regression_forests::Sample(input, new_reward));
   }
   return new_ts;
-}
-
-std::vector<Eigen::VectorXd> MRE::CustomFPF::getPolicyTrainingStates(const std::vector<Sample>& samples)
-{
-  std::vector<Eigen::VectorXd> result;
-  result.reserve(samples.size());
-  for (const Sample & s : samples)
-  {
-    result.push_back(s.state);
-  }
-  return result;
 }
 
 MRE::Config::Config()

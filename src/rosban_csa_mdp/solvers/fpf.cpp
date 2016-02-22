@@ -258,7 +258,7 @@ void FPF::solve(const std::vector<Sample>& samples,
   TimeStamp q_value_end = TimeStamp::now();
   conf.q_value_time = diffSec(q_value_start, q_value_end);
   // If required, learn policy from the q_value
-  if (conf.policy_samples > 0)
+  if (conf.policy_samples >= 0)
   {
     int x_dim = conf.getStateLimits().rows();
     int u_dim = conf.getActionLimits().rows();
@@ -328,8 +328,17 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
 
 std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Sample>& samples)
 {
-  (void) samples;
-  return regression_forests::getUniformSamples(conf.getStateLimits(), conf.policy_samples);
+  if (conf.policy_samples > 0)
+  {
+    return regression_forests::getUniformSamples(conf.getStateLimits(), conf.policy_samples);
+  }
+  std::vector<Eigen::VectorXd> result;
+  result.reserve(samples.size());
+  for (const Sample & s : samples)
+  {
+    result.push_back(s.state);
+  }
+  return result;
 }
 
 }

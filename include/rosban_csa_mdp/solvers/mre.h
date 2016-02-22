@@ -86,10 +86,6 @@ public:
     getTrainingSet(const std::vector<Sample>& samples,
                    std::function<bool(const Eigen::VectorXd&)> is_terminal) override;
 
-    // Custom way of chosing reward states
-    virtual std::vector<Eigen::VectorXd>
-    getPolicyTrainingStates(const std::vector<Sample>& samples) override;
-
 
   public:
     // Ideally properties should be owned by MRE, but the whole concept needs to be rethought
