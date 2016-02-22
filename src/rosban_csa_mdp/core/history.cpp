@@ -77,7 +77,7 @@ std::vector<History> History::readCSV(const std::string &path,
     {
       histories.push_back(curr_history);
       curr_run = std::stoi(cols[run_col]);
-      histories.clear();
+      curr_history = History();
       expected_step = 0;
     }
     // Checking
