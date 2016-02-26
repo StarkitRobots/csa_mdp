@@ -11,7 +11,7 @@
 #include <random>
 
 /**
- * From Nouri2008: Multi-resolution Exploration in continuous spaces
+ * From Nouri2009: Multi-resolution Exploration in continuous spaces
  */
 namespace csa_mdp
 {

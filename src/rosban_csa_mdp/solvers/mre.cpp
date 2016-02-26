@@ -27,7 +27,11 @@ void MRE::KnownnessTree::push(const Eigen::VectorXd& point)
   {
     if (point(dim) < tree_space(dim,0) || point(dim) > tree_space(dim,1))
     {
-      throw std::runtime_error("Point is outside of space!");
+      std::ostringstream oss;
+      oss << "Point is outside of space!" << std::endl
+          << "P: " << point.transpose() << std::endl
+          << "Space:" << std::endl << tree_space << std::endl;
+      throw std::runtime_error(oss.str());
     }
   }
   // Pushing point
@@ -323,6 +327,7 @@ TrainingSet MRE::CustomFPF::getTrainingSet(const std::vector<Sample>& samples,
     {
       Eigen::VectorXd state_diff = known_sample.state - new_sample.state;
       Eigen::VectorXd action_diff = known_sample.action - new_sample.action;
+      // Which is the highest difference between the two samples?
       double max_diff = std::max(state_diff.lpNorm<Eigen::Infinity>(),
                                  action_diff.lpNorm<Eigen::Infinity>());
       if (max_diff < tolerance)
