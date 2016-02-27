@@ -1,5 +1,8 @@
 #include "rosban_csa_mdp/solvers/mre_fpf.h"
 
+#include "rosban_regression_forests/approximations/pwc_approximation.h"
+
+using regression_forests::PWCApproximation;
 using regression_forests::TrainingSet;
 
 namespace csa_mdp
@@ -78,7 +81,29 @@ void MREFPF::updateQValue(const std::vector<Sample> &samples,
   FPF::updateQValue(samples, is_terminal);
   if (conf.update_type == UpdateType::Alternative)
   {
-    throw std::logic_error("Unimplemented update Alternative");
+    regression_forests::Node::Function f = [this](regression_forests::Node * node,
+                                                  const Eigen::MatrixXd & limits)
+      {
+        // Throw an error if approximation is not PWC
+        PWCApproximation *pwc_app = dynamic_cast<PWCApproximation*>(node->a);
+        if (pwc_app == nullptr)
+        {
+          throw std::logic_error("Alternative update is only available for pwc approximations");
+        }
+        // Compute knownness and old value
+        Eigen::VectorXd middle_point = (limits.col(1) + limits.col(0)) / 2;
+        double knownness = this->knownness_func->getValue(middle_point);
+        double old_val = pwc_app->getValue();
+        double new_val = old_val * knownness + (1 - knownness) * this->conf.reward_max;
+        node->a = new PWCApproximation(new_val);
+        delete(pwc_app);
+      };
+    int x_dim = conf.getStateLimits().rows();
+    int u_dim = conf.getActionLimits().rows();
+    Eigen::MatrixXd limits(x_dim + u_dim, 2);
+    limits.block(    0, 0, x_dim, 2) = conf.getStateLimits();
+    limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
+    q_value->applyOnLeafs(limits, f);
   }
 }
 
