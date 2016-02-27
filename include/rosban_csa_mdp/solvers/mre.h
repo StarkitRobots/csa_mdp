@@ -2,6 +2,7 @@
 
 #include "rosban_csa_mdp/core/sample.h"
 #include "rosban_csa_mdp/solvers/fpf.h"
+#include "rosban_csa_mdp/knownness/knownness_forest.h"
 
 #include "rosban_regression_forests/core/forest.h"
 
@@ -18,52 +19,6 @@ namespace csa_mdp
 
 class MRE {
 public:
-  /// This class provides some extra functions to KdTree in order to fit the needs of Nouri2008
-  class KnownnessTree
-  {
-  private:
-    /// The basic data structure
-    kd_trees::KdTree tree;
-    /// The maximal number of points by node
-    int v;
-    /// On which dimension will happen the next split
-    int nextSplitDim;
-    /// Quick access to the total number of points
-    int nbPoints;
-    /// Random generator for the Random Type
-    std::default_random_engine random_engine;
-
-  public:
-
-    enum class Type
-    {
-      // Follows MRE description
-      Original,
-      // Splitting on median of the biggest dimension (using rescaling)
-      Test,
-      // Split on a random dimension at a random position (between min and max found)
-      // Value is based on dimension product
-      Random
-    };
-
-    /// Which version of knownness tree is activated?
-    Type type;
-
-    KnownnessTree(const Eigen::MatrixXd& space, int maxPoints, Type type);
-
-    void push(const Eigen::VectorXd& point);
-
-    double getMu() const;
-
-    double getValue(const Eigen::VectorXd& point) const;
-    double getValue(const Eigen::MatrixXd& space, int nb_points) const;
-
-    regression_forests::Node * convertToRegNode(const kd_trees::KdNode *node,
-                                                Eigen::MatrixXd &space) const;
-    std::unique_ptr<regression_forests::Tree> convertToRegTree() const;
- 
-  };
-
   /// MRE needs a modification of the trainingSet creation
   class CustomFPF : public FPF
   {
@@ -89,7 +44,7 @@ public:
 
   public:
     // Ideally properties should be owned by MRE, but the whole concept needs to be rethought
-    std::vector<KnownnessTree> knownness_forest;
+    KnownnessForest knownness_forest;
     double r_max;
     
   };
@@ -166,8 +121,5 @@ public:
   double getQValueTime() const;
   double getPolicyTime() const;
 };
-
-std::string to_string(MRE::KnownnessTree::Type type);
-MRE::KnownnessTree::Type loadType(const std::string &str);
 
 }

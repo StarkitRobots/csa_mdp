@@ -1,6 +1,9 @@
 #pragma once
 
 #include "rosban_csa_mdp/knownness/knownness_function.h"
+#include "kd_trees/kd_tree.h"
+
+#include <rosban_regression_forests/core/tree.h>
 
 #include <rosban_utils/serializable.h>
 
@@ -19,7 +22,7 @@ public:
   { MRE, Random };
 
   /// Config of the KnownnessTree
-  class Config : public Serializable
+  class Config : public rosban_utils::Serializable
   {
   public:
     /// Maximal number of points by node (automatically split when values is above)
@@ -29,11 +32,13 @@ public:
 
     Config();
 
+    virtual std::string class_name() const override;
     virtual void to_xml(std::ostream &out) const override;
-    virtual void from_xml(TiXmlNode * node) override;
+    virtual void from_xml(TiXmlNode *node) override;
   };
 
-  KnownnessTree();
+  KnownnessTree(const Eigen::MatrixXd& space,
+                const Config &conf);
 
   double getMu() const;
 
@@ -43,6 +48,7 @@ public:
 
   double getValue(const Eigen::MatrixXd &space, int nb_points) const;
 
+  // Conversion tools
   regression_forests::Node * convertToRegNode(const kd_trees::KdNode *node,
                                               Eigen::MatrixXd &space) const;
   std::unique_ptr<regression_forests::Tree> convertToRegTree() const;
@@ -59,5 +65,8 @@ private:
   /// Random generator (for Random Type)
   std::default_random_engine random_engine;
 };
+
+std::string to_string(KnownnessTree::Type type);
+KnownnessTree::Type loadType(const std::string &type);
 
 }

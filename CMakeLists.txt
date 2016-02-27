@@ -125,6 +125,7 @@ include_directories(
 set(DIRECTORIES
   src/rosban_csa_mdp/core
   src/rosban_csa_mdp/solvers
+  src/rosban_csa_mdp/knownness
   src/kd_trees# Should be elsewhere...
   )
 
