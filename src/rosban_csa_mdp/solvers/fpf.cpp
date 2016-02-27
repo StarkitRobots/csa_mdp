@@ -241,19 +241,23 @@ std::unique_ptr<regression_forests::Forest> FPF::stealPolicyForest(int action_in
   return std::unique_ptr<regression_forests::Forest>(policies[action_index].release());
 }
 
+void FPF::updateQValue(const std::vector<Sample>& samples,
+                       std::function<bool(const Eigen::VectorXd&)> isTerminal)
+{
+  regression_forests::ExtraTrees q_learner;
+  q_learner.conf = conf.q_value_conf;
+  // ts is computed using last q_value
+  TrainingSet ts = getTrainingSet(samples, isTerminal);
+  q_value = q_learner.solve(ts, conf.getStateLimits());
+}
 
 void FPF::solve(const std::vector<Sample>& samples,
                 std::function<bool(const Eigen::VectorXd&)> isTerminal)
 {
   q_value.release();
-  regression_forests::ExtraTrees q_learner;
-  q_learner.conf = conf.q_value_conf;
   TimeStamp q_value_start = TimeStamp::now();
   for (size_t h = 1; h <= conf.horizon; h++) {
-    // Compute TrainingSet with last q_value
-    TrainingSet ts = getTrainingSet(samples, isTerminal);
-    // Compute q_value from TrainingSet
-    q_value = q_learner.solve(ts, conf.getStateLimits());
+    updateQValue(samples, isTerminal);
   }
   TimeStamp q_value_end = TimeStamp::now();
   conf.q_value_time = diffSec(q_value_start, q_value_end);

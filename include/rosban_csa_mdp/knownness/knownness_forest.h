@@ -10,7 +10,7 @@ namespace csa_mdp
 class KnownnessForest : public KnownnessFunction
 {
 public:
-  class Config : rosban_utils::Serializable
+  class Config : public rosban_utils::Serializable
   {
   public:
 

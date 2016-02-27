@@ -38,7 +38,7 @@ public:
     /// > 0: The number of samples generated to learn the policy
     /// = 0: States used to learn policy are the same as the state from samples
     /// < 0: Policy is not learned
-    size_t policy_samples;
+    int policy_samples;
     /// The time spent learning the q_value [s]
     double q_value_time;
     /// The time spent learning the policy from the q_value [s]
@@ -79,10 +79,15 @@ protected:
   getTrainingSet(const std::vector<Sample>& samples,
                  std::function<bool(const Eigen::VectorXd&)> is_terminal);
 
+  /// Perform one step of update on the Q-value. This function is virtual because some
+  /// algorithms need to modify it
+  virtual void updateQValue(const std::vector<Sample>& samples,
+                            std::function<bool(const Eigen::VectorXd&)> isTerminal);
+
   /// Create a set of states which will be used to build the the policy forest, in the default implementation,
   /// states are chosen at uniformous random inside the state space
   /// Note: this method is virtual, because other algorithms (such as MRE) might need to use a
-  ///       custom way of cre
+  ///       custom way of creating their policy training state
   virtual std::vector<Eigen::VectorXd>
   getPolicyTrainingStates(const std::vector<Sample>& samples);
 
