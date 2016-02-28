@@ -134,7 +134,14 @@ void KnownnessTree::push(const Eigen::VectorXd& point)
         if (split_dim < 0)
         {
           leafNode->pop_back();
-          throw std::runtime_error("No split candidate found");
+          return;
+          //std::ostringstream oss;
+          //oss << "No split candidate found: Points:" << std::endl;
+          //for (const auto & p : leafNode->getPoints())
+          //{
+          //  oss << "\t" << p.transpose() << std::endl;
+          //}
+          //throw std::runtime_error(oss.str());
         }
       }
     }
