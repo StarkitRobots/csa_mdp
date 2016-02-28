@@ -31,6 +31,7 @@ protected:
 
 public:
   Problem();
+  virtual ~Problem();
 
   int stateDims() const;
   int actionDims() const;

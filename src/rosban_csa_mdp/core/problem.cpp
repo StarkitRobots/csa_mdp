@@ -11,6 +11,10 @@ Problem::Problem()
   random_engine = std::default_random_engine(seed);
 }
 
+Problem::~Problem()
+{
+}
+
 int Problem::stateDims() const
 {
   return state_limits.rows();
