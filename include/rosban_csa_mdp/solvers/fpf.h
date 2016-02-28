@@ -79,27 +79,27 @@ protected:
   ///       custom way of creating the trainingSet
   virtual regression_forests::TrainingSet
   getTrainingSet(const std::vector<Sample>& samples,
-                 std::function<bool(const Eigen::VectorXd&)> is_terminal);
+                 std::function<bool(const Eigen::VectorXd&)> is_terminal,
+                 const Config &conf);
 
   /// Perform one step of update on the Q-value. This function is virtual because some
   /// algorithms need to modify it
   virtual void updateQValue(const std::vector<Sample>& samples,
-                            std::function<bool(const Eigen::VectorXd&)> isTerminal);
+                            std::function<bool(const Eigen::VectorXd&)> isTerminal,
+                            const Config &conf);
 
   /// Create a set of states which will be used to build the the policy forest, in the default implementation,
   /// states are chosen at uniformous random inside the state space
   /// Note: this method is virtual, because other algorithms (such as MRE) might need to use a
   ///       custom way of creating their policy training state
   virtual std::vector<Eigen::VectorXd>
-  getPolicyTrainingStates(const std::vector<Sample>& samples);
+  getPolicyTrainingStates(const std::vector<Sample>& samples,
+                          const Config &conf);
 
   /// Compute the bestAction at given state according to the current q_value
   Eigen::VectorXd bestAction(const Eigen::VectorXd& state);
 
 public:
-  /// The whole configuration of the FPF solver
-  Config conf;
-
   /// Create a FPF solver with a default configuration
   FPF();
 
@@ -110,7 +110,8 @@ public:
   std::unique_ptr<regression_forests::Forest> stealPolicyForest(int action_index);
 
   void solve(const std::vector<Sample>& samples,
-             std::function<bool(const Eigen::VectorXd&)> is_terminal);
+             std::function<bool(const Eigen::VectorXd&)> is_terminal,
+             Config &conf);
 };
 
 

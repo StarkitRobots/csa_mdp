@@ -40,16 +40,16 @@ MREFPF::MREFPF()
 {
 }
 
-MREFPF::MREFPF(const MREFPF::Config & conf_,
-               std::shared_ptr<KnownnessFunction> knownness_func_)
-  : conf(conf_), knownness_func(knownness_func_)
+MREFPF::MREFPF(std::shared_ptr<KnownnessFunction> knownness_func_)
+  : knownness_func(knownness_func_)
 {
-  FPF::conf = conf;
 }
 
 TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
-                                   std::function<bool(const Eigen::VectorXd&)> is_terminal)
+                                   std::function<bool(const Eigen::VectorXd&)> is_terminal,
+                                   const FPF::Config &conf_fpf)
 {
+  const MREFPF::Config &conf = dynamic_cast<const MREFPF::Config &>(conf_fpf);
   // Removing samples which have the same starting state if filter_samples is activated
   std::vector<Sample> filtered_samples;
   if (conf.filter_samples)
@@ -57,7 +57,7 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
   else
     filtered_samples = samples;
   // Computing original training Set
-  TrainingSet original_ts = FPF::getTrainingSet(filtered_samples, is_terminal);
+  TrainingSet original_ts = FPF::getTrainingSet(filtered_samples, is_terminal, conf);
   // If alternative mode, then do not modify samples
   if (conf.update_type == UpdateType::Alternative) return original_ts;
   // Otherwise use knownness to influence samples
@@ -77,13 +77,15 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
 }
 
 void MREFPF::updateQValue(const std::vector<Sample> &samples,
-                          std::function<bool(const Eigen::VectorXd&)> is_terminal)
+                          std::function<bool(const Eigen::VectorXd&)> is_terminal,
+                          const FPF::Config &conf_fpf)
 {
-  FPF::updateQValue(samples, is_terminal);
+  const MREFPF::Config &conf = dynamic_cast<const MREFPF::Config &>(conf_fpf);
+  FPF::updateQValue(samples, is_terminal, conf);
   if (conf.update_type == UpdateType::Alternative)
   {
-    regression_forests::Node::Function f = [this](regression_forests::Node * node,
-                                                  const Eigen::MatrixXd & limits)
+    regression_forests::Node::Function f = [this, &conf](regression_forests::Node * node,
+                                                         const Eigen::MatrixXd & limits)
       {
         // Throw an error if approximation is not PWC
         PWCApproximation *pwc_app = dynamic_cast<PWCApproximation*>(node->a);
@@ -95,7 +97,7 @@ void MREFPF::updateQValue(const std::vector<Sample> &samples,
         Eigen::VectorXd middle_point = (limits.col(1) + limits.col(0)) / 2;
         double knownness = this->knownness_func->getValue(middle_point);
         double old_val = pwc_app->getValue();
-        double new_val = old_val * knownness + (1 - knownness) * this->conf.reward_max;
+        double new_val = old_val * knownness + (1 - knownness) * conf.reward_max;
         node->a = new PWCApproximation(new_val);
         delete(pwc_app);
       };

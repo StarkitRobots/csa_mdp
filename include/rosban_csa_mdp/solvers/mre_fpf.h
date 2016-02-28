@@ -34,22 +34,24 @@ public:
   };
 
   MREFPF();
-  MREFPF(const Config & conf,
-         std::shared_ptr<KnownnessFunction> knownness_func);
+  MREFPF(std::shared_ptr<KnownnessFunction> knownness_func);
 
 protected:
+
+  /// TrueType of conf must be MREFPF::Config
   virtual regression_forests::TrainingSet
   getTrainingSet(const std::vector<Sample>& samples,
-                 std::function<bool(const Eigen::VectorXd&)> is_terminal) override;
+                 std::function<bool(const Eigen::VectorXd&)> is_terminal,
+                 const FPF::Config &conf) override;
 
+  /// TrueType of conf must be MREFPF::Config
   virtual void
   updateQValue(const std::vector<Sample> &samples,
-               std::function<bool(const Eigen::VectorXd&)> is_terminal) override;
+               std::function<bool(const Eigen::VectorXd&)> is_terminal,
+               const FPF::Config &conf) override;
 
   std::vector<Sample> filterSimilarSamples(const std::vector<Sample> &samples) const;
 
-public:
-  Config conf;
 private:
   std::shared_ptr<KnownnessFunction> knownness_func;
 };

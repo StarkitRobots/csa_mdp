@@ -256,22 +256,24 @@ std::unique_ptr<regression_forests::Forest> FPF::stealPolicyForest(int action_in
 }
 
 void FPF::updateQValue(const std::vector<Sample>& samples,
-                       std::function<bool(const Eigen::VectorXd&)> isTerminal)
+                       std::function<bool(const Eigen::VectorXd&)> isTerminal,
+                       const Config &conf)
 {
   regression_forests::ExtraTrees q_learner;
   q_learner.conf = conf.q_value_conf;
   // ts is computed using last q_value
-  TrainingSet ts = getTrainingSet(samples, isTerminal);
+  TrainingSet ts = getTrainingSet(samples, isTerminal, conf);
   q_value = q_learner.solve(ts, conf.getInputLimits());
 }
 
 void FPF::solve(const std::vector<Sample>& samples,
-                std::function<bool(const Eigen::VectorXd&)> isTerminal)
+                std::function<bool(const Eigen::VectorXd&)> isTerminal,
+                Config &conf)
 {
   q_value.release();
   TimeStamp q_value_start = TimeStamp::now();
   for (size_t h = 1; h <= conf.horizon; h++) {
-    updateQValue(samples, isTerminal);
+    updateQValue(samples, isTerminal, conf);
   }
   TimeStamp q_value_end = TimeStamp::now();
   conf.q_value_time = diffSec(q_value_start, q_value_end);
@@ -281,7 +283,7 @@ void FPF::solve(const std::vector<Sample>& samples,
     int x_dim = conf.getStateLimits().rows();
     int u_dim = conf.getActionLimits().rows();
     // First generate the starting states
-    std::vector<Eigen::VectorXd> states = getPolicyTrainingStates(samples);
+    std::vector<Eigen::VectorXd> states = getPolicyTrainingStates(samples, conf);
     // Then get corresponding actions
     std::vector<Eigen::VectorXd> actions;
     for (const Eigen::VectorXd &state : states)
@@ -315,7 +317,8 @@ void FPF::solve(const std::vector<Sample>& samples,
 }
 
 TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
-                                std::function<bool(const Eigen::VectorXd&)> is_terminal)
+                                std::function<bool(const Eigen::VectorXd&)> is_terminal,
+                                const Config &conf)
 {
   int x_dim = conf.getStateLimits().rows();
   int u_dim = conf.getActionLimits().rows();
@@ -344,7 +347,8 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
   return ls;
 }
 
-std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Sample>& samples)
+std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Sample>& samples,
+                                                          const Config &conf)
 {
   if (conf.policy_samples > 0)
   {

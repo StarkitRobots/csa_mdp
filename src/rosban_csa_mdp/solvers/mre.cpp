@@ -66,7 +66,7 @@ void MRE::feed(const Sample &s)
     updatePolicy();
   }
   // Initializing solver
-  solver = MREFPF(conf.mrefpf_conf, knownness_forest);
+  solver = MREFPF(knownness_forest);
 }
 
 Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
@@ -89,7 +89,7 @@ Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
 
 void MRE::updatePolicy()
 {
-  solver.solve(samples, is_terminal);
+  solver.solve(samples, is_terminal, conf.mrefpf_conf);
   policies.clear();
   for (int dim = 0; dim < getActionSpace().rows(); dim++)
   {
@@ -133,12 +133,12 @@ void MRE::saveStatus(const std::string &prefix)
 
 double MRE::getQValueTime() const
 {
-  return solver.conf.q_value_time;
+  return conf.mrefpf_conf.q_value_time;
 }
 
 double MRE::getPolicyTime() const
 {
-  return solver.conf.policy_time;
+  return conf.mrefpf_conf.policy_time;
 }
 
 const Eigen::MatrixXd & MRE::getStateSpace()

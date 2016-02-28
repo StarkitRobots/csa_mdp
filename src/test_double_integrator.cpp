@@ -92,9 +92,8 @@ int main()
   conf.policy_conf.min_var = std::pow(10, -4);
   conf.policy_conf.appr_type = regression_forests::ApproximationType::PWL;
   FPF solver;
-  solver.conf = conf;
   auto is_terminal = [di](const Eigen::VectorXd &state){return di.isTerminal(state);};
-  solver.solve(mdp_samples, is_terminal);
+  solver.solve(mdp_samples, is_terminal, conf);
   solver.getValueForest().save("/tmp/test_di_values.data");
   solver.getPolicyForest(0).save("/tmp/test_di_policy.data");
 }
