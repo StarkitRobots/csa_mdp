@@ -54,6 +54,8 @@ public:
 
     const Eigen::MatrixXd & getStateLimits() const;
     const Eigen::MatrixXd & getActionLimits() const;
+    /// Return the space limits for the input State, then action
+    Eigen::MatrixXd getInputLimits() const;
 
     void setStateLimits(const Eigen::MatrixXd &new_limits);
     void setActionLimits(const Eigen::MatrixXd &new_limits);

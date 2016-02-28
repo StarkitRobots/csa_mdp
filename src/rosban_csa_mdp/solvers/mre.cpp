@@ -43,11 +43,7 @@ MRE::MRE(const MRE::Config &conf_,
     is_terminal(is_terminal_)
 {
   // Init Knownness Forest
-  int s_dim = getStateSpace().rows();
-  int a_dim = getActionSpace().rows();
-  Eigen::MatrixXd q_space(s_dim + a_dim, 2);
-  q_space.block(    0, 0, s_dim, 2) = getStateSpace();
-  q_space.block(s_dim, 0, a_dim, 2) = getActionSpace();
+  Eigen::MatrixXd q_space = conf.mrefpf_conf.getInputLimits();
   knownness_forest = std::shared_ptr<KnownnessForest>(new KnownnessForest(q_space, conf.knownness_conf));
   // Init random engine
   random_engine = regression_forests::get_random_engine();
@@ -152,7 +148,7 @@ const Eigen::MatrixXd & MRE::getStateSpace()
 
 const Eigen::MatrixXd & MRE::getActionSpace()
 {
-  return conf.mrefpf_conf.getStateLimits();
+  return conf.mrefpf_conf.getActionLimits();
 }
 
 }

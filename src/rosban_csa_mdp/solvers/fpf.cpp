@@ -161,6 +161,16 @@ const Eigen::MatrixXd & FPF::Config::getActionLimits() const
 {
   return u_limits;
 }
+Eigen::MatrixXd FPF::Config::getInputLimits() const
+{
+  // Init Knownness Forest
+  int s_dim = getStateLimits().rows();
+  int a_dim = getActionLimits().rows();
+  Eigen::MatrixXd limits(s_dim + a_dim, 2);
+  limits.block(    0, 0, s_dim, 2) = getStateLimits();
+  limits.block(s_dim, 0, a_dim, 2) = getActionLimits();
+  return limits;
+}
 
 void FPF::Config::setStateLimits(const Eigen::MatrixXd &new_limits)
 {
@@ -207,6 +217,10 @@ void FPF::Config::from_xml(TiXmlNode *node)
   std::vector<double> x_limits_vec, u_limits_vec;
   x_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "x_limits");
   u_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "u_limits");
+  if (x_limits_vec.size() != 2 * x_dim)
+    throw std::runtime_error("FPF::from_xml: Invalid number of limits for x_limits");
+  if (u_limits_vec.size() != 2 * u_dim)
+    throw std::runtime_error("FPF::from_xml: Invalid number of limits for x_limits");
   x_limits = Eigen::Map<Eigen::MatrixXd>(x_limits_vec.data(),x_dim, 2);
   u_limits = Eigen::Map<Eigen::MatrixXd>(u_limits_vec.data(),u_dim, 2);
   // Writing properties
@@ -248,7 +262,7 @@ void FPF::updateQValue(const std::vector<Sample>& samples,
   q_learner.conf = conf.q_value_conf;
   // ts is computed using last q_value
   TrainingSet ts = getTrainingSet(samples, isTerminal);
-  q_value = q_learner.solve(ts, conf.getStateLimits());
+  q_value = q_learner.solve(ts, conf.getInputLimits());
 }
 
 void FPF::solve(const std::vector<Sample>& samples,

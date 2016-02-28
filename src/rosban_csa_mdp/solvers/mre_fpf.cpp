@@ -44,6 +44,7 @@ MREFPF::MREFPF(const MREFPF::Config & conf_,
                std::shared_ptr<KnownnessFunction> knownness_func_)
   : conf(conf_), knownness_func(knownness_func_)
 {
+  FPF::conf = conf;
 }
 
 TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
@@ -98,11 +99,7 @@ void MREFPF::updateQValue(const std::vector<Sample> &samples,
         node->a = new PWCApproximation(new_val);
         delete(pwc_app);
       };
-    int x_dim = conf.getStateLimits().rows();
-    int u_dim = conf.getActionLimits().rows();
-    Eigen::MatrixXd limits(x_dim + u_dim, 2);
-    limits.block(    0, 0, x_dim, 2) = conf.getStateLimits();
-    limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
+    Eigen::MatrixXd limits = conf.getInputLimits();
     q_value->applyOnLeafs(limits, f);
   }
 }
