@@ -1,15 +1,14 @@
 #include "rosban_csa_mdp/solvers/fpf.h"
 #include "rosban_csa_mdp/solvers/mre.h"
 
-#include <ros/ros.h>
-
 int main(int argc, char ** argv)
 {
-  std::string type = ros::getROSArg(argc, argv, "type");
-  if (type == "")
+  if (argc < 2)
   {
-    std::cout << "Usage: ... type:=<type>" << std::endl;
+    std::cout << "Usage: ... <type>" << std::endl;
+    exit(EXIT_FAILURE);
   }
+  std::string type(argv[1]);
 
   Eigen::MatrixXd state_limits(3,2), action_limits(1,2);
   state_limits << -1, 1, -2, 2, -3, 3;
@@ -21,6 +20,9 @@ int main(int argc, char ** argv)
     conf.setStateLimits(state_limits);
     conf.setActionLimits(action_limits);
     conf.pretty_print();
-//    std::cout << conf.to_xml_stream() << std::endl;
+  }
+  else
+  {
+    throw std::runtime_error("Unknown type '" + type + "'");
   }
 }

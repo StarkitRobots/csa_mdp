@@ -14,12 +14,8 @@
   <license>NCY</license>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>rosban_regression_forests</build_depend>
   <build_depend>rosban_utils</build_depend>
-  <build_depend>roscpp</build_depend>
-  <run_depend>rosban_regression_forests</run_depend>
   <run_depend>rosban_utils</run_depend>
-  <run_depend>roscpp</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
