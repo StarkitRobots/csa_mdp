@@ -95,15 +95,25 @@ std::vector<History> History::readCSV(const std::string &path,
     double reward = 0;
     // Attributing variables at the right place
     int dim = 0;
-    for (int col : state_cols){
+    for (int col : state_cols)
+    {
+      if (col >= (int)cols.size())
+        throw std::runtime_error("Not enough columns in logs");
       state(dim++) = std::stod(cols[col]);
     }
     dim = 0;
-    for (int col : action_cols){
+    for (int col : action_cols)
+    {
+      if (col >= (int)cols.size())
+        throw std::runtime_error("Not enough columns in logs");
       action(dim++) = std::stod(cols[col]);
     }
     if (reward_col >= 0)
+    {
+      if (reward_col >= (int)cols.size())
+        throw std::runtime_error("Not enough columns in logs");
       reward = std::stod(cols[reward_col]);
+    }
     // Pushing values
     curr_history.push(state, action, reward);
     expected_step++;
