@@ -43,14 +43,15 @@ public:
     double q_value_time;
     /// The time spent learning the policy from the q_value [s]
     double policy_time;
+    /// Number of threads used to compute the trainingset
+    int nb_threads;
+
+    /// Config used for computing the Q-value
     regression_forests::ExtraTrees::Config q_value_conf;
+    /// Config used for computing the Policy
     regression_forests::ExtraTrees::Config policy_conf;
 
     Config();
-    std::vector<std::string> names() const;
-    std::vector<std::string> values() const;
-    void load(const std::vector<std::string>& names,
-              const std::vector<std::string>& values);
 
     const Eigen::MatrixXd & getStateLimits() const;
     const Eigen::MatrixXd & getActionLimits() const;
@@ -81,6 +82,13 @@ protected:
   getTrainingSet(const std::vector<Sample>& samples,
                  std::function<bool(const Eigen::VectorXd&)> is_terminal,
                  const Config &conf);
+
+  /// Create a TrainingSet from current q_value, using samples from samples[start_idx,end_idx[
+  virtual regression_forests::TrainingSet
+  getTrainingSet(const std::vector<Sample>& samples,
+                 std::function<bool(const Eigen::VectorXd&)> is_terminal,
+                 const Config &conf,
+                 int start_idx, int end_idx);
 
   /// Perform one step of update on the Q-value. This function is virtual because some
   /// algorithms need to modify it

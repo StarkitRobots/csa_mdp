@@ -4,8 +4,12 @@
 #include "rosban_regression_forests/tools/random.h"
 #include "rosban_regression_forests/tools/statistics.h"
 
+#include "rosban_utils/time_stamp.h"
+
 #include <set>
 #include <iostream>
+
+using rosban_utils::TimeStamp;
 
 using regression_forests::TrainingSet;
 using namespace regression_forests::Statistics;
@@ -89,7 +93,10 @@ Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
 
 void MRE::updatePolicy()
 {
+  TimeStamp time1 = TimeStamp::now();
   solver.solve(samples, is_terminal, conf.mrefpf_conf);
+  TimeStamp time2 = TimeStamp::now();
+  std::cout << "solver.solve: " << diffMs(time1,time2) << " ms" << std::endl;
   policies.clear();
   for (int dim = 0; dim < getActionSpace().rows(); dim++)
   {

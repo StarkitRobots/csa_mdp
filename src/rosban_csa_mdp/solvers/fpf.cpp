@@ -5,7 +5,9 @@
 #include "rosban_utils/time_stamp.h"
 
 #include <iostream>
+#include <mutex>
 #include <sstream>
+#include <thread>
 
 using rosban_utils::TimeStamp;
 
@@ -21,6 +23,7 @@ namespace csa_mdp
 
 FPF::Config::Config()
 {
+  nb_threads = 1;
   x_dim = 0;
   u_dim = 0;
   horizon = 1;
@@ -29,127 +32,6 @@ FPF::Config::Config()
   policy_samples = 0;
   q_value_time = 0;
   policy_time = 0;
-}
-
-std::vector<std::string> FPF::Config::names() const
-{
-  std::vector<std::string> result = {"x_dim", "u_dim"};
-  for (size_t i = 0; i < x_dim; i++)
-  {
-    result.push_back("x_" + std::to_string(i) + "_min");
-    result.push_back("x_" + std::to_string(i) + "_max");
-  }
-  for (size_t i = 0; i < u_dim; i++)
-  {
-    result.push_back("u_" + std::to_string(i) + "_min");
-    result.push_back("u_" + std::to_string(i) + "_max");
-  }
-  result.push_back("horizon"         );
-  result.push_back("discount"        );
-  result.push_back("max_action_tiles");
-  result.push_back("policy_samples"  );
-  result.push_back("q_value_time"    );
-  result.push_back("policy_time"     );
-
-  // Add q_value_conf with prefix
-  std::vector<std::string> q_value_names = q_value_conf.names();
-  for (const std::string &name : q_value_names)
-    result.push_back("q_value_" + name);
-  std::vector<std::string> policy_names = policy_conf.names();
-  for (const std::string &name : policy_names)
-    result.push_back("policy_" + name);
-  return result;
-}
-
-std::vector<std::string> FPF::Config::values() const
-{
-  std::vector<std::string> result = {std::to_string(x_dim), std::to_string(u_dim)};
-  // Use custom to_string for double here
-  for (size_t i = 0; i < x_dim; i++)
-  {
-    result.push_back(std::to_string(x_limits(i,0)));
-    result.push_back(std::to_string(x_limits(i,1)));
-  }
-  for (size_t i = 0; i < u_dim; i++)
-  {
-    result.push_back(std::to_string(u_limits(i,0)));
-    result.push_back(std::to_string(u_limits(i,1)));
-  }
-  result.push_back(std::to_string(horizon         ));
-  result.push_back(std::to_string(discount        ));
-  result.push_back(std::to_string(max_action_tiles));
-  result.push_back(std::to_string(policy_samples  ));
-  result.push_back(std::to_string(q_value_time    ));
-  result.push_back(std::to_string(policy_time     ));
-  std::vector<std::string> q_value_values = q_value_conf.values();
-  result.insert(result.end(), q_value_values.begin(), q_value_values.end());
-  std::vector<std::string> policy_values = policy_conf.values();
-  result.insert(result.end(), policy_values.begin(), policy_values.end());
-  return result;
-}
-
-void FPF::Config::load(const std::vector<std::string>& col_names,
-                       const std::vector<std::string>& col_values)
-{
-  // start by reading the 2 first entries
-  if (col_names.size() < 2)
-  {
-    throw std::runtime_error("Failed to load FPF::Config, size must be at least 2");
-  }
-  x_dim = std::stoi(col_values[0]);
-  u_dim = std::stoi(col_values[1]);
-  // Now names will be valid
-  auto expectedNames = names();
-  if (col_names.size() != expectedNames.size()) {
-    throw std::runtime_error("Failed to load FPF::Config, unexpected size");
-  }
-  // Check if names matches the description
-  for (size_t colNo = 0;  colNo < col_names.size(); colNo++) {
-    auto givenName = col_names[colNo];
-    auto expectedName = expectedNames[colNo];
-    if (givenName.find(expectedName) == std::string::npos) {
-      throw std::runtime_error("Given name '" + givenName + "' does not match '"
-                               + expectedName + "'");
-    }
-  }
-  // Read limits
-  int col_idx = 2;
-  for (size_t i = 0; i < x_dim; i++)
-  {
-    x_limits(i,0) = std::stoi(col_values[col_idx++]);
-    x_limits(i,1) = std::stoi(col_values[col_idx++]);
-  }
-  for (size_t i = 0; i < u_dim; i++)
-  {
-    u_limits(i,0) = std::stoi(col_values[col_idx++]);
-    u_limits(i,1) = std::stoi(col_values[col_idx++]);
-  }
-  horizon          = std::stoi(col_values[col_idx++]);
-  discount         = std::stoi(col_values[col_idx++]);
-  max_action_tiles = std::stoi(col_values[col_idx++]);
-  q_value_time     = std::stod(col_values[col_idx++]);
-  policy_time      = std::stod(col_values[col_idx++]);
-  /// reading q_value_conf
-  int q_conf_size = q_value_conf.names().size();
-  std::vector<std::string> q_value_names, q_value_values;
-  q_value_names.insert (q_value_names.end() ,
-                        col_names.begin() + col_idx ,
-                        col_names.begin() + col_idx + q_conf_size);
-  q_value_values.insert(q_value_values.end(),
-                        col_values.begin() + col_idx,
-                        col_values.begin() + col_idx + q_conf_size);
-  q_value_conf.load(q_value_names, q_value_values);
-  col_idx += q_conf_size;
-  /// reading policy_conf
-  int policy_conf_size = policy_conf.names().size();
-  std::vector<std::string> policy_names, policy_values;
-  policy_names.insert (policy_names.end() ,
-                       col_names.begin() + col_idx ,
-                       col_names.begin() + col_idx + policy_conf_size);
-  policy_values.insert(policy_values.end(),
-                       col_values.begin() + col_idx,
-                       col_values.begin() + col_idx + policy_conf_size);
-  policy_conf.load(policy_names, policy_values);
 }
 
 const Eigen::MatrixXd & FPF::Config::getStateLimits() const
@@ -200,6 +82,7 @@ void FPF::Config::to_xml(std::ostream &out) const
   rosban_utils::xml_tools::write_vector<double>("u_limits", u_limits_vec, out);
   // Writing properties
   rosban_utils::xml_tools::write<int>("horizon", horizon, out);
+  rosban_utils::xml_tools::write<int>("nb_threads", nb_threads, out);
   rosban_utils::xml_tools::write<double>("discount", discount, out);
   rosban_utils::xml_tools::write<int>("policy_samples", policy_samples, out);
   rosban_utils::xml_tools::write<int>("max_action_tiles", max_action_tiles, out);
@@ -225,6 +108,7 @@ void FPF::Config::from_xml(TiXmlNode *node)
   u_limits = Eigen::Map<Eigen::MatrixXd>(u_limits_vec.data(),u_dim, 2);
   // Writing properties
   horizon          = rosban_utils::xml_tools::read<int>   (node, "horizon");
+  nb_threads       = rosban_utils::xml_tools::read<int>   (node, "nb_threads");
   discount         = rosban_utils::xml_tools::read<double>(node, "discount");
   policy_samples   = rosban_utils::xml_tools::read<int>   (node, "policy_samples");
   max_action_tiles = rosban_utils::xml_tools::read<int>   (node, "max_action_tiles");
@@ -320,10 +204,49 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
                                 std::function<bool(const Eigen::VectorXd&)> is_terminal,
                                 const Config &conf)
 {
+  std::vector<std::thread> threads;
+  std::mutex ts_mutex;
+  int x_dim = conf.getStateLimits().rows();
+  int u_dim = conf.getActionLimits().rows();
+  TrainingSet ts(x_dim + u_dim);
+  double samples_by_thread = samples.size() / (double)conf.nb_threads;
+  for (int thread_no = 0; thread_no < conf.nb_threads; thread_no++)
+  {
+    // Compute samples in [start, end[
+    int start = std::floor(thread_no * samples_by_thread);
+    int end = std::floor((thread_no + 1) * samples_by_thread);
+    threads.push_back(std::thread([&]()
+                                  {
+                                    TrainingSet thread_ts = this->getTrainingSet(samples,
+                                                                                 is_terminal,
+                                                                                 conf,
+                                                                                 start,
+                                                                                 end);
+                                    // Only one thread at a time can push its collection
+                                    ts_mutex.lock();
+                                    for (size_t sample = 0; sample < thread_ts.size(); sample++)
+                                    {
+                                      ts.push(thread_ts(sample));
+                                    }
+                                    ts_mutex.unlock();
+                                  }));
+  }
+  for (size_t thread_no = 0; thread_no < conf.nb_threads; thread_no++)
+  {
+    threads[thread_no].join();
+  }
+  return ts;
+}
+
+TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
+                                std::function<bool(const Eigen::VectorXd&)> is_terminal,
+                                const Config &conf,
+                                int start_idx, int end_idx)
+{
   int x_dim = conf.getStateLimits().rows();
   int u_dim = conf.getActionLimits().rows();
   TrainingSet ls(x_dim + u_dim);
-  for (size_t i = 0; i < samples.size(); i++) {
+  for (size_t i = start_idx; i < end_idx; i++) {
     const Sample& sample = samples[i];
     int x_dim = sample.state.rows();
     int u_dim = sample.action.rows();

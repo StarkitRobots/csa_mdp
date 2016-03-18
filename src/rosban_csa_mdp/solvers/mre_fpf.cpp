@@ -76,6 +76,7 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
   return new_ts;
 }
 
+
 void MREFPF::updateQValue(const std::vector<Sample> &samples,
                           std::function<bool(const Eigen::VectorXd&)> is_terminal,
                           const FPF::Config &conf_fpf)
