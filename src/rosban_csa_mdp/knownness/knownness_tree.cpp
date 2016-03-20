@@ -200,6 +200,9 @@ double KnownnessTree::getValue(const Eigen::MatrixXd& space,
       double global_density = nb_points / global_size;
       double density_ratio = local_density / global_density;
       double raw_value = density_ratio;
+      // Test:
+      // - Required density is reduced when the number of points grows
+      raw_value = density_ratio  * log(nb_points);
       double value = std::min(1.0, raw_value);
       return value;
     }
