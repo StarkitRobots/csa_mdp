@@ -110,6 +110,7 @@ void MRE::updatePolicy()
     //TODO software design should really be improved
     policies.push_back(solver.stealPolicyForest(dim));
   }
+  nb_update++;
 }
 
 const regression_forests::Forest & MRE::getPolicy(int dim)
