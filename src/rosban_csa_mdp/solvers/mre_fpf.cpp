@@ -2,6 +2,10 @@
 
 #include "rosban_regression_forests/approximations/pwc_approximation.h"
 
+#include "rosban_utils/time_stamp.h"
+
+using rosban_utils::TimeStamp;
+
 using regression_forests::PWCApproximation;
 using regression_forests::TrainingSet;
 
@@ -51,13 +55,18 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
 {
   const MREFPF::Config &conf = dynamic_cast<const MREFPF::Config &>(conf_fpf);
   // Removing samples which have the same starting state if filter_samples is activated
+  TimeStamp start_filter = TimeStamp::now();
   std::vector<Sample> filtered_samples;
   if (conf.filter_samples)
     filtered_samples = filterSimilarSamples(samples);
   else
     filtered_samples = samples;
+  TimeStamp end_filter = TimeStamp::now();
+  std::cout << "\t\tFiltering samples  : " << diffMs(start_filter, end_filter) << " ms" << std::endl;
   // Computing original training Set
   TrainingSet original_ts = FPF::getTrainingSet(filtered_samples, is_terminal, conf);
+  TimeStamp get_ts_end = TimeStamp::now();
+  std::cout << "\t\tFPF::getTrainingSet: " << diffMs(end_filter, get_ts_end) << " ms" << std::endl;
   // If alternative mode, then do not modify samples
   if (conf.update_type == UpdateType::Alternative) return original_ts;
   // Otherwise use knownness to influence samples
