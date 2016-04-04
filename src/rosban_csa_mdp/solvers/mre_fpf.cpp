@@ -62,11 +62,11 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
   else
     filtered_samples = samples;
   TimeStamp end_filter = TimeStamp::now();
-  std::cout << "\t\tFiltering samples  : " << diffMs(start_filter, end_filter) << " ms" << std::endl;
+  //std::cout << "\t\tFiltering samples  : " << diffMs(start_filter, end_filter) << " ms" << std::endl;
   // Computing original training Set
   TrainingSet original_ts = FPF::getTrainingSet(filtered_samples, is_terminal, conf);
   TimeStamp get_ts_end = TimeStamp::now();
-  std::cout << "\t\tFPF::getTrainingSet: " << diffMs(end_filter, get_ts_end) << " ms" << std::endl;
+  //std::cout << "\t\tFPF::getTrainingSet: " << diffMs(end_filter, get_ts_end) << " ms" << std::endl;
   // If alternative mode, then do not modify samples
   if (conf.update_type == UpdateType::Alternative) return original_ts;
   // Otherwise use knownness to influence samples
