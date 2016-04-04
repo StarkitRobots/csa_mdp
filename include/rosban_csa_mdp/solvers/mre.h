@@ -81,6 +81,10 @@ private:
 
   // Quick approach for implementation, yet not generic, force the use of FPF
   std::vector<std::unique_ptr<regression_forests::Forest>> policies;
+
+  // Spacing policies
+  int nb_update;
+  int nb_update_requested;
 };
 
 }

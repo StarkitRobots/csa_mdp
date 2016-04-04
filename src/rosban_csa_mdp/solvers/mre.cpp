@@ -44,7 +44,9 @@ void MRE::Config::from_xml(TiXmlNode *node)
 MRE::MRE(const MRE::Config &conf_,
          std::function<bool(const Eigen::VectorXd &)> is_terminal_)
   : conf(conf_),
-    is_terminal(is_terminal_)
+    is_terminal(is_terminal_),
+    nb_update(0),
+    nb_update_requested(0)
 {
   // Init Knownness Forest
   Eigen::MatrixXd q_space = conf.mrefpf_conf.getInputLimits();
@@ -79,7 +81,7 @@ Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
     Eigen::VectorXd action(policies.size());
     for (size_t i = 0; i < policies.size(); i++)
     {
-      action(i) = policies[i]->getValue(state);
+      action(i) = policies[i]->getRandomizedValue(state, random_engine);
       double min = getActionSpace()(i,0);
       double max = getActionSpace()(i,1);
       // Ensuring that action is in the given bounds
@@ -93,6 +95,11 @@ Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
 
 void MRE::updatePolicy()
 {
+  // Trick to space up the computation of policies
+  nb_update_requested++;
+  int next_update = nb_update * nb_update;
+  if (nb_update_requested < next_update) return;
+  // Updating the policy
   TimeStamp time1 = TimeStamp::now();
   solver.solve(samples, is_terminal, conf.mrefpf_conf);
   TimeStamp time2 = TimeStamp::now();
