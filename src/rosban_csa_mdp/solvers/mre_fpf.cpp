@@ -2,8 +2,9 @@
 
 #include "rosban_regression_forests/approximations/pwc_approximation.h"
 
-#include "rosban_utils/time_stamp.h"
+#include "rosban_utils/benchmark.h"
 
+using rosban_utils::Benchmark;
 using rosban_utils::TimeStamp;
 
 using regression_forests::PWCApproximation;
@@ -53,20 +54,28 @@ MREFPF::MREFPF(std::shared_ptr<KnownnessFunction> knownness_func_)
 
 TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
                                    std::function<bool(const Eigen::VectorXd&)> is_terminal,
-                                   const FPF::Config &conf_fpf)
+                                   const FPF::Config &conf_fpf,
+                                   int start_index, int end_index)
 {
   const MREFPF::Config &conf = dynamic_cast<const MREFPF::Config &>(conf_fpf);
   // Removing samples which have the same starting state if filter_samples is activated
   TimeStamp start_filter = TimeStamp::now();
   std::vector<Sample> filtered_samples;
+  //TODO filtering samples should be done before...
   if (conf.filter_samples)
+  {
+    throw std::logic_error("Fix needed for filtering similar samples");
     filtered_samples = filterSimilarSamples(samples);
+  }
   else
+  {
     filtered_samples = samples;
+  }
   TimeStamp end_filter = TimeStamp::now();
   //std::cout << "\t\tFiltering samples  : " << diffMs(start_filter, end_filter) << " ms" << std::endl;
   // Computing original training Set
-  TrainingSet original_ts = FPF::getTrainingSet(filtered_samples, is_terminal, conf);
+  TrainingSet original_ts = FPF::getTrainingSet(filtered_samples, is_terminal, conf,
+                                                start_index, end_index);
   TimeStamp get_ts_end = TimeStamp::now();
   //std::cout << "\t\tFPF::getTrainingSet: " << diffMs(end_filter, get_ts_end) << " ms" << std::endl;
   // If alternative mode, then do not modify samples
@@ -97,6 +106,7 @@ void MREFPF::updateQValue(const std::vector<Sample> &samples,
   FPF::updateQValue(samples, is_terminal, conf, last_step);
   if (conf.update_type == UpdateType::Alternative)
   {
+    Benchmark::open("Applying knownness (Alternative)");
     regression_forests::Node::Function f = [this, &conf](regression_forests::Node * node,
                                                          const Eigen::MatrixXd & limits)
       {
@@ -116,6 +126,7 @@ void MREFPF::updateQValue(const std::vector<Sample> &samples,
       };
     Eigen::MatrixXd limits = conf.getInputLimits();
     q_value->applyOnLeafs(limits, f);
+    Benchmark::close();
   }
 }
 

@@ -81,9 +81,10 @@ protected:
   std::vector<std::unique_ptr<regression_forests::Forest>> policies;
 
   /// Create a TrainingSet from current q_value and a collection f mdp samples
-  /// Note: this method is virtual, because other algorithms (such as MRE) might need to use a
-  ///       custom way of creating the trainingSet
-  virtual regression_forests::TrainingSet
+  /// Note: this method is not virtual, because if other algorithms (such as MRE)
+  ///       need to use a custom way of initializing the data, they should implement
+  ///       the method which generate samples for a given interval
+  regression_forests::TrainingSet
   getTrainingSet(const std::vector<Sample>& samples,
                  std::function<bool(const Eigen::VectorXd&)> is_terminal,
                  const Config &conf);

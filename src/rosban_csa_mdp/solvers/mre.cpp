@@ -4,11 +4,12 @@
 #include "rosban_regression_forests/tools/random.h"
 #include "rosban_regression_forests/tools/statistics.h"
 
-#include "rosban_utils/time_stamp.h"
+#include "rosban_utils/benchmark.h"
 
 #include <set>
 #include <iostream>
 
+using rosban_utils::Benchmark;
 using rosban_utils::TimeStamp;
 
 using regression_forests::TrainingSet;
@@ -100,10 +101,9 @@ void MRE::updatePolicy()
   int next_update = nb_update * nb_update;
   if (nb_update_requested < next_update) return;
   // Updating the policy
-  TimeStamp time1 = TimeStamp::now();
+  Benchmark::open("solver.solve");
   solver.solve(samples, is_terminal, conf.mrefpf_conf);
-  TimeStamp time2 = TimeStamp::now();
-  std::cout << "solver.solve: " << diffMs(time1,time2) << " ms" << std::endl;
+  Benchmark::close();//true, -1);
   policies.clear();
   for (int dim = 0; dim < getActionSpace().rows(); dim++)
   {

@@ -42,7 +42,8 @@ protected:
   virtual regression_forests::TrainingSet
   getTrainingSet(const std::vector<Sample>& samples,
                  std::function<bool(const Eigen::VectorXd&)> is_terminal,
-                 const FPF::Config &conf) override;
+                 const FPF::Config &conf,
+                 int start_idx, int end_idx) override;
 
   /// TrueType of conf must be MREFPF::Config
   virtual void

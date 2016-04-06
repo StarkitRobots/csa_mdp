@@ -2,13 +2,14 @@
 
 #include "rosban_regression_forests/tools/random.h"
 
-#include "rosban_utils/time_stamp.h"
+#include "rosban_utils/benchmark.h"
 
 #include <iostream>
 #include <mutex>
 #include <sstream>
 #include <thread>
 
+using rosban_utils::Benchmark;
 using rosban_utils::TimeStamp;
 
 using regression_forests::ApproximationType;
@@ -180,8 +181,12 @@ void FPF::updateQValue(const std::vector<Sample>& samples,
     q_learner.conf = conf.q_value_conf;
   }
   // ts is computed using last q_value
+  Benchmark::open("Getting TrainingSet");
   TrainingSet ts = getTrainingSet(samples, isTerminal, conf);
+  Benchmark::close();
+  Benchmark::open("q_learner.solve()");
   q_value = q_learner.solve(ts, conf.getInputLimits());
+  Benchmark::close();
 }
 
 void FPF::solve(const std::vector<Sample>& samples,
@@ -189,13 +194,12 @@ void FPF::solve(const std::vector<Sample>& samples,
                 Config &conf)
 {
   q_value.release();
-  TimeStamp q_value_start = TimeStamp::now();
+  Benchmark::open("Updating Q-Value");
   for (size_t h = 1; h <= conf.horizon; h++) {
     bool last_step = (h == conf.horizon);
     updateQValue(samples, isTerminal, conf, last_step);
   }
-  TimeStamp q_value_end = TimeStamp::now();
-  conf.q_value_time = diffSec(q_value_start, q_value_end);
+  conf.q_value_time = Benchmark::close();
   // If required, learn policy from the q_value
   if (conf.policy_samples >= 0)
   {
@@ -230,6 +234,7 @@ void FPF::solve(const std::vector<Sample>& samples,
     {
       policy_learner.conf = conf.policy_conf;
     }
+    Benchmark::open("policy_learning");
     for (int dim = 0; dim < u_dim; dim++)
     {
       // First build training set
@@ -240,8 +245,7 @@ void FPF::solve(const std::vector<Sample>& samples,
       }
       policies.push_back(policy_learner.solve(ts, conf.getStateLimits()));
     }
-    TimeStamp policy_end = TimeStamp::now();
-    conf.policy_time = diffSec(q_value_end, policy_end);
+    conf.policy_time = Benchmark::close();
   }
 }
 
@@ -260,6 +264,7 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
     // Compute samples in [start, end[
     int start = std::floor(thread_no * samples_by_thread);
     int end = std::floor((thread_no + 1) * samples_by_thread);
+    end = std::min(end, (int)samples.size());
     threads.push_back(std::thread([&]()
                                   {
                                     TrainingSet thread_ts = this->getTrainingSet(samples,
@@ -276,14 +281,14 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
                                     ts_mutex.unlock();
                                   }));
   }
-  for (size_t thread_no = 0; thread_no < conf.nb_threads; thread_no++)
+  for (int thread_no = 0; thread_no < conf.nb_threads; thread_no++)
   {
     threads[thread_no].join();
   }
   return ts;
 }
 
-TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
+TrainingSet FPF::getTrainingSet(const std::vector<Sample> &samples,
                                 std::function<bool(const Eigen::VectorXd&)> is_terminal,
                                 const Config &conf,
                                 int start_idx, int end_idx)
@@ -291,7 +296,7 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
   int x_dim = conf.getStateLimits().rows();
   int u_dim = conf.getActionLimits().rows();
   TrainingSet ls(x_dim + u_dim);
-  for (size_t i = start_idx; i < end_idx; i++) {
+  for (int i = start_idx; i < end_idx; i++) {
     const Sample& sample = samples[i];
     int x_dim = sample.state.rows();
     int u_dim = sample.action.rows();
