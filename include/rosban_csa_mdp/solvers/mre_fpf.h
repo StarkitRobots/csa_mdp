@@ -48,7 +48,8 @@ protected:
   virtual void
   updateQValue(const std::vector<Sample> &samples,
                std::function<bool(const Eigen::VectorXd&)> is_terminal,
-               const FPF::Config &conf) override;
+               const FPF::Config &conf,
+               bool last_step) override;
 
   std::vector<Sample> filterSimilarSamples(const std::vector<Sample> &samples) const;
 

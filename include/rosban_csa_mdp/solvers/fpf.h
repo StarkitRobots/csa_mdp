@@ -47,6 +47,9 @@ public:
     double policy_time;
     /// Number of threads used to compute the trainingset
     int nb_threads;
+    /// If activated, internal config are ignored and replaced by heuristic based
+    /// parameters. (see ExtraTrees::Config::generateAuto)
+    bool auto_parameters;
 
     /// Config used for computing the Q-value
     regression_forests::ExtraTrees::Config q_value_conf;
@@ -92,11 +95,12 @@ protected:
                  const Config &conf,
                  int start_idx, int end_idx);
 
-  /// Perform one step of update on the Q-value. This function is virtual because some
-  /// algorithms need to modify it
+  /// Perform one step of update on the Q-value, last_step might include special update.
+  /// This function is virtual because some algorithms need to modify it.
   virtual void updateQValue(const std::vector<Sample>& samples,
                             std::function<bool(const Eigen::VectorXd&)> isTerminal,
-                            const Config &conf);
+                            const Config &conf,
+                            bool last_step);
 
   /// Create a set of states which will be used to build the the policy forest, in the default implementation,
   /// states are chosen at uniformous random inside the state space

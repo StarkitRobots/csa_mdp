@@ -88,10 +88,11 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
 
 void MREFPF::updateQValue(const std::vector<Sample> &samples,
                           std::function<bool(const Eigen::VectorXd&)> is_terminal,
-                          const FPF::Config &conf_fpf)
+                          const FPF::Config &conf_fpf,
+                          bool last_step)
 {
   const MREFPF::Config &conf = dynamic_cast<const MREFPF::Config &>(conf_fpf);
-  FPF::updateQValue(samples, is_terminal, conf);
+  FPF::updateQValue(samples, is_terminal, conf, last_step);
   if (conf.update_type == UpdateType::Alternative)
   {
     regression_forests::Node::Function f = [this, &conf](regression_forests::Node * node,

@@ -32,6 +32,7 @@ FPF::Config::Config()
   policy_samples = 0;
   q_value_time = 0;
   policy_time = 0;
+  auto_parameters = false;
 }
 
 const Eigen::MatrixXd & FPF::Config::getStateLimits() const
@@ -88,6 +89,7 @@ void FPF::Config::to_xml(std::ostream &out) const
   rosban_utils::xml_tools::write<int>("max_action_tiles", max_action_tiles, out);
   rosban_utils::xml_tools::write<double>("q_value_time", q_value_time, out);
   rosban_utils::xml_tools::write<double>("policy_time", policy_time, out);
+  rosban_utils::xml_tools::write<bool>("auto_parameters", auto_parameters, out);
   q_value_conf.write("q_value_conf", out);
   policy_conf.write("policy_conf", out);
 }
@@ -123,6 +125,7 @@ void FPF::Config::from_xml(TiXmlNode *node)
   rosban_utils::xml_tools::try_read<int>   (node, "policy_samples"  , policy_samples  );
   rosban_utils::xml_tools::try_read<double>(node, "q_value_time"    , q_value_time    );
   rosban_utils::xml_tools::try_read<double>(node, "policy_time"     , policy_time     );
+  rosban_utils::xml_tools::try_read<bool>  (node, "auto_parameters" , auto_parameters );
   q_value_conf.read(node, "q_value_conf");
   policy_conf.read(node, "policy_conf");
 }
@@ -150,10 +153,26 @@ std::unique_ptr<regression_forests::Forest> FPF::stealPolicyForest(int action_in
 
 void FPF::updateQValue(const std::vector<Sample>& samples,
                        std::function<bool(const Eigen::VectorXd&)> isTerminal,
-                       const Config &conf)
+                       const Config &conf,
+                       bool last_step)
 {
   regression_forests::ExtraTrees q_learner;
-  q_learner.conf = conf.q_value_conf;
+  if (conf.auto_parameters)
+  {
+    // Using piecewise linear approximation is only allowed during the last step
+    ApproximationType appr_type = last_step ? ApproximationType::PWL : ApproximationType::PWC;
+    // TODO implement alternative update with PWL approximations to allow their use
+    appr_type = ApproximationType::PWC;
+    // Generating the configuration automatically
+    q_learner.conf = ExtraTrees::Config::generateAuto(conf.getInputLimits(),
+                                                      samples.size(),
+                                                      appr_type);
+    q_learner.conf.nb_threads = conf.nb_threads;
+  }
+  else
+  {
+    q_learner.conf = conf.q_value_conf;
+  }
   // ts is computed using last q_value
   TrainingSet ts = getTrainingSet(samples, isTerminal, conf);
   q_value = q_learner.solve(ts, conf.getInputLimits());
@@ -166,7 +185,8 @@ void FPF::solve(const std::vector<Sample>& samples,
   q_value.release();
   TimeStamp q_value_start = TimeStamp::now();
   for (size_t h = 1; h <= conf.horizon; h++) {
-    updateQValue(samples, isTerminal, conf);
+    bool last_step = (h == conf.horizon);
+    updateQValue(samples, isTerminal, conf, last_step);
   }
   TimeStamp q_value_end = TimeStamp::now();
   conf.q_value_time = diffSec(q_value_start, q_value_end);
@@ -193,7 +213,17 @@ void FPF::solve(const std::vector<Sample>& samples,
     // Train a policy for each dimension
     policies.clear();
     regression_forests::ExtraTrees policy_learner;
-    policy_learner.conf = conf.policy_conf;
+    if (conf.auto_parameters)
+    {
+      policy_learner.conf = ExtraTrees::Config::generateAuto(conf.getInputLimits(),
+                                                             samples.size(),
+                                                             ApproximationType::PWL);
+      policy_learner.conf.nb_threads = conf.nb_threads;
+    }
+    else
+    {
+      policy_learner.conf = conf.policy_conf;
+    }
     for (int dim = 0; dim < u_dim; dim++)
     {
       // First build training set
