@@ -19,11 +19,13 @@ public:
   class Config : public rosban_utils::Serializable{
   private:
     // Storing x_dim and u_dim is required in order to load properly a configuration
+    // TODO: not exactly in fact, dividing size of read vector by 2 should give the
+    //       expected result
 
     /// The number of continuous dimensions for the state
-    size_t x_dim;
+    int x_dim;
     /// The number of continuous dimensions for actions
-    size_t u_dim;
+    int u_dim;
     /// The state space
     Eigen::MatrixXd x_limits;
     /// The action space

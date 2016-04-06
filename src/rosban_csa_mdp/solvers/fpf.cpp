@@ -75,7 +75,7 @@ void FPF::Config::to_xml(std::ostream &out) const
 {
   rosban_utils::xml_tools::write<int>("x_dim", x_dim, out);
   rosban_utils::xml_tools::write<int>("u_dim", u_dim, out);
-  // Gathering limits in a vector
+  // Gathering limits in a vector if dim have been specified
   std::vector<double> x_limits_vec(x_limits.data(), x_limits.data() + x_limits.size());
   std::vector<double> u_limits_vec(u_limits.data(), u_limits.data() + u_limits.size());
   rosban_utils::xml_tools::write_vector<double>("x_limits", x_limits_vec, out);
@@ -94,26 +94,35 @@ void FPF::Config::to_xml(std::ostream &out) const
 
 void FPF::Config::from_xml(TiXmlNode *node)
 {
-  x_dim = rosban_utils::xml_tools::read<int>(node, "x_dim");
-  u_dim = rosban_utils::xml_tools::read<int>(node, "u_dim");
+  // Reading size of the problem if provided
+  rosban_utils::xml_tools::try_read<int>(node, "x_dim", x_dim);
+  rosban_utils::xml_tools::try_read<int>(node, "u_dim", u_dim);
   // Gathering limits in a vector
-  std::vector<double> x_limits_vec, u_limits_vec;
-  x_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "x_limits");
-  u_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "u_limits");
-  if (x_limits_vec.size() != 2 * x_dim)
-    throw std::runtime_error("FPF::from_xml: Invalid number of limits for x_limits");
-  if (u_limits_vec.size() != 2 * u_dim)
-    throw std::runtime_error("FPF::from_xml: Invalid number of limits for x_limits");
-  x_limits = Eigen::Map<Eigen::MatrixXd>(x_limits_vec.data(),x_dim, 2);
-  u_limits = Eigen::Map<Eigen::MatrixXd>(u_limits_vec.data(),u_dim, 2);
-  // Writing properties
-  horizon          = rosban_utils::xml_tools::read<int>   (node, "horizon");
-  nb_threads       = rosban_utils::xml_tools::read<int>   (node, "nb_threads");
-  discount         = rosban_utils::xml_tools::read<double>(node, "discount");
-  policy_samples   = rosban_utils::xml_tools::read<int>   (node, "policy_samples");
+  if (x_dim != 0)
+  {
+    std::vector<double> x_limits_vec;
+    x_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "x_limits");
+    if (x_limits_vec.size() != (size_t) 2 * x_dim)
+      throw std::runtime_error("FPF::from_xml: Invalid number of limits for x_limits");
+    x_limits = Eigen::Map<Eigen::MatrixXd>(x_limits_vec.data(),x_dim, 2);
+  }
+  if (u_dim != 0)
+  {
+    std::vector<double> u_limits_vec;
+    u_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "u_limits");
+    if (u_limits_vec.size() != (size_t)2 * u_dim)
+      throw std::runtime_error("FPF::from_xml: Invalid number of limits for x_limits");
+    u_limits = Eigen::Map<Eigen::MatrixXd>(u_limits_vec.data(),x_dim, 2);
+  }
+  // Reading mandatory properties
+  horizon          = rosban_utils::xml_tools::read<int>   (node, "horizon"         );
+  discount         = rosban_utils::xml_tools::read<double>(node, "discount"        );
   max_action_tiles = rosban_utils::xml_tools::read<int>   (node, "max_action_tiles");
-  q_value_time     = rosban_utils::xml_tools::read<double>(node, "q_value_time");
-  policy_time      = rosban_utils::xml_tools::read<double>(node, "policy_time");
+  // Reading optional properties
+  rosban_utils::xml_tools::try_read<int>   (node, "nb_threads"      , nb_threads      );
+  rosban_utils::xml_tools::try_read<int>   (node, "policy_samples"  , policy_samples  );
+  rosban_utils::xml_tools::try_read<double>(node, "q_value_time"    , q_value_time    );
+  rosban_utils::xml_tools::try_read<double>(node, "policy_time"     , policy_time     );
   q_value_conf.read(node, "q_value_conf");
   policy_conf.read(node, "policy_conf");
 }
