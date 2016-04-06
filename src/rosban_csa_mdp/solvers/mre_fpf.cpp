@@ -33,11 +33,13 @@ void MREFPF::Config::to_xml(std::ostream &out) const
 void MREFPF::Config::from_xml(TiXmlNode *node)
 {
   FPF::Config::from_xml(node);
-  filter_samples  = rosban_utils::xml_tools::read<bool>(node, "filter_samples");
+  // Mandatory parameters
   reward_max      = rosban_utils::xml_tools::read<int> (node, "reward_max"    );
   std::string update_type_str;
   update_type_str = rosban_utils::xml_tools::read<std::string>(node, "update_type");
   update_type = loadUpdateType(update_type_str);
+  // Optional parameters
+  rosban_utils::xml_tools::try_read<bool>(node, "filter_samples", filter_samples);
 }
 
 MREFPF::MREFPF()

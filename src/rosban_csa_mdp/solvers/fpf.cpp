@@ -90,8 +90,11 @@ void FPF::Config::to_xml(std::ostream &out) const
   rosban_utils::xml_tools::write<double>("q_value_time", q_value_time, out);
   rosban_utils::xml_tools::write<double>("policy_time", policy_time, out);
   rosban_utils::xml_tools::write<bool>("auto_parameters", auto_parameters, out);
-  q_value_conf.write("q_value_conf", out);
-  policy_conf.write("policy_conf", out);
+  if (!auto_parameters)
+  {
+    q_value_conf.write("q_value_conf", out);
+    policy_conf.write("policy_conf", out);
+  }
 }
 
 void FPF::Config::from_xml(TiXmlNode *node)
@@ -126,8 +129,11 @@ void FPF::Config::from_xml(TiXmlNode *node)
   rosban_utils::xml_tools::try_read<double>(node, "q_value_time"    , q_value_time    );
   rosban_utils::xml_tools::try_read<double>(node, "policy_time"     , policy_time     );
   rosban_utils::xml_tools::try_read<bool>  (node, "auto_parameters" , auto_parameters );
-  q_value_conf.read(node, "q_value_conf");
-  policy_conf.read(node, "policy_conf");
+  if (!auto_parameters)
+  {
+    q_value_conf.read(node, "q_value_conf");
+    policy_conf.read(node, "policy_conf");
+  }
 }
 
 FPF::FPF()
