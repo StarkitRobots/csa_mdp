@@ -225,7 +225,7 @@ void FPF::solve(const std::vector<Sample>& samples,
     regression_forests::ExtraTrees policy_learner;
     if (conf.auto_parameters)
     {
-      policy_learner.conf = ExtraTrees::Config::generateAuto(conf.getInputLimits(),
+      policy_learner.conf = ExtraTrees::Config::generateAuto(conf.getStateLimits(),
                                                              samples.size(),
                                                              ApproximationType::PWL);
       policy_learner.conf.nb_threads = conf.nb_threads;
