@@ -117,8 +117,8 @@ void FPF::Config::from_xml(TiXmlNode *node)
     std::vector<double> u_limits_vec;
     u_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "u_limits");
     if (u_limits_vec.size() != (size_t)2 * u_dim)
-      throw std::runtime_error("FPF::from_xml: Invalid number of limits for x_limits");
-    u_limits = Eigen::Map<Eigen::MatrixXd>(u_limits_vec.data(),x_dim, 2);
+      throw std::runtime_error("FPF::from_xml: Invalid number of limits for u_limits");
+    u_limits = Eigen::Map<Eigen::MatrixXd>(u_limits_vec.data(),u_dim, 2);
   }
   // Reading mandatory properties
   horizon          = rosban_utils::xml_tools::read<int>   (node, "horizon"         );
