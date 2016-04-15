@@ -30,24 +30,22 @@ std::string MRE::Config::class_name() const
 
 void MRE::Config::to_xml(std::ostream &out) const
 {
-  rosban_utils::xml_tools::write<int>   ("plan_period", plan_period, out);
+  rosban_utils::xml_tools::write<int>("plan_period", plan_period, out);
   mrefpf_conf.write("mrefpf_conf", out);
   knownness_conf.write("knownness_conf", out);
 }
 
 void MRE::Config::from_xml(TiXmlNode *node)
 {
-  plan_period = rosban_utils::xml_tools::read<int>   (node, "plan_period");
+  rosban_utils::xml_tools::try_read<int>(node, "plan_period", plan_period);
   mrefpf_conf.read(node, "mrefpf_conf");
-  knownness_conf.read(node, "knownness_conf");
+  knownness_conf.tryRead(node, "knownness_conf");
 }
 
 MRE::MRE(const MRE::Config &conf_,
          std::function<bool(const Eigen::VectorXd &)> is_terminal_)
   : conf(conf_),
-    is_terminal(is_terminal_),
-    nb_update(0),
-    nb_update_requested(0)
+    is_terminal(is_terminal_)
 {
   // Init Knownness Forest
   Eigen::MatrixXd q_space = conf.mrefpf_conf.getInputLimits();
@@ -96,10 +94,6 @@ Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
 
 void MRE::updatePolicy()
 {
-  // Trick to space up the computation of policies
-  nb_update_requested++;
-  int next_update = nb_update * nb_update;
-  if (nb_update_requested < next_update) return;
   // Updating the policy
   Benchmark::open("solver.solve");
   solver.solve(samples, is_terminal, conf.mrefpf_conf);
@@ -110,7 +104,6 @@ void MRE::updatePolicy()
     //TODO software design should really be improved
     policies.push_back(solver.stealPolicyForest(dim));
   }
-  nb_update++;
 }
 
 const regression_forests::Forest & MRE::getPolicy(int dim)
@@ -145,15 +138,24 @@ void MRE::saveStatus(const std::string &prefix)
   saveKnownnessTree(prefix);
 }
 
-
-double MRE::getQValueTime() const
+double MRE::getQValueTrainingSetTime() const
 {
-  return conf.mrefpf_conf.q_value_time;
+  return conf.mrefpf_conf.q_training_set_time;
 }
 
-double MRE::getPolicyTime() const
+double MRE::getQValueExtraTreesTime() const
 {
-  return conf.mrefpf_conf.policy_time;
+  return conf.mrefpf_conf.q_extra_trees_time;
+}
+
+double MRE::getPolicyTrainingSetTime() const
+{
+  return conf.mrefpf_conf.p_training_set_time;
+}
+
+double MRE::getPolicyExtraTreesTime() const
+{
+  return conf.mrefpf_conf.p_extra_trees_time;
 }
 
 const Eigen::MatrixXd & MRE::getStateSpace()

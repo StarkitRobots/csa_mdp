@@ -54,8 +54,10 @@ public:
   void saveKnownnessTree(const std::string &prefix);
   void saveStatus(const std::string &prefix);
 
-  double getQValueTime() const;
-  double getPolicyTime() const;
+  double getQValueTrainingSetTime() const;
+  double getQValueExtraTreesTime()  const;
+  double getPolicyTrainingSetTime() const;
+  double getPolicyExtraTreesTime()  const;
 
   const Eigen::MatrixXd & getStateSpace();
   const Eigen::MatrixXd & getActionSpace();
@@ -81,10 +83,6 @@ private:
 
   // Quick approach for implementation, yet not generic, force the use of FPF
   std::vector<std::unique_ptr<regression_forests::Forest>> policies;
-
-  // Spacing policies
-  int nb_update;
-  int nb_update_requested;
 };
 
 }

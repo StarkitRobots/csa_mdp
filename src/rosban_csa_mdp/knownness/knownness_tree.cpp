@@ -10,7 +10,7 @@ namespace csa_mdp
 {
 
 KnownnessTree::Config::Config()
-  : max_points(-1), type(Type::MRE)
+  : max_points(10), type(Type::Random)
 {
 }
 
@@ -27,10 +27,13 @@ void KnownnessTree::Config::to_xml(std::ostream &out) const
 
 void KnownnessTree::Config::from_xml(TiXmlNode *node)
 {
-  max_points  = rosban_utils::xml_tools::read<int>(node, "max_points" );
+  rosban_utils::xml_tools::try_read<int>(node, "max_points", max_points);
   std::string type_str;
-  type_str = rosban_utils::xml_tools::read<std::string>(node, "type");
-  type = loadType(type_str);
+  rosban_utils::xml_tools::try_read<std::string>(node, "type", type_str);
+  if (type_str != "")
+  {
+    type = loadType(type_str);
+  }
 }
 
 KnownnessTree::KnownnessTree(const Eigen::MatrixXd& space,
