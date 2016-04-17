@@ -193,7 +193,7 @@ void FPF::solve(const std::vector<Sample>& samples,
                 std::function<bool(const Eigen::VectorXd&)> isTerminal,
                 Config &conf)
 {
-  q_value.release();
+  //q_value.release();
   Benchmark::open("Updating Q-Value");
   for (size_t h = 1; h <= conf.horizon; h++) {
     bool last_step = (h == conf.horizon);
