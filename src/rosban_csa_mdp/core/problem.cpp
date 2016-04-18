@@ -45,6 +45,7 @@ void Problem::setStateLimits(const Eigen::MatrixXd & new_limits)
     double max = new_limits(row, 1);
     state_distribution.push_back(std::uniform_real_distribution<double>(min, max));
   }
+  resetStateNames();
 }
 
 void Problem::setActionLimits(const Eigen::MatrixXd & new_limits)
@@ -57,7 +58,69 @@ void Problem::setActionLimits(const Eigen::MatrixXd & new_limits)
     double max = new_limits(row, 1);
     action_distribution.push_back(std::uniform_real_distribution<double>(min, max));
   }
+  resetActionNames();
 }
+
+void Problem::resetStateNames()
+{
+  std::vector<std::string> names;
+  std::string prefix = "state_";
+  for (int i = 0; i < state_limits.rows(); i++)
+  {
+    std::ostringstream oss;
+    oss << prefix << i;
+    names.push_back(oss.str());
+  }
+  setStateNames(names);
+}
+
+void Problem::resetActionNames()
+{
+  std::vector<std::string> names;
+  std::string prefix = "action";
+  for (int i = 0; i < action_limits.rows(); i++)
+  {
+    std::ostringstream oss;
+    oss << prefix << i;
+    names.push_back(oss.str());
+  }
+  setActionNames(names);
+}
+
+void Problem::setStateNames(const std::vector<std::string> &names)
+{
+  if (names.size() != state_limits.rows())
+  {
+    std::ostringstream oss;
+    oss << "Problem::setStateNames: names.size() != state_limits.rows(), "
+        << names.size() << " != " << state_limits.rows();
+    throw std::runtime_error(oss.str());
+  }
+  state_names = names;
+}
+
+void Problem::setActionNames(const std::vector<std::string> &names)
+{
+  if (names.size() != action_limits.rows())
+  {
+    std::ostringstream oss;
+    oss << "Problem::setActionNames: names.size() != action_limits.rows(), "
+        << names.size() << " != " << action_limits.rows();
+    throw std::runtime_error(oss.str());
+  }
+  action_names = names;
+}
+
+const std::vector<std::string> & Problem::getStateNames() const
+{
+  return state_names;
+}
+
+const std::vector<std::string> & Problem::getActionNames() const
+{
+  return action_names;
+}
+
 
 Eigen::VectorXd Problem::getRandomAction()
 {

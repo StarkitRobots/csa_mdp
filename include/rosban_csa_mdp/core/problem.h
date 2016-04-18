@@ -23,6 +23,9 @@ private:
   Eigen::MatrixXd state_limits;
   Eigen::MatrixXd action_limits;
 
+  std::vector<std::string> state_names;
+  std::vector<std::string> action_names;
+
   std::vector<std::uniform_real_distribution<double>> state_distribution;
   std::vector<std::uniform_real_distribution<double>> action_distribution;
 
@@ -39,8 +42,29 @@ public:
   const Eigen::MatrixXd & getStateLimits() const;
   const Eigen::MatrixXd & getActionLimits() const;
 
+  /// Also reset state names
   void setStateLimits(const Eigen::MatrixXd &new_limits);
+
+  /// Also reset action names
   void setActionLimits(const Eigen::MatrixXd &new_limits);
+
+
+  /// Set the names of the states to "state_0, state_1, ..."
+  void resetStateNames();
+
+  /// Set the names of the states to "action_0, action_1, ..."
+  void resetActionNames();
+
+  /// To call after setting properly the limits
+  /// throw a runtime_error if names size is not appropriate
+  void setStateNames(const std::vector<std::string> &names);
+
+  /// To call after setting properly the limits
+  /// throw a runtime_error if names size is not appropriate
+  void setActionNames(const std::vector<std::string> &names);
+
+  const std::vector<std::string> & getStateNames() const;
+  const std::vector<std::string> & getActionNames() const;
   
   virtual bool isTerminal(const Eigen::VectorXd &) const = 0;
   /// This function is allowed to be stochastic
