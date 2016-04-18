@@ -14,7 +14,7 @@ namespace csa_mdp
 {
 
 MREFPF::Config::Config()
-  : filter_samples(false), reward_max(0), update_type(UpdateType::MRE)
+  : filter_samples(false), reward_max(0), update_type(UpdateType::Alternative)
 {
 }
 
@@ -37,8 +37,11 @@ void MREFPF::Config::from_xml(TiXmlNode *node)
   // Mandatory parameters
   reward_max      = rosban_utils::xml_tools::read<int> (node, "reward_max"    );
   std::string update_type_str;
-  update_type_str = rosban_utils::xml_tools::read<std::string>(node, "update_type");
-  update_type = loadUpdateType(update_type_str);
+  rosban_utils::xml_tools::try_read<std::string>(node, "update_type", update_type_str);
+  if (update_type_str != "")
+  {
+    update_type = loadUpdateType(update_type_str);
+  }
   // Optional parameters
   rosban_utils::xml_tools::try_read<bool>(node, "filter_samples", filter_samples);
 }
@@ -58,26 +61,9 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
                                    int start_index, int end_index)
 {
   const MREFPF::Config &conf = dynamic_cast<const MREFPF::Config &>(conf_fpf);
-  // Removing samples which have the same starting state if filter_samples is activated
-  TimeStamp start_filter = TimeStamp::now();
-  std::vector<Sample> filtered_samples;
-  //TODO filtering samples should be done before...
-  if (conf.filter_samples)
-  {
-    throw std::logic_error("Fix needed for filtering similar samples");
-    filtered_samples = filterSimilarSamples(samples);
-  }
-  else
-  {
-    filtered_samples = samples;
-  }
-  TimeStamp end_filter = TimeStamp::now();
-  //std::cout << "\t\tFiltering samples  : " << diffMs(start_filter, end_filter) << " ms" << std::endl;
   // Computing original training Set
-  TrainingSet original_ts = FPF::getTrainingSet(filtered_samples, is_terminal, conf,
+  TrainingSet original_ts = FPF::getTrainingSet(samples, is_terminal, conf,
                                                 start_index, end_index);
-  TimeStamp get_ts_end = TimeStamp::now();
-  //std::cout << "\t\tFPF::getTrainingSet: " << diffMs(end_filter, get_ts_end) << " ms" << std::endl;
   // If alternative mode, then do not modify samples
   if (conf.update_type == UpdateType::Alternative) return original_ts;
   // Otherwise use knownness to influence samples
@@ -99,10 +85,10 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
 
 void MREFPF::updateQValue(const std::vector<Sample> &samples,
                           std::function<bool(const Eigen::VectorXd&)> is_terminal,
-                          const FPF::Config &conf_fpf,
+                          FPF::Config &conf_fpf,
                           bool last_step)
 {
-  const MREFPF::Config &conf = dynamic_cast<const MREFPF::Config &>(conf_fpf);
+  MREFPF::Config &conf = dynamic_cast<MREFPF::Config &>(conf_fpf);
   FPF::updateQValue(samples, is_terminal, conf, last_step);
   if (conf.update_type == UpdateType::Alternative)
   {

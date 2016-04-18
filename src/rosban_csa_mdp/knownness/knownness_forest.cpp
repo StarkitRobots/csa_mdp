@@ -4,7 +4,7 @@ namespace csa_mdp
 {
 
 KnownnessForest::Config::Config()
-  : nb_trees(0), tree_conf()
+  : nb_trees(25), tree_conf()
 {
 }
 
@@ -22,7 +22,7 @@ void KnownnessForest::Config::to_xml(std::ostream &out) const
 void KnownnessForest::Config::from_xml(TiXmlNode *node)
 {
   nb_trees = rosban_utils::xml_tools::read<int>(node, "nb_trees");
-  tree_conf.read(node, "tree_conf");
+  tree_conf.tryRead(node, "tree_conf");
 }
 
 KnownnessForest::KnownnessForest()

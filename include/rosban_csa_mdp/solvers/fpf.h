@@ -41,10 +41,14 @@ public:
     /// = 0: States used to learn policy are the same as the state from samples
     /// < 0: Policy is not learned
     int policy_samples;
-    /// The time spent learning the q_value [s]
-    double q_value_time;
-    /// The time spent learning the policy from the q_value [s]
-    double policy_time;
+    /// The time spent computing training sets for q_value [s]
+    double q_training_set_time;
+    /// The time spent growing extra-trees for the q_value [s]
+    double q_extra_trees_time;
+    /// The time spent computing training sets for policies [s]
+    double p_training_set_time;
+    /// The time spent growing extra-trees for the policies [s]
+    double p_extra_trees_time;
     /// Number of threads used to compute the trainingset
     int nb_threads;
     /// If activated, internal config are ignored and replaced by heuristic based
@@ -100,7 +104,7 @@ protected:
   /// This function is virtual because some algorithms need to modify it.
   virtual void updateQValue(const std::vector<Sample>& samples,
                             std::function<bool(const Eigen::VectorXd&)> isTerminal,
-                            const Config &conf,
+                            Config &conf,
                             bool last_step);
 
   /// Create a set of states which will be used to build the the policy forest, in the default implementation,
