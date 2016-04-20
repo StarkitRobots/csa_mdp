@@ -7,7 +7,7 @@
 namespace csa_mdp
 {
 
-class Policy : rosban_utils::Serializable
+class Policy : public rosban_utils::Serializable
 {
 public:
   Policy();

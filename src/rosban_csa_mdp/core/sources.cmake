@@ -1,5 +1,7 @@
 set(SOURCES
-  forests_policy
+  forests_policy.cpp
+  random_policy.cpp
+  policy_factory.cpp
   history.cpp
   policy.cpp
   problem.cpp
