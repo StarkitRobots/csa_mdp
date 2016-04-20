@@ -21,7 +21,7 @@ Eigen::VectorXd Policy::boundAction(const Eigen::VectorXd & raw_action)
   {
     throw std::runtime_error("Policy::boundAction: Number of rows does not match");
   }
-  Eigen::VectorXd action;
+  Eigen::VectorXd action(raw_action.rows());
   for (int dim = 0; dim < raw_action.rows(); dim++)
   {
     action(dim) = std::min(action_limits(dim,1), std::max(action_limits(dim,0), raw_action(dim)));
