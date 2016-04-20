@@ -171,7 +171,6 @@ std::vector<Sample> Problem::getRandomBatch(const Eigen::VectorXd & initial_stat
   return result;
 }
 
-
 Sample Problem::getSample(const Eigen::VectorXd &state,
                           const Eigen::VectorXd &action)
 {
