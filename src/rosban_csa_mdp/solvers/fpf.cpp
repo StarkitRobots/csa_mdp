@@ -192,7 +192,7 @@ void FPF::solve(const std::vector<Sample>& samples,
                 Config &conf)
 {
   // Resetting properties
-  q_value.release();//TODO: test without it
+  //q_value.release();//Experimental
   conf.q_training_set_time = 0;
   conf.q_extra_trees_time  = 0;
   conf.p_training_set_time = 0;
