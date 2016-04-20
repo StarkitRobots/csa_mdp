@@ -29,6 +29,17 @@ public:
   /// Transform the content of several histories
   static std::vector<Sample> getBatch(const std::vector<History> &histories);
 
+  /// Read the history contained in a csv file with classical form:
+  /// - column 0 is 'run'
+  /// - column 1 is 'step'
+  /// - the next 'nb_states' column are the state values
+  /// - the next 'nb_actions' column are the action values
+  /// - the last column is the reward
+  /// The file also need to have a header
+  static std::vector<History> readCSV(const std::string &path,
+                                      int nb_states,
+                                      int nb_actions);
+
   /// Read the history contained in a csv file
   /// - path: the location of the file
   /// - run_col: this column indicate the id of the run

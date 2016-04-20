@@ -45,6 +45,23 @@ std::vector<Sample> History::getBatch(const std::vector<History> &histories)
 }
 
 std::vector<History> History::readCSV(const std::string &path,
+                                      int nb_states,
+                                      int nb_actions)
+{
+  std::vector<int> state_cols, action_cols;
+  for (int i = 0; i < nb_states; i++)
+  {
+    state_cols.push_back(i+2);
+  }
+  for (int i = 0; i < nb_actions; i++)
+  {
+    action_cols.push_back(i+2+nb_states);
+  }
+  int reward_col = 2 + nb_states + nb_actions;
+  return readCSV(path, 0, 1, state_cols, action_cols, reward_col, true);
+}
+
+std::vector<History> History::readCSV(const std::string &path,
                                       int run_col,
                                       int step_col,
                                       const std::vector<int> &state_cols,
