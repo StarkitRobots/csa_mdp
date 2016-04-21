@@ -213,18 +213,7 @@ void FPF::solve(const std::vector<Sample>& samples,
     // First generate the starting states
     std::vector<Eigen::VectorXd> states = getPolicyTrainingStates(samples, conf);
     // Then get corresponding actions
-    std::vector<Eigen::VectorXd> actions;
-    for (const Eigen::VectorXd &state : states)
-    {
-      // Establishing limits for projection
-      Eigen::MatrixXd limits(x_dim + u_dim, 2);
-      limits.block(    0, 0, x_dim, 1) = state;
-      limits.block(    0, 1, x_dim, 1) = state;
-      limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
-      std::unique_ptr<regression_forests::Tree> sub_tree;
-      sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
-      actions.push_back(sub_tree->getArgMax(limits).segment(x_dim, u_dim));
-    }
+    std::vector<Eigen::VectorXd> actions = getPolicyActions(states, conf);
     conf.p_training_set_time += Benchmark::close();
     // Train a policy for each dimension
     policies.clear();
@@ -271,7 +260,7 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
     int start = std::floor(thread_no * samples_by_thread);
     int end = std::floor((thread_no + 1) * samples_by_thread);
     end = std::min(end, (int)samples.size());
-    threads.push_back(std::thread([&]()
+    threads.push_back(std::thread([&, start, end]()
                                   {
                                     TrainingSet thread_ts = this->getTrainingSet(samples,
                                                                                  is_terminal,
@@ -340,6 +329,58 @@ std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Samp
     result.push_back(s.state);
   }
   return result;
+}
+
+std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::VectorXd> &states,
+                                                   const Config &conf)
+{
+  std::vector<std::thread> threads;
+  double states_by_thread = states.size() / (double)conf.nb_threads;
+  // Each thread has its own vector of actions
+  std::vector<std::vector<Eigen::VectorXd>> thread_actions(conf.nb_threads);
+  for (int thread_no = 0; thread_no < conf.nb_threads; thread_no++)
+  {
+    // Compute states in [start, end[
+    int start = std::floor(thread_no * states_by_thread);
+    int end = std::floor((thread_no + 1) * states_by_thread);
+    end = std::min(end, (int)states.size());
+    threads.push_back(std::thread([&, thread_no, start, end]()
+                                  {
+                                    thread_actions[thread_no]= this->getPolicyActions(states,
+                                                                                      conf,
+                                                                                      start,
+                                                                                      end);
+                                  }));
+  }
+  // Gatherig all actions in the right order
+  std::vector<Eigen::VectorXd> actions;
+  for (int thread_no = 0; thread_no < conf.nb_threads; thread_no++)
+  {
+    threads[thread_no].join();
+    const std::vector<Eigen::VectorXd> & to_add = thread_actions[thread_no];
+    actions.insert(actions.end(), to_add.begin(), to_add.end());
+  }
+  return actions;  
+}
+
+std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::VectorXd> &states,
+                                                   const Config &conf,
+                                                   int start_idx, int end_idx)
+{
+  int x_dim = conf.getStateLimits().rows();
+  int u_dim = conf.getActionLimits().rows();
+  std::vector<Eigen::VectorXd> actions;
+  for (int i = start_idx; i < end_idx; i++)
+  {
+    Eigen::MatrixXd limits(x_dim + u_dim, 2);
+    limits.block(    0, 0, x_dim, 1) = states[i];
+    limits.block(    0, 1, x_dim, 1) = states[i];
+    limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
+    std::unique_ptr<regression_forests::Tree> sub_tree;
+    sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
+    actions.push_back(sub_tree->getArgMax(limits).segment(x_dim, u_dim));
+  }
+  return actions;
 }
 
 }

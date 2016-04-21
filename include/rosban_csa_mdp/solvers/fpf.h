@@ -115,6 +115,16 @@ protected:
   getPolicyTrainingStates(const std::vector<Sample>& samples,
                           const Config &conf);
 
+  /// This function is not virtual, because it mainly handle the multi threading
+  std::vector<Eigen::VectorXd>
+  getPolicyActions(const std::vector<Eigen::VectorXd> &states,
+                   const Config &conf);
+
+  virtual std::vector<Eigen::VectorXd>
+  getPolicyActions(const std::vector<Eigen::VectorXd> &states,
+                   const Config &conf,
+                   int start_idx, int end_idx);
+
   /// Compute the bestAction at given state according to the current q_value
   Eigen::VectorXd bestAction(const Eigen::VectorXd& state);
 
