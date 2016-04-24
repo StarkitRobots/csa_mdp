@@ -14,7 +14,7 @@ RandomPolicy::RandomPolicy()
 Eigen::VectorXd RandomPolicy::getRawAction(const Eigen::VectorXd &state)
 {
   (void)state;
-  Eigen::VectorXd cmd(action_limits.size());
+  Eigen::VectorXd cmd(action_limits.rows());
   for (int dim = 0; dim < cmd.rows(); dim++)
   {
     std::uniform_real_distribution<double> distrib(action_limits(dim,0), action_limits(dim,1));
