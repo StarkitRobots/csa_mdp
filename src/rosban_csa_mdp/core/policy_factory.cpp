@@ -7,6 +7,9 @@ using csa_mdp::Policy;
 using csa_mdp::ForestsPolicy;
 using csa_mdp::RandomPolicy;
 
+namespace csa_mdp
+{
+
 std::map<std::string,PolicyFactory::Builder> PolicyFactory::extra_builders;
 
 PolicyFactory::PolicyFactory()
@@ -29,4 +32,6 @@ PolicyFactory::PolicyFactory()
 void PolicyFactory::registerExtraBuilder(const std::string &name, Builder b)
 {
   extra_builders[name] = b;
+}
+
 }

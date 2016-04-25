@@ -1,4 +1,5 @@
 #include "rosban_csa_mdp/core/history.h"
+#include "rosban_csa_mdp/core/problem_factory.h"
 
 #include "rosban_utils/string_tools.h"
 
@@ -7,6 +8,49 @@
 
 namespace csa_mdp
 {
+
+History::Config::Config()
+  : run_column(-1), step_column(-1)
+{
+}
+
+void History::Config::to_xml(std::ostream &out) const
+{
+  if (!problem)
+  {
+    throw std::runtime_error("History::Config::to_xml: forbidden while problem is not set");
+  }
+  out << "<problem>";
+  problem->write(problem->class_name(), out);
+  out << "</problem>";
+  rosban_utils::xml_tools::write<std::string>("log_path"      , log_path      , out);
+  rosban_utils::xml_tools::write<int>        ("run_column"    , run_column    , out);
+  rosban_utils::xml_tools::write<int>        ("step_column"   , step_column   , out);
+  rosban_utils::xml_tools::write_vector<int> ("state_columns" , state_columns , out);
+  rosban_utils::xml_tools::write_vector<int> ("action_columns", action_columns, out);
+}
+
+void History::Config::from_xml(TiXmlNode *node)
+{
+  // Try to read problem if found
+  TiXmlNode * problem_node = node->FirstChild("problem");
+  if(problem_node)
+  {
+    problem = std::unique_ptr<Problem>(ProblemFactory().build(problem_node));
+  }
+
+  rosban_utils::xml_tools::try_read<std::string>(node, "log_path"      , log_path      );
+  rosban_utils::xml_tools::try_read<int>        (node, "run_column"    , run_column    );
+  rosban_utils::xml_tools::try_read<int>        (node, "step_column"   , step_column   );
+  rosban_utils::xml_tools::try_read_vector<int> (node, "state_columns" , state_columns );
+  rosban_utils::xml_tools::try_read_vector<int> (node, "action_columns", action_columns);
+}
+
+std::string History::Config::class_name() const
+{
+  return "history_config";
+}
+
 
 History::History()
 {
@@ -42,6 +86,14 @@ std::vector<Sample> History::getBatch(const std::vector<History> &histories)
     std::move(new_samples.begin(), new_samples.end(), std::inserter(samples, samples.end()));
   }
   return samples;
+}
+
+std::vector<History> History::readCSV(const History::Config & conf)
+{
+  // TODO start by validating config and accept other format
+  int nb_states = conf.problem->getStateLimits().rows();
+  int nb_actions = conf.problem->getActionLimits().rows();
+  return readCSV(conf.log_path, nb_states, nb_actions);
 }
 
 std::vector<History> History::readCSV(const std::string &path,

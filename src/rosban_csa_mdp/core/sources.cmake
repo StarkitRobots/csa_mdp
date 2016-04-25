@@ -5,5 +5,6 @@ set(SOURCES
   history.cpp
   policy.cpp
   problem.cpp
+  problem_factory.cpp
   sample.cpp
 )

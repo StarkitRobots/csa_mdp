@@ -6,7 +6,10 @@
 
 #include <map>
 
-class PolicyFactory : public rosban_utils::Factory<csa_mdp::Policy>
+namespace csa_mdp
+{
+
+class PolicyFactory : public rosban_utils::Factory<Policy>
 {
 public:
 
@@ -18,3 +21,5 @@ private:
   static std::map<std::string,Builder> extra_builders;
 
 };
+
+}

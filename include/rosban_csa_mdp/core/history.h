@@ -1,6 +1,8 @@
 #pragma once
 
-#include "problem.h"
+#include "rosban_csa_mdp/core/problem.h"
+
+#include <memory>
 
 namespace csa_mdp
 {
@@ -18,6 +20,26 @@ private:
   std::vector<double> rewards;
 
 public:
+
+  /// Describe the config used to load an History or a vector of History
+  class Config : public rosban_utils::Serializable
+  {
+  public:
+    Config();
+
+    void to_xml(std::ostream &out) const override;
+    void from_xml(TiXmlNode *node) override;
+    std::string class_name() const override;
+
+    std::string log_path;
+    int run_column;
+    int step_column;
+    std::vector<int> state_columns;
+    std::vector<int> action_columns;
+    std::shared_ptr<Problem> problem;
+  };
+
+
   History();
 
   void push(const Eigen::VectorXd &state,
@@ -28,6 +50,8 @@ public:
   std::vector<Sample> getBatch() const;
   /// Transform the content of several histories
   static std::vector<Sample> getBatch(const std::vector<History> &histories);
+
+  static std::vector<History> readCSV(const History::Config & conf);
 
   /// Read the history contained in a csv file with classical form:
   /// - column 0 is 'run'
