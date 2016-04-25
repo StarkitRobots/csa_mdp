@@ -89,7 +89,7 @@ void Problem::resetActionNames()
 
 void Problem::setStateNames(const std::vector<std::string> &names)
 {
-  if (names.size() != state_limits.rows())
+  if ((int)names.size() != state_limits.rows())
   {
     std::ostringstream oss;
     oss << "Problem::setStateNames: names.size() != state_limits.rows(), "
@@ -101,7 +101,7 @@ void Problem::setStateNames(const std::vector<std::string> &names)
 
 void Problem::setActionNames(const std::vector<std::string> &names)
 {
-  if (names.size() != action_limits.rows())
+  if ((int)names.size() != action_limits.rows())
   {
     std::ostringstream oss;
     oss << "Problem::setActionNames: names.size() != action_limits.rows(), "

@@ -2,6 +2,8 @@
 
 #include "rosban_csa_mdp/core/sample.h"
 
+#include "rosban_utils/serializable.h"
+
 #include <Eigen/Core>
 
 #include <functional>
@@ -9,7 +11,7 @@
 namespace csa_mdp
 {
 
-class Problem
+class Problem : public rosban_utils::Serializable
 {
 public:
   typedef std::function<Eigen::VectorXd(const Eigen::VectorXd &state)> Policy;
