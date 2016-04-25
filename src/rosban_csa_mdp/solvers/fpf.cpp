@@ -290,7 +290,7 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
                                     ts_mutex.unlock();
                                   }));
   }
-  for (int thread_no = 0; thread_no < conf.nb_threads; thread_no++)
+  for (int thread_no = 0; thread_no < intervals.size(); thread_no++)
   {
     threads[thread_no].join();
   }
