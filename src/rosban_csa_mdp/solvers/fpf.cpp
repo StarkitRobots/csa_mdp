@@ -3,6 +3,7 @@
 #include "rosban_regression_forests/tools/random.h"
 
 #include "rosban_utils/benchmark.h"
+#include "rosban_utils/multi_core.h"
 
 #include <iostream>
 #include <mutex>
@@ -10,6 +11,7 @@
 #include <thread>
 
 using rosban_utils::Benchmark;
+using rosban_utils::MultiCore;
 using rosban_utils::TimeStamp;
 
 using regression_forests::ApproximationType;
@@ -266,13 +268,12 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
   int x_dim = conf.getStateLimits().rows();
   int u_dim = conf.getActionLimits().rows();
   TrainingSet ts(x_dim + u_dim);
-  double samples_by_thread = samples.size() / (double)conf.nb_threads;
-  for (int thread_no = 0; thread_no < conf.nb_threads; thread_no++)
+  MultiCore::Intervals intervals = MultiCore::buildIntervals(samples.size(), conf.nb_threads);
+  for (size_t thread_no = 0; thread_no < intervals.size(); thread_no++)
   {
     // Compute samples in [start, end[
-    int start = std::floor(thread_no * samples_by_thread);
-    int end = std::floor((thread_no + 1) * samples_by_thread);
-    end = std::min(end, (int)samples.size());
+    int start = intervals[thread_no].first;
+    int end = intervals[thread_no].second;
     threads.push_back(std::thread([&, start, end]()
                                   {
                                     TrainingSet thread_ts = this->getTrainingSet(samples,
@@ -347,16 +348,15 @@ std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Samp
 std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::VectorXd> &states,
                                                    const Config &conf)
 {
-  std::vector<std::thread> threads;
-  double states_by_thread = states.size() / (double)conf.nb_threads;
+  MultiCore::Intervals intervals = MultiCore::buildIntervals(states.size(), conf.nb_threads);
   // Each thread has its own vector of actions
-  std::vector<std::vector<Eigen::VectorXd>> thread_actions(conf.nb_threads);
-  for (int thread_no = 0; thread_no < conf.nb_threads; thread_no++)
+  std::vector<std::thread> threads;
+  std::vector<std::vector<Eigen::VectorXd>> thread_actions(intervals.size());
+  for (size_t thread_no = 0; thread_no < intervals.size(); thread_no++)
   {
-    // Compute states in [start, end[
-    int start = std::floor(thread_no * states_by_thread);
-    int end = std::floor((thread_no + 1) * states_by_thread);
-    end = std::min(end, (int)states.size());
+    // Compute samples in [start, end[
+    int start = intervals[thread_no].first;
+    int end = intervals[thread_no].second;
     threads.push_back(std::thread([&, thread_no, start, end]()
                                   {
                                     thread_actions[thread_no]= this->getPolicyActions(states,
@@ -367,16 +367,15 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
   }
   // Gathering all actions in the right order
   std::vector<Eigen::VectorXd> actions;
-  for (int thread_no = 0; thread_no < conf.nb_threads; thread_no++)
+  for (int thread_no = 0; thread_no < intervals.size(); thread_no++)
   {
     threads[thread_no].join();
     const std::vector<Eigen::VectorXd> & to_add = thread_actions[thread_no];
     actions.insert(actions.end(), to_add.begin(), to_add.end());
 
     // TODO: remove once the segfault issue is solved
-    int start = std::floor(thread_no * states_by_thread);
-    int end = std::floor((thread_no + 1) * states_by_thread);
-    end = std::min(end, (int)states.size());
+    int start = intervals[thread_no].first;
+    int end = intervals[thread_no].second;
     if ((int)to_add.size() != end - start)
     {
       std::ostringstream oss;
