@@ -215,6 +215,18 @@ void FPF::solve(const std::vector<Sample>& samples,
     // Then get corresponding actions
     std::vector<Eigen::VectorXd> actions = getPolicyActions(states, conf);
     conf.p_training_set_time += Benchmark::close();
+
+    // TODO: remove once the segfault issue is solved
+    if (actions.size() != states.size())
+    {
+      std::ostringstream oss;
+      oss << "FPF::solve: The number of actions does not match the number of states" << std::endl
+          << "\tActions.size() : " << actions.size() << std::endl
+          << "\tStates.size()  : " << states.size();
+      throw std::logic_error(oss.str());
+    }
+
+
     // Train a policy for each dimension
     policies.clear();
     regression_forests::ExtraTrees policy_learner;
@@ -230,9 +242,10 @@ void FPF::solve(const std::vector<Sample>& samples,
       policy_learner.conf = conf.policy_conf;
     }
     Benchmark::open("policy_learning");
+    /// Create a policy for each action dimension
     for (int dim = 0; dim < u_dim; dim++)
     {
-      // First build training set
+      // First build training set from State to action[dim]
       TrainingSet ts(x_dim);
       for (size_t sample_idx = 0; sample_idx < states.size(); sample_idx++)
       {
@@ -352,13 +365,38 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
                                                                                       end);
                                   }));
   }
-  // Gatherig all actions in the right order
+  // Gathering all actions in the right order
   std::vector<Eigen::VectorXd> actions;
   for (int thread_no = 0; thread_no < conf.nb_threads; thread_no++)
   {
     threads[thread_no].join();
     const std::vector<Eigen::VectorXd> & to_add = thread_actions[thread_no];
     actions.insert(actions.end(), to_add.begin(), to_add.end());
+
+    // TODO: remove once the segfault issue is solved
+    int start = std::floor(thread_no * states_by_thread);
+    int end = std::floor((thread_no + 1) * states_by_thread);
+    end = std::min(end, (int)states.size());
+    if ((int)to_add.size() != end - start)
+    {
+      std::ostringstream oss;
+      oss << "FPF::getPolicyActions: The number of actions does not match the expected number" << std::endl
+          << "\tAt thread : " << thread_no << std::endl
+          << "\tActions.size() : " << actions.size() << std::endl
+          << "\tStart  : " << start << std::endl
+          << "\tEnd  : " << end;
+      throw std::logic_error(oss.str());
+    }
+  }
+
+  // TODO: remove once the segfault issue is solved
+  if (actions.size() != states.size())
+  {
+    std::ostringstream oss;
+    oss << "FPF::getPolicyActions: The number of actions does not match the number of states" << std::endl
+        << "\tActions.size() : " << actions.size() << std::endl
+        << "\tStates.size()  : " << states.size();
+    throw std::logic_error(oss.str());
   }
   return actions;  
 }
@@ -380,6 +418,17 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
     sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
     actions.push_back(sub_tree->getArgMax(limits).segment(x_dim, u_dim));
   }
+
+  // TODO: remove once the segfault issue is solved
+  if (actions.size() != end_idx - start_idx)
+  {
+    std::ostringstream oss;
+    oss << "FPF::getPolicyActions: The number of actions does not match the expected number" << std::endl
+        << "\tActions.size() : " << actions.size() << std::endl
+        << "\tExpected size  : " << (end_idx - start_idx);
+    throw std::logic_error(oss.str());
+  }
+
   return actions;
 }
 
