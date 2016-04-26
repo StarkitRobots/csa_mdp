@@ -90,6 +90,10 @@ std::vector<Sample> History::getBatch(const std::vector<History> &histories)
 
 std::vector<History> History::readCSV(const History::Config & conf)
 {
+  if (conf.log_path == "")
+  {
+    throw std::runtime_error("History::readCSV: Trying to read from a conf with log_path=\"\"");
+  }
   // TODO start by validating config and accept other format
   int nb_states = conf.problem->getStateLimits().rows();
   int nb_actions = conf.problem->getActionLimits().rows();
@@ -125,7 +129,10 @@ std::vector<History> History::readCSV(const std::string &path,
   int x_dim = state_cols.size();
   int u_dim = action_cols.size();
   std::ifstream infile(path);
-  if (!infile.good()) throw std::runtime_error("Failed to open file '" + path + "'");
+  if (!infile.good())
+  {
+    throw std::runtime_error("History::readCSV: Failed to open file '" + path + "'");
+  }
   std::string line;
   // Temporary variables
   History curr_history;
