@@ -1,6 +1,6 @@
 #include "rosban_csa_mdp/solvers/fpf.h"
 
-#include "rosban_regression_forests/tools/random.h"
+#include "rosban_random/tools.h"
 
 #include "rosban_utils/benchmark.h"
 #include "rosban_utils/multi_core.h"
@@ -279,7 +279,7 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
                                     ts_mutex.unlock();
                                   }));
   }
-  for (int thread_no = 0; thread_no < intervals.size(); thread_no++)
+  for (size_t thread_no = 0; thread_no < intervals.size(); thread_no++)
   {
     threads[thread_no].join();
   }
@@ -323,7 +323,7 @@ std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Samp
 {
   if (conf.policy_samples > 0)
   {
-    return regression_forests::getUniformSamples(conf.getStateLimits(), conf.policy_samples);
+    return rosban_random::getUniformSamples(conf.getStateLimits(), conf.policy_samples);
   }
   std::vector<Eigen::VectorXd> result;
   result.reserve(samples.size());
@@ -356,7 +356,7 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
   }
   // Gathering all actions in the right order
   std::vector<Eigen::VectorXd> actions;
-  for (int thread_no = 0; thread_no < intervals.size(); thread_no++)
+  for (size_t thread_no = 0; thread_no < intervals.size(); thread_no++)
   {
     threads[thread_no].join();
     const std::vector<Eigen::VectorXd> & to_add = thread_actions[thread_no];

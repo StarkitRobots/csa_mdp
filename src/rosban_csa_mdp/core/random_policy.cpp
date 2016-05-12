@@ -1,6 +1,6 @@
 #include "rosban_csa_mdp/core/random_policy.h"
 
-#include "rosban_regression_forests/tools/random.h"
+#include "rosban_random/tools.h"
 
 namespace csa_mdp
 {
@@ -8,7 +8,7 @@ namespace csa_mdp
 RandomPolicy::RandomPolicy()
   : Policy()
 {
-  random_engine = regression_forests::get_random_engine();
+  random_engine = rosban_random::getRandomEngine();
 }
 
 Eigen::VectorXd RandomPolicy::getRawAction(const Eigen::VectorXd &state)

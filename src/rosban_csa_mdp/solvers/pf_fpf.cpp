@@ -1,6 +1,6 @@
 #include "rosban_csa_mdp/solvers/pf_fpf.h"
 
-#include "rosban_regression_forests/tools/random.h"
+#include "rosban_random/tools.h"
 
 #include "rosban_utils/time_stamp.h"
 
@@ -214,6 +214,7 @@ std::vector<std::unique_ptr<regression_forests::Forest>>
 generatePolicy(const std::vector<Sample>& samples,
                std::unique_ptr<regression_forests::Forest> q_value)
 {
+  (void) samples;
   std::vector<std::unique_ptr<regression_forests::Forest>> result;
   throw std::logic_error("unimplemented function");
   return result;

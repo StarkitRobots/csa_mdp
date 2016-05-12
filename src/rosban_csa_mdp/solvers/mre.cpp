@@ -1,7 +1,7 @@
 #include "rosban_csa_mdp/solvers/mre.h"
 
 #include "rosban_regression_forests/approximations/pwc_approximation.h"
-#include "rosban_regression_forests/tools/random.h"
+#include "rosban_random/tools.h"
 #include "rosban_regression_forests/tools/statistics.h"
 
 #include "rosban_utils/benchmark.h"
@@ -51,7 +51,7 @@ MRE::MRE(const MRE::Config &conf_,
   Eigen::MatrixXd q_space = conf.mrefpf_conf.getInputLimits();
   knownness_forest = std::shared_ptr<KnownnessForest>(new KnownnessForest(q_space, conf.knownness_conf));
   // Init random engine
-  random_engine = regression_forests::get_random_engine();
+  random_engine = rosban_random::getRandomEngine();
 }
 
 void MRE::feed(const Sample &s)
@@ -89,7 +89,7 @@ Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
     }
     return action;
   }
-  return regression_forests::getUniformSamples(getActionSpace(), 1, &random_engine)[0];
+  return rosban_random::getUniformSamples(getActionSpace(), 1, &random_engine)[0];
 }
 
 void MRE::updatePolicy()
