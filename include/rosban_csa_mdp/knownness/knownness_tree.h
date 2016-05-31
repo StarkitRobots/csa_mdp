@@ -7,6 +7,8 @@
 
 #include <rosban_utils/serializable.h>
 
+#include <random>
+
 namespace csa_mdp
 {
 

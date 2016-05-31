@@ -7,6 +7,7 @@
 #include <Eigen/Core>
 
 #include <functional>
+#include <random>
 
 namespace csa_mdp
 {
