@@ -52,6 +52,8 @@ MRE::MRE(const MRE::Config &conf_,
   knownness_forest = std::shared_ptr<KnownnessForest>(new KnownnessForest(q_space, conf.knownness_conf));
   // Init random engine
   random_engine = rosban_random::getRandomEngine();
+  // Initializing solver
+  solver = MREFPF(knownness_forest);
 }
 
 void MRE::feed(const Sample &s)
@@ -70,8 +72,6 @@ void MRE::feed(const Sample &s)
   {
     updatePolicy();
   }
-  // Initializing solver
-  solver = MREFPF(knownness_forest);
 }
 
 Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
