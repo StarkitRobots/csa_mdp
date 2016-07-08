@@ -1,5 +1,7 @@
 #include "rosban_csa_mdp/solvers/fpf.h"
 
+#include "rosban_gp/gradient_ascent/randomized_rprop.h"
+
 #include "rosban_random/tools.h"
 
 #include "rosban_utils/benchmark.h"
@@ -38,6 +40,8 @@ FPF::Config::Config()
   p_training_set_time = 0;
   p_extra_trees_time  = 0;
   auto_parameters = true;
+  gp_values = false;
+  gp_policies = false;
 }
 
 const Eigen::MatrixXd & FPF::Config::getStateLimits() const
@@ -98,6 +102,8 @@ void FPF::Config::to_xml(std::ostream &out) const
     q_value_conf.write("q_value_conf", out);
     policy_conf.write("policy_conf", out);
   }
+  rosban_utils::xml_tools::write<bool>("gp_values", gp_values, out);
+  rosban_utils::xml_tools::write<bool>("gp_policies", gp_policies, out);
 }
 
 void FPF::Config::from_xml(TiXmlNode *node)
@@ -135,6 +141,8 @@ void FPF::Config::from_xml(TiXmlNode *node)
     q_value_conf.read(node, "q_value_conf");
     policy_conf.read(node, "policy_conf");
   }
+  rosban_utils::xml_tools::try_read<bool>  (node, "gp_values" , gp_values);
+  rosban_utils::xml_tools::try_read<bool>  (node, "gp_policies" , gp_policies);
 }
 
 FPF::FPF()
@@ -170,6 +178,8 @@ void FPF::updateQValue(const std::vector<Sample>& samples,
     ApproximationType appr_type = last_step ? ApproximationType::PWL : ApproximationType::PWC;
     // TODO implement alternative update with PWL approximations to allow their use
     appr_type = ApproximationType::PWC;
+    // Replacing by GP if required
+    if (conf.gp_values) appr_type = ApproximationType::GP;
     // Generating the configuration automatically
     q_learner.conf = ExtraTrees::Config::generateAuto(conf.getInputLimits(),
                                                       samples.size(),
@@ -223,9 +233,11 @@ void FPF::solve(const std::vector<Sample>& samples,
     regression_forests::ExtraTrees policy_learner;
     if (conf.auto_parameters)
     {
+      ApproximationType policy_appr_type = ApproximationType::PWL;
+      if (conf.gp_policies) policy_appr_type = ApproximationType::GP;
       policy_learner.conf = ExtraTrees::Config::generateAuto(conf.getStateLimits(),
                                                              samples.size(),
-                                                             ApproximationType::PWL);
+                                                             policy_appr_type);
       policy_learner.conf.nb_threads = conf.nb_threads;
     }
     else
@@ -309,9 +321,33 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample> &samples,
       limits.block(    0, 0, x_dim, 1) = next_state;
       limits.block(    0, 1, x_dim, 1) = next_state;
       limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
-      std::unique_ptr<regression_forests::Tree> sub_tree;
-      sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
-      reward += conf.discount * sub_tree->getMax(limits);
+      double best_reward;
+      if (conf.gp_values) {
+        // Preparing functions
+        std::function<Eigen::VectorXd(const Eigen::VectorXd)> gradient_func;
+        gradient_func = [this](const Eigen::VectorXd & input)
+          {
+            return this->q_value->getGradient(input);
+          };
+        std::function<double(const Eigen::VectorXd)> scoring_func;
+        scoring_func = [this](const Eigen::VectorXd & guess)
+          {
+            return this->q_value->getValue(guess);
+          };
+        // Performing multiple rProp and conserving the best candidate
+        //TODO custom rprop conf
+        rosban_gp::RandomizedRProp::Config rprop_conf;
+        Eigen::VectorXd best_guess;
+        best_guess = rosban_gp::RandomizedRProp::run(gradient_func, scoring_func,
+                                                     limits, rprop_conf);
+        best_reward = scoring_func(best_guess);
+      }
+      else {
+        std::unique_ptr<regression_forests::Tree> sub_tree;
+        sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
+        best_reward = sub_tree->getMax(limits);
+      }
+      reward += conf.discount * best_reward;
     }
     ls.push(regression_forests::Sample(input, reward));
   }
@@ -378,9 +414,31 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
     limits.block(    0, 0, x_dim, 1) = states[i];
     limits.block(    0, 1, x_dim, 1) = states[i];
     limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
-    std::unique_ptr<regression_forests::Tree> sub_tree;
-    sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
-    actions.push_back(sub_tree->getArgMax(limits).segment(x_dim, u_dim));
+    Eigen::VectorXd best_input;
+    if (conf.gp_values) {
+      // Preparing functions
+      std::function<Eigen::VectorXd(const Eigen::VectorXd)> gradient_func;
+      gradient_func = [this](const Eigen::VectorXd & input)
+        {
+          return this->q_value->getGradient(input);
+        };
+      std::function<double(const Eigen::VectorXd)> scoring_func;
+      scoring_func = [this](const Eigen::VectorXd & guess)
+        {
+          return this->q_value->getValue(guess);
+        };
+      // Performing multiple rProp and conserving the best candidate
+      //TODO custom rprop conf
+      rosban_gp::RandomizedRProp::Config rprop_conf;
+      best_input = rosban_gp::RandomizedRProp::run(gradient_func, scoring_func,
+                                                   limits, rprop_conf);
+    }
+    else {
+      std::unique_ptr<regression_forests::Tree> sub_tree;
+      sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
+      best_input = sub_tree->getArgMax(limits);
+    }
+    actions.push_back(best_input.segment(x_dim, u_dim));
   }
 
   return actions;

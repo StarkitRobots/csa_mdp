@@ -47,6 +47,10 @@ public:
   /// Called automatically on feed each plan_period samples
   void updatePolicy();
 
+  /// While policy has not been updated with enough samples, this is false and actions
+  /// are chosen at uniformous random
+  bool hasAvailablePolicy();
+
   const regression_forests::Forest & getPolicy(int dim);
 
   void savePolicies(const std::string &prefix);

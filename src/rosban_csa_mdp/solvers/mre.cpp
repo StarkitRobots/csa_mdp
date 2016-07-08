@@ -76,7 +76,7 @@ void MRE::feed(const Sample &s)
 
 Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
 {
-  if (policies.size() > 0) {
+  if (hasAvailablePolicy()) {
     Eigen::VectorXd action(policies.size());
     for (size_t i = 0; i < policies.size(); i++)
     {
@@ -104,6 +104,11 @@ void MRE::updatePolicy()
     //TODO software design should really be improved
     policies.push_back(solver.stealPolicyForest(dim));
   }
+}
+
+bool MRE::hasAvailablePolicy()
+{
+  return policies.size() > 0;
 }
 
 const regression_forests::Forest & MRE::getPolicy(int dim)

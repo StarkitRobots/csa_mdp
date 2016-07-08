@@ -54,6 +54,11 @@ public:
     /// If activated, internal config are ignored and replaced by heuristic based
     /// parameters. (see ExtraTrees::Config::generateAuto)
     bool auto_parameters;
+    /// If activated, gaussian processes are used to represent the values
+    /// and max is computed according to gradient
+    bool gp_values;
+    /// If activated, gaussian processes are used to represent the policies
+    bool gp_policies;
 
     /// Config used for computing the Q-value
     regression_forests::ExtraTrees::Config q_value_conf;
