@@ -65,6 +65,11 @@ public:
     /// Config used for computing the Policy
     regression_forests::ExtraTrees::Config policy_conf;
 
+    /// Config used for auto_tuning of GP hyperparameters
+    rosban_gp::RandomizedRProp::Config hyper_rprop_conf;
+    /// Config used for gradient ascent when using gp
+    rosban_gp::RandomizedRProp::Config find_max_rprop_conf;
+
     Config();
 
     const Eigen::MatrixXd & getStateLimits() const;

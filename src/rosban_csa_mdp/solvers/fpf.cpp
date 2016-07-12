@@ -104,6 +104,12 @@ void FPF::Config::to_xml(std::ostream &out) const
   }
   rosban_utils::xml_tools::write<bool>("gp_values", gp_values, out);
   rosban_utils::xml_tools::write<bool>("gp_policies", gp_policies, out);
+  if (gp_values) {
+    find_max_rprop_conf.write("find_max_rprop_conf", out);
+  }
+  if (gp_values || gp_policies) {
+    hyper_rprop_conf.write("hyper_rprop_conf", out);
+  }
 }
 
 void FPF::Config::from_xml(TiXmlNode *node)
@@ -143,6 +149,12 @@ void FPF::Config::from_xml(TiXmlNode *node)
   }
   rosban_utils::xml_tools::try_read<bool>  (node, "gp_values" , gp_values);
   rosban_utils::xml_tools::try_read<bool>  (node, "gp_policies" , gp_policies);
+  if (gp_values) {
+    find_max_rprop_conf.read(node, "find_max_rprop_conf");
+  }
+  if (gp_values || gp_policies) {
+    hyper_rprop_conf.read(node, "hyper_rprop_conf");
+  }
 }
 
 FPF::FPF()
@@ -185,6 +197,8 @@ void FPF::updateQValue(const std::vector<Sample>& samples,
                                                       samples.size(),
                                                       appr_type);
     q_learner.conf.nb_threads = conf.nb_threads;
+    // If using GP, use the custom parameters for hyperparameters tuning
+    q_learner.conf.gp_conf = conf.hyper_rprop_conf;
   }
   else
   {
@@ -234,11 +248,14 @@ void FPF::solve(const std::vector<Sample>& samples,
     if (conf.auto_parameters)
     {
       ApproximationType policy_appr_type = ApproximationType::PWL;
+      // Use GP if required
       if (conf.gp_policies) policy_appr_type = ApproximationType::GP;
       policy_learner.conf = ExtraTrees::Config::generateAuto(conf.getStateLimits(),
                                                              samples.size(),
                                                              policy_appr_type);
       policy_learner.conf.nb_threads = conf.nb_threads;
+      // If using GP, use the custom parameters for hyperparameters tuning
+      policy_learner.conf.gp_conf = conf.hyper_rprop_conf;
     }
     else
     {
@@ -335,11 +352,9 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample> &samples,
             return this->q_value->getValue(guess);
           };
         // Performing multiple rProp and conserving the best candidate
-        //TODO custom rprop conf
-        rosban_gp::RandomizedRProp::Config rprop_conf;
         Eigen::VectorXd best_guess;
         best_guess = rosban_gp::RandomizedRProp::run(gradient_func, scoring_func,
-                                                     limits, rprop_conf);
+                                                     limits, conf.find_max_rprop_conf);
         best_reward = scoring_func(best_guess);
       }
       else {
@@ -428,10 +443,8 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
           return this->q_value->getValue(guess);
         };
       // Performing multiple rProp and conserving the best candidate
-      //TODO custom rprop conf
-      rosban_gp::RandomizedRProp::Config rprop_conf;
       best_input = rosban_gp::RandomizedRProp::run(gradient_func, scoring_func,
-                                                   limits, rprop_conf);
+                                                   limits, conf.find_max_rprop_conf);
     }
     else {
       std::unique_ptr<regression_forests::Tree> sub_tree;
