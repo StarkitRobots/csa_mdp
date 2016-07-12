@@ -150,10 +150,10 @@ void FPF::Config::from_xml(TiXmlNode *node)
   rosban_utils::xml_tools::try_read<bool>  (node, "gp_values" , gp_values);
   rosban_utils::xml_tools::try_read<bool>  (node, "gp_policies" , gp_policies);
   if (gp_values) {
-    find_max_rprop_conf.read(node, "find_max_rprop_conf");
+    find_max_rprop_conf.tryRead(node, "find_max_rprop_conf");
   }
   if (gp_values || gp_policies) {
-    hyper_rprop_conf.read(node, "hyper_rprop_conf");
+    hyper_rprop_conf.tryRead(node, "hyper_rprop_conf");
   }
 }
 
