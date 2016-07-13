@@ -4,6 +4,8 @@
 
 #include "rosban_regression_forests/core/forest.h"
 
+#include <random>
+
 namespace csa_mdp
 {
 
@@ -22,6 +24,12 @@ public:
 private:
   /// The policies
   std::vector<std::unique_ptr<regression_forests::Forest>> policies;
+
+  /// Is the noise applied when requesting raw action?
+  bool apply_noise;
+
+  /// Random generator used to select noisy actions
+  std::default_random_engine engine;
 };
 
 }

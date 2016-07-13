@@ -64,8 +64,8 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
   // Computing original training Set
   TrainingSet original_ts = FPF::getTrainingSet(samples, is_terminal, conf,
                                                 start_index, end_index);
-  // If alternative mode, then do not modify samples
-  if (conf.update_type == UpdateType::Alternative) return original_ts;
+  // Modify samples only in MRE mode
+  if (conf.update_type != UpdateType::MRE) return original_ts;
   // Otherwise use knownness to influence samples
   TrainingSet new_ts(original_ts.getInputDim());
   for (size_t i = 0; i < original_ts.size(); i++)
@@ -90,30 +90,29 @@ void MREFPF::updateQValue(const std::vector<Sample> &samples,
 {
   MREFPF::Config &conf = dynamic_cast<MREFPF::Config &>(conf_fpf);
   FPF::updateQValue(samples, is_terminal, conf, last_step);
-  if (conf.update_type == UpdateType::Alternative)
-  {
-    Benchmark::open("Applying knownness (Alternative)");
-    regression_forests::Node::Function f = [this, &conf](regression_forests::Node * node,
-                                                         const Eigen::MatrixXd & limits)
+  // If type is not alternative, end here
+  if (conf.update_type != UpdateType::Alternative) return;
+  Benchmark::open("Applying knownness (Alternative)");
+  regression_forests::Node::Function f = [this, &conf](regression_forests::Node * node,
+                                                       const Eigen::MatrixXd & limits)
+    {
+      // Throw an error if approximation is not PWC
+      PWCApproximation *pwc_app = dynamic_cast<PWCApproximation*>(node->a);
+      if (pwc_app == nullptr)
       {
-        // Throw an error if approximation is not PWC
-        PWCApproximation *pwc_app = dynamic_cast<PWCApproximation*>(node->a);
-        if (pwc_app == nullptr)
-        {
-          throw std::logic_error("Alternative update is only available for pwc approximations");
-        }
-        // Compute knownness and old value
-        Eigen::VectorXd middle_point = (limits.col(1) + limits.col(0)) / 2;
-        double knownness = this->knownness_func->getValue(middle_point);
-        double old_val = pwc_app->getValue();
-        double new_val = old_val * knownness + (1 - knownness) * conf.reward_max;
-        node->a = new PWCApproximation(new_val);
-        delete(pwc_app);
-      };
-    Eigen::MatrixXd limits = conf.getInputLimits();
-    q_value->applyOnLeafs(limits, f);
-    Benchmark::close();
-  }
+        throw std::logic_error("Alternative update is only available for pwc approximations");
+      }
+      // Compute knownness and old value
+      Eigen::VectorXd middle_point = (limits.col(1) + limits.col(0)) / 2;
+      double knownness = this->knownness_func->getValue(middle_point);
+      double old_val = pwc_app->getValue();
+      double new_val = old_val * knownness + (1 - knownness) * conf.reward_max;
+      node->a = new PWCApproximation(new_val);
+      delete(pwc_app);
+    };
+  Eigen::MatrixXd limits = conf.getInputLimits();
+  q_value->applyOnLeafs(limits, f);
+  Benchmark::close();
 }
 
 std::vector<Sample> MREFPF::filterSimilarSamples(const std::vector<Sample> &samples) const
@@ -149,6 +148,7 @@ std::string to_string(MREFPF::UpdateType type)
   {
     case MREFPF::UpdateType::MRE: return "MRE";
     case MREFPF::UpdateType::Alternative: return "Alternative";
+    case MREFPF::UpdateType::Disabled: return "Disabled";
   }
   throw std::runtime_error("Unknown type in to_string(Type)");
 }
@@ -162,6 +162,10 @@ MREFPF::UpdateType loadUpdateType(const std::string &type)
   if (type == "Alternative")
   {
     return MREFPF::UpdateType::Alternative;
+  }
+  if (type == "Disabled")
+  {
+    return MREFPF::UpdateType::Disabled;
   }
   throw std::runtime_error("Unknown MREFPF Update Type: '" + type + "'");
 }

@@ -9,13 +9,14 @@ namespace csa_mdp
 /// A class implementing the Multi-Resolution Exploration adapted on FPF
 class MREFPF : public FPF
 {
-public:
-  /// Two types of KnownnessTrees are available
-  /// MRE: Follows Multi-Resolution Exploration description (Nouri2009)
-  ///      i.e. samples are modified to include knownness function
+public: 
+  /// Three types of use of the KnownnessTrees are available
+  /// MRE        : Follows Multi-Resolution Exploration description (Nouri2009)
+  ///              i.e. samples are modified to include knownness function
   /// Alternative: The trees are modified to apply the knownness function
+  /// Disabled   : Values of the knownness trees are simply ignored
   enum class UpdateType
-  { MRE, Alternative };
+  { MRE, Alternative, Disabled };
 
   class Config : public FPF::Config
   {

@@ -1,19 +1,28 @@
 #include "rosban_csa_mdp/core/forests_policy.h"
 
+#include "rosban_random/tools.h"
+
 namespace csa_mdp
 {
 
 ForestsPolicy::ForestsPolicy()
-  : Policy()
+  : Policy(), apply_noise(false)
 {
+  engine = rosban_random::getRandomEngine();
 }
 
 Eigen::VectorXd ForestsPolicy::getRawAction(const Eigen::VectorXd &state)
 {
   Eigen::VectorXd cmd(policies.size());
-  for (int dim = 0; dim < cmd.rows(); dim++)
-  {
-    cmd(dim) = policies[dim]->getValue(state);
+  if (apply_noise) {
+    for (int dim = 0; dim < cmd.rows(); dim++) {
+      cmd(dim) = policies[dim]->getRandomizedValue(state, engine);
+    }
+  }
+  else {
+    for (int dim = 0; dim < cmd.rows(); dim++) {
+      cmd(dim) = policies[dim]->getValue(state);
+    }
   }
   return cmd;
 }
@@ -33,6 +42,7 @@ void ForestsPolicy::from_xml(TiXmlNode * node)
   {
     policies.push_back(regression_forests::Forest::loadFile(path));
   }
+  rosban_utils::xml_tools::try_read<bool>(node, "apply_noise", apply_noise);
 }
 
 std::string ForestsPolicy::class_name() const
