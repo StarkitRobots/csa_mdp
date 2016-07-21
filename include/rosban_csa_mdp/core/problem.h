@@ -68,6 +68,9 @@ public:
 
   const std::vector<std::string> & getStateNames() const;
   const std::vector<std::string> & getActionNames() const;
+
+  /// Which state dimensions are used as input for learning (default is all)
+  virtual std::vector<int> getLearningDimensions() const;
   
   virtual bool isTerminal(const Eigen::VectorXd &) const = 0;
   /// This function is allowed to be stochastic

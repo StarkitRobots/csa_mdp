@@ -121,6 +121,15 @@ const std::vector<std::string> & Problem::getActionNames() const
   return action_names;
 }
 
+std::vector<int> Problem::getLearningDimensions() const
+{
+  std::vector<int> result;
+  result.reserve(stateDims());
+  for (int i = 0; i < stateDims(); i++) {
+    result.push_back(i);
+  }
+  return result;
+}
 
 Eigen::VectorXd Problem::getRandomAction()
 {
