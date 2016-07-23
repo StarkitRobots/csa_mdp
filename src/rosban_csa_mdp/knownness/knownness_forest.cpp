@@ -63,7 +63,8 @@ double KnownnessForest::getValue(const Eigen::VectorXd &point) const
   double sum = 0;
   for (const KnownnessTree &tree : trees)
   {
-    sum += tree.getValue(point);
+    double tree_value = tree.getValue(point);
+    sum += tree_value;
   }
   return sum / trees.size();
 }
@@ -76,6 +77,14 @@ std::unique_ptr<regression_forests::Forest> KnownnessForest::convertToRegression
     forest->push(tree.convertToRegTree());
   }
   return forest;
+}
+
+void KnownnessForest::checkConsistency()
+{
+  for (KnownnessTree &tree : trees)
+  {
+    tree.checkConsistency();
+  }
 }
 
 }

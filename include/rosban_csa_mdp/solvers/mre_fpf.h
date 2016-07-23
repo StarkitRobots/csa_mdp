@@ -10,13 +10,15 @@ namespace csa_mdp
 class MREFPF : public FPF
 {
 public: 
-  /// Three types of use of the KnownnessTrees are available
+  /// Four types of use of the KnownnessTrees are available
   /// MRE        : Follows Multi-Resolution Exploration description (Nouri2009)
   ///              i.e. samples are modified to include knownness function
   /// Alternative: The trees are modified to apply the knownness function
   /// Disabled   : Values of the knownness trees are simply ignored
+  /// MRE_CI     : Is also based on noise estimation, to avoid trying to explore
+  ///              areas were the upper confidence bound is still low
   enum class UpdateType
-  { MRE, Alternative, Disabled };
+  { MRE, Alternative, Disabled, MRE_CI };
 
   class Config : public FPF::Config
   {

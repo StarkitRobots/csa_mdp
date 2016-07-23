@@ -13,6 +13,16 @@ bool KdNode::isLeaf() const
   return lChild == NULL;
 }
 
+void KdNode::addLeaves(std::vector<KdNode *> & leaves)
+{
+  if (isLeaf()) {
+    leaves.push_back(this);
+    return;
+  }
+  lChild->addLeaves(leaves);
+  uChild->addLeaves(leaves);
+}
+
 KdNode * KdNode::getLeaf(const Eigen::VectorXd& point)
 {
   if (isLeaf()) {

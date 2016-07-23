@@ -131,6 +131,7 @@ void MRE::saveValue(const std::string &prefix)
 
 void MRE::saveKnownnessTree(const std::string &prefix)
 {
+  knownness_forest->checkConsistency();
   std::unique_ptr<regression_forests::Forest> forest;
   forest = knownness_forest->convertToRegressionForest();
   forest->save(prefix + "knownness.data");

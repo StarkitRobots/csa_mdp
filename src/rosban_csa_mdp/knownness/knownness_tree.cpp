@@ -253,6 +253,22 @@ std::unique_ptr<regression_forests::Tree> KnownnessTree::convertToRegTree() cons
   return reg_tree;
 }
 
+void KnownnessTree::checkConsistency()
+{
+  std::vector<kd_trees::KdNode *> leaves = tree.getLeaves();
+  int leaf_points = 0;
+  for (kd_trees::KdNode * leaf : leaves)
+  {
+    leaf_points += leaf->getPoints().size();
+  }
+  if (leaf_points != nb_points) {
+    std::ostringstream oss;
+    oss << "KnownnessTree::checkConsistency: not consistent! expecting "
+        << nb_points << " points and found " << leaf_points << " points";
+    throw std::logic_error(oss.str());
+  }
+}
+
 std::string to_string(KnownnessTree::Type type)
 {
   switch (type)

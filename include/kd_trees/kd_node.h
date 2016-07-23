@@ -20,6 +20,9 @@ public:
 
   bool isLeaf() const;
 
+  /// Add the leaves of the given node to the provided vector
+  void addLeaves(std::vector<KdNode *> & leaves);
+
   // Get the leaf corresponding to the given point
   KdNode * getLeaf(const Eigen::VectorXd &point);
   const KdNode * getLeaf(const Eigen::VectorXd &point) const;

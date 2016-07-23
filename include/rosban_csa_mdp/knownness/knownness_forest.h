@@ -37,6 +37,9 @@ public:
   /// Conversion to a regression_forest
   std::unique_ptr<regression_forests::Forest> convertToRegressionForest() const;
 
+  /// Ensure that all the trees are consistent
+  void checkConsistency();
+
 private:
   std::vector<KnownnessTree> trees;
 };

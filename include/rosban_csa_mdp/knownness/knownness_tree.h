@@ -55,6 +55,10 @@ public:
                                               Eigen::MatrixXd &space) const;
   std::unique_ptr<regression_forests::Tree> convertToRegTree() const;
 
+  /// Ensure that the number of points stored correspond to the total number
+  /// of points, if it does not, throw a logic_error
+  void checkConsistency();
+
 private:
   /// The basic data structure
   kd_trees::KdTree tree;

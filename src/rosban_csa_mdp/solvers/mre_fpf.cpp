@@ -65,7 +65,8 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
   TrainingSet original_ts = FPF::getTrainingSet(samples, is_terminal, conf,
                                                 start_index, end_index);
   // Modify samples only in MRE mode
-  if (conf.update_type != UpdateType::MRE) return original_ts;
+  if (conf.update_type != UpdateType::MRE &&
+      conf.update_type != UpdateType::MRE_CI) return original_ts;
   // Otherwise use knownness to influence samples
   TrainingSet new_ts(original_ts.getInputDim());
   for (size_t i = 0; i < original_ts.size(); i++)
@@ -74,9 +75,14 @@ TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
     const regression_forests::Sample & original_sample = original_ts(i);
     Eigen::VectorXd input = original_sample.getInput();
     double reward         = original_sample.getOutput();
-    // Getting knownness of the input
+    // Getting knownness of the input and fake reward
     double knownness = knownness_func->getValue(input);
-    double new_reward = reward * knownness + conf.reward_max * (1 - knownness);
+    double fake_reward = conf.reward_max;
+    if (conf.update_type == UpdateType::MRE_CI && q_value) {
+      double reward_std_dev = std::sqrt(q_value->getVar(input));
+      fake_reward = std::min(reward + reward_std_dev, conf.reward_max);
+    }
+    double new_reward = reward * knownness + fake_reward * (1 - knownness);
     new_ts.push(regression_forests::Sample(input, new_reward));
   }
   return new_ts;
@@ -149,6 +155,7 @@ std::string to_string(MREFPF::UpdateType type)
     case MREFPF::UpdateType::MRE: return "MRE";
     case MREFPF::UpdateType::Alternative: return "Alternative";
     case MREFPF::UpdateType::Disabled: return "Disabled";
+    case MREFPF::UpdateType::MRE_CI: return "MRE_CI";
   }
   throw std::runtime_error("Unknown type in to_string(Type)");
 }
@@ -166,6 +173,10 @@ MREFPF::UpdateType loadUpdateType(const std::string &type)
   if (type == "Disabled")
   {
     return MREFPF::UpdateType::Disabled;
+  }
+  if (type == "MRE_CI")
+  {
+    return MREFPF::UpdateType::MRE_CI;
   }
   throw std::runtime_error("Unknown MREFPF Update Type: '" + type + "'");
 }

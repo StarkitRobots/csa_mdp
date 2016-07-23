@@ -15,6 +15,9 @@ public:
   int dim() const;
   const KdNode * getRoot() const;
 
+  /// Return all the leaves inside the tree
+  std::vector<KdNode *> getLeaves();
+
   KdNode * getLeaf(const Eigen::VectorXd &point);
   const KdNode * getLeaf(const Eigen::VectorXd &point) const;
 

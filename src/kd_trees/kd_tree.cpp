@@ -13,6 +13,13 @@ const KdNode * KdTree::getRoot() const
   return &root;
 }
 
+std::vector<KdNode *> KdTree::getLeaves()
+{
+  std::vector<KdNode *> leaves;
+  root.addLeaves(leaves);
+  return leaves;
+}
+
 int KdTree::dim() const
 {
   return space.rows();
