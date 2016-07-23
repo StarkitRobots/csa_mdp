@@ -89,12 +89,12 @@ void KnownnessTree::push(const Eigen::VectorXd& point)
             if (val > s_val_max) s_val_max = val; 
           }
           // Choose another dimension if all the points along this dimension are similars
-          if (s_val_min == s_val_max) break;
+          if (s_val_min == s_val_max) continue;
           // Generate random value
           std::uniform_real_distribution<double> val_distrib(s_val_min, s_val_max);
           double curr_split_val = val_distrib(random_engine);
           // This can really happen (even if it not supposed to)
-          if (curr_split_val == s_val_max) break;
+          if (curr_split_val == s_val_max) continue;
           // Gathering points
           std::vector<double> values, lower_values, upper_values;
           for (const auto & p : leafNode->getPoints())
