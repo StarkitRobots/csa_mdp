@@ -8,12 +8,7 @@ namespace csa_mdp
 LearnerFactory::LearnerFactory()
 {
   registerBuilder("ModelBasedLearner",
-                  [](TiXmlNode * node)
-                  {
-                    Learner * learner = new ModelBasedLearner();
-                    learner->from_xml(node);
-                    return learner;
-                  });
+                  [](){return std::unique_ptr<Learner>(new ModelBasedLearner);});
 }
 
 }

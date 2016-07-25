@@ -10,7 +10,7 @@ namespace csa_mdp
 {
 
 /// This class implements a policy as a set of regression forests, one for each dimension
-class ForestsPolicy : Policy
+class ForestsPolicy : public Policy
 {
 public:
   ForestsPolicy();

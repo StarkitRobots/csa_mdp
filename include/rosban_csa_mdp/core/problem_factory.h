@@ -15,10 +15,11 @@ public:
 
   ProblemFactory();
 
-  static void registerExtraBuilder(const std::string &name, Builder b);
+  static void registerExtraBuilder(const std::string &name, Builder b, bool parse_xml = true);
+  static void registerExtraBuilder(const std::string &name, XMLBuilder b);
 
 private:
-  static std::map<std::string,Builder> extra_builders;
+  static std::map<std::string, XMLBuilder> extra_builders;
 };
 
 }

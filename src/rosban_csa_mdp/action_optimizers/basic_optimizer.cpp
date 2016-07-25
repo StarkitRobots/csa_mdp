@@ -4,6 +4,12 @@
 
 #include "rosban_random/tools.h"
 
+#include "rosban_fa/gp_trainer.h"
+#include "rosban_fa/trainer_factory.h"
+
+using rosban_fa::GPTrainer;
+using rosban_fa::Trainer;
+using rosban_fa::TrainerFactory;
 
 namespace csa_mdp
 {
@@ -11,7 +17,8 @@ namespace csa_mdp
 BasicOptimizer::BasicOptimizer()
   : nb_additional_steps(4),
     nb_simulations(100),
-    nb_actions(25)
+    nb_actions(15),
+    trainer(new GPTrainer)
 {
   engine = rosban_random::getRandomEngine();
 }
@@ -53,7 +60,7 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
   // Averaging the rewards is useless
   // Train a function approximator
   std::unique_ptr<rosban_fa::FunctionApproximator> approximator;
-  approximator = gp_trainer.train(actions, results, model->getActionLimits());
+  approximator = trainer->train(actions, results, model->getActionLimits());
   Eigen::VectorXd best_guess;
   double best_output;
   approximator->getMaximum(model->getActionLimits(),
@@ -72,7 +79,9 @@ void BasicOptimizer::to_xml(std::ostream &out) const
   rosban_utils::xml_tools::write<int>("nb_additional_steps", nb_additional_steps, out);
   rosban_utils::xml_tools::write<int>("nb_simulations"     , nb_simulations     , out);
   rosban_utils::xml_tools::write<int>("nb_actions"         , nb_actions         , out);
-  gp_trainer.write("gp_trainer", out);
+  out << "<trainer>";
+  trainer->write(trainer->class_name(), out);
+  out << "</trainer>";
 }
 
 void BasicOptimizer::from_xml(TiXmlNode *node)
@@ -80,7 +89,10 @@ void BasicOptimizer::from_xml(TiXmlNode *node)
   rosban_utils::xml_tools::try_read<int>(node, "nb_additional_steps", nb_additional_steps);
   rosban_utils::xml_tools::try_read<int>(node, "nb_simulations"     , nb_simulations     );
   rosban_utils::xml_tools::try_read<int>(node, "nb_actions"         , nb_actions         );
-  gp_trainer.tryRead(node, "gp_trainer");
+  TiXmlNode * trainer_node = node->FirstChild("trainer");
+  if(trainer_node) {
+    trainer = std::unique_ptr<Trainer>(TrainerFactory().build(trainer_node));
+  }
 }
 
 }

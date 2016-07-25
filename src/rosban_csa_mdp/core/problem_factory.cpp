@@ -5,7 +5,7 @@ using csa_mdp::Problem;
 namespace csa_mdp
 {
 
-std::map<std::string,ProblemFactory::Builder> ProblemFactory::extra_builders;
+std::map<std::string, ProblemFactory::XMLBuilder> ProblemFactory::extra_builders;
 
 ProblemFactory::ProblemFactory()
 {
@@ -16,7 +16,12 @@ ProblemFactory::ProblemFactory()
   }
 }
 
-void ProblemFactory::registerExtraBuilder(const std::string &name, Builder b)
+void ProblemFactory::registerExtraBuilder(const std::string &name, Builder b, bool parse_xml)
+{
+  registerExtraBuilder(name, toXMLBuilder(b, parse_xml));
+}
+
+void ProblemFactory::registerExtraBuilder(const std::string &name, XMLBuilder b)
 {
   extra_builders[name] = b;
 }

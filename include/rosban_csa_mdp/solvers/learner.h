@@ -3,6 +3,7 @@
 #include "rosban_csa_mdp/core/problem.h"
 
 #include "rosban_utils/serializable.h"
+#include "rosban_utils/time_stamp.h"
 
 namespace csa_mdp
 {
@@ -11,10 +12,18 @@ namespace csa_mdp
 class Learner : public rosban_utils::Serializable
 {
 public:
+  Learner();
+  virtual ~Learner();
+
+  /// Inform the learner that the process just started
+  void setStart();
+
   /// Inform the learner of the state space
   virtual void setStateLimits(const Eigen::MatrixXd & state_limits);
   /// Inform the learner of the action space
   virtual void setActionLimits(const Eigen::MatrixXd & action_limits);
+  /// Update the discount factor used for the learner
+  virtual void setDiscount(double discount);
 
   Eigen::MatrixXd getStateLimits() const;
   Eigen::MatrixXd getActionLimits() const;
@@ -40,9 +49,27 @@ public:
   /// Save current status with the given prefix
   virtual void saveStatus(const std::string & prefix) = 0;
 
+  virtual void to_xml(std::ostream &out) const override;
+  virtual void from_xml(TiXmlNode *node) override;
+
+  /// Return time elapsed since learning start (in seconds)
+  double getLearningTime() const;
+
+  /// Retrieve the time repartition of the last internal update
+  /// Entries have the following format: <label, time[s]>
+  const std::map<std::string, double> & getTimeRepartition() const;
+
 protected:
   /// Acquired samples until now
   std::vector<Sample> samples;
+
+protected:
+  /// The discount factor of the learning process
+  double discount;
+  /// The beginning of the learning
+  rosban_utils::TimeStamp learning_start;
+  /// Store time repartition for the last internal update [s]
+  std::map<std::string, double> time_repartition;
 
 private:
   /// Limits of state space used for learning of:

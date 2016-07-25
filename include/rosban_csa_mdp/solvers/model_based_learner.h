@@ -70,9 +70,6 @@ private:
   /// Number of steps taken at each value update
   int value_steps;
 
-  /// The discount gain
-  double discount;
-
   /// Random machine
   std::default_random_engine engine;
 };

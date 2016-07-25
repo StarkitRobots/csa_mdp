@@ -13,14 +13,18 @@ using csa_mdp::RandomPolicy;
 using rosban_fa::Trainer;
 using rosban_fa::TrainerFactory;
 
+using rosban_utils::TimeStamp;
+
 // Default types
 #include "rosban_csa_mdp/reward_predictors/monte_carlo_predictor.h"
 #include "rosban_csa_mdp/action_optimizers/basic_optimizer.h"
 #include "rosban_fa/gp_forest_trainer.h"
+#include "rosban_fa/pwl_forest_trainer.h"
 
 using csa_mdp::MonteCarloPredictor;
 using csa_mdp::BasicOptimizer;
 using rosban_fa::GPForestTrainer;
+using rosban_fa::PWLForestTrainer;
 
 namespace csa_mdp
 {
@@ -29,8 +33,8 @@ ModelBasedLearner::ModelBasedLearner()
   : reward_predictor(new MonteCarloPredictor()),
     value_trainer(new GPForestTrainer()),
     action_optimizer(new BasicOptimizer()),
-    policy_trainer(new GPForestTrainer()),
-    value_steps(5), discount(0.98)
+    policy_trainer(new PWLForestTrainer()),
+    value_steps(5)
 {
   engine = rosban_random::getRandomEngine();
   //TODO add experimental code and remove it later (with associated headers)
@@ -67,6 +71,7 @@ void ModelBasedLearner::saveStatus(const std::string & prefix)
 
 void ModelBasedLearner::internalUpdate()
 {
+  time_repartition.clear();
   //TODO: update transition model and cost model
   updateValue();
   updatePolicy();
@@ -100,6 +105,7 @@ void ModelBasedLearner::updateValue()
     this->value->predict(state, mean, var);
     return mean;
   };
+  TimeStamp start_reward_predictor = TimeStamp::now();
   for (int sample = 0; sample < nb_samples; sample++)
   {
     Eigen::VectorXd state = samples[sample].state;
@@ -110,7 +116,11 @@ void ModelBasedLearner::updateValue()
     inputs.col(sample) = state;
     observations(sample) = mean;
   }
+  TimeStamp end_reward_predictor = TimeStamp::now();
   value = value_trainer->train(inputs, observations, getStateLimits());
+  TimeStamp end_value_trainer = TimeStamp::now();
+  time_repartition["reward_predictor"] = diffSec(start_reward_predictor, end_reward_predictor);
+  time_repartition["value_trainer"   ] = diffSec(end_reward_predictor  , end_value_trainer   );
 }
 
 void ModelBasedLearner::updatePolicy()
@@ -141,6 +151,7 @@ void ModelBasedLearner::updatePolicy()
     this->value->predict(state, mean, var);
     return mean;
   };
+  TimeStamp start_action_optimizer = TimeStamp::now();
   for (int sample = 0; sample < nb_samples; sample++)
   {
     Eigen::VectorXd state = samples[sample].state;
@@ -151,11 +162,15 @@ void ModelBasedLearner::updatePolicy()
     inputs.col(sample) = state;
     observations.row(sample) = best_action.transpose();
   }
+  TimeStamp end_action_optimizer = TimeStamp::now();
   std::unique_ptr<rosban_fa::FunctionApproximator> new_policy_fa;
   new_policy_fa = policy_trainer->train(inputs, observations, getStateLimits());
   std::unique_ptr<Policy> new_policy(new FAPolicy(std::move(new_policy_fa)));
   new_policy->setActionLimits(getActionLimits());
   policy = std::move(new_policy);
+  TimeStamp end_policy_trainer = TimeStamp::now();
+  time_repartition["action_optimizer"] = diffSec(start_action_optimizer, end_action_optimizer);
+  time_repartition["policy_trainer"  ] = diffSec(end_action_optimizer  , end_policy_trainer  );
 }
 
 std::string ModelBasedLearner::class_name() const
@@ -163,6 +178,7 @@ std::string ModelBasedLearner::class_name() const
 
 void ModelBasedLearner::to_xml(std::ostream &out) const
 {
+  Learner::to_xml(out);
   if (model) {
     out << "<model>";
     model->write(model->class_name(), out);
@@ -189,11 +205,11 @@ void ModelBasedLearner::to_xml(std::ostream &out) const
     out << "</policy_trainer>";
   }
   rosban_utils::xml_tools::write<int>   ("values_steps", value_steps, out);
-  rosban_utils::xml_tools::write<double>("discount"    , discount   , out);
 }
 
 void ModelBasedLearner::from_xml(TiXmlNode *node)
 {
+  Learner::from_xml(node);
   // 1: read model (mandatory)
   TiXmlNode * model_node = node->FirstChild("model");
   if(!model_node) {
@@ -223,7 +239,6 @@ void ModelBasedLearner::from_xml(TiXmlNode *node)
     policy_trainer = std::unique_ptr<Trainer>(TrainerFactory().build(policy_trainer_node));
   }
   rosban_utils::xml_tools::try_read<int>   (node, "values_steps", value_steps);
-  rosban_utils::xml_tools::try_read<double>(node, "discount"    , discount   );
 }
 
 }

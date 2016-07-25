@@ -14,15 +14,8 @@ std::map<std::string,PolicyFactory::Builder> PolicyFactory::extra_builders;
 
 PolicyFactory::PolicyFactory()
 {
-  registerBuilder("forests_policy",
-                  [](TiXmlNode *node)
-                  {
-                    ForestsPolicy * p = new ForestsPolicy();
-                    p->from_xml(node);
-                    return (Policy*)p;
-                  });
-  registerBuilder("random",
-                  [](TiXmlNode *node) {(void)node;return (Policy*)new RandomPolicy();});
+  registerBuilder("forests_policy",[](){return std::unique_ptr<Policy>(new ForestsPolicy);});
+  registerBuilder("random"        ,[](){return std::unique_ptr<Policy>(new RandomPolicy );});
   for (const auto & entry : extra_builders)
   {
     registerBuilder(entry.first, entry.second);

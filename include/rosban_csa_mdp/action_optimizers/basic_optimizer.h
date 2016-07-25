@@ -2,7 +2,7 @@
 
 #include "rosban_csa_mdp/action_optimizers/action_optimizer.h"
 
-#include "rosban_fa/gp_trainer.h"
+#include "rosban_fa/trainer.h"
 
 namespace csa_mdp
 {
@@ -27,7 +27,7 @@ private:
   int nb_additional_steps;
   int nb_simulations;
   int nb_actions;
-  rosban_fa::GPTrainer gp_trainer;
+  std::unique_ptr<rosban_fa::Trainer> trainer;
   std::default_random_engine engine;
 };
 
