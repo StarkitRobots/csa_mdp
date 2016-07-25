@@ -6,6 +6,7 @@ project(rosban_csa_mdp)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   regression_experiments
+  rosban_fa
 )
 
 find_package(PkgConfig)
@@ -121,10 +122,11 @@ include_directories(
 
 # Directories containing sources files
 set(DIRECTORIES
+  src/rosban_csa_mdp/action_optimizers
   src/rosban_csa_mdp/core
-  src/rosban_csa_mdp/solvers
   src/rosban_csa_mdp/knownness
   src/rosban_csa_mdp/reward_predictors
+  src/rosban_csa_mdp/solvers
   src/kd_trees# Should be elsewhere...
   )
 

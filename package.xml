@@ -15,7 +15,9 @@
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>regression_experiments</build_depend>
+  <build_depend>rosban_fa</build_depend>
   <run_depend>regression_experiments</run_depend>
+  <run_depend>rosban_fa</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
