@@ -32,9 +32,11 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
     Eigen::VectorXd initial_action = actions.col(action);
     // Compute several simulations
     for (int sim = 0; sim < nb_simulations; sim++) {
+      // 1. Using chosen action
       Eigen::VectorXd state = model->getSuccessor(input, initial_action);
       double reward = reward_function(input, initial_action, state);
       double coeff = discount;
+      // 2. Using current_policy for a few steps
       for (int i = 0; i < nb_additional_steps; i++)
       {
         Eigen::VectorXd action = current_policy->getAction(state, &engine);
@@ -43,6 +45,8 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
         state = next_state;
         coeff *= discount;
       }
+      // 3. Using value at final state if provided
+      if (value_function) reward += coeff * value_function(state);
       results(action) += reward;
     }
   }

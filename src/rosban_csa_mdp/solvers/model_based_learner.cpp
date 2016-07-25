@@ -2,15 +2,41 @@
 
 #include "rosban_csa_mdp/core/fa_policy.h"
 
+#include "rosban_random/tools.h"
+
 namespace csa_mdp
 {
 
 ModelBasedLearner::ModelBasedLearner()
   : value_steps(5), discount(0.98)
 {
-  //TODO remove code, it is only temporary. also remove associated headers
-  //...
+  engine = rosban_random::getRandomEngine();
+  //TODO add experimental code and remove it later (with associated headers)
 }
+
+Eigen::VectorXd ModelBasedLearner::getAction(const Eigen::VectorXd & state)
+{
+  // If policy is available, use it
+  if (policy) return policy->getAction(state, &engine);
+  // Otherwise, draw at uniform random from action space
+  return rosban_random::getUniformSamples(getActionLimits(), 1, &engine)[0];
+}
+bool ModelBasedLearner::hasAvailablePolicy()
+{
+  if (policy) return true;
+  return false;
+}
+
+void ModelBasedLearner::savePolicy(const std::string & prefix)
+{
+  std::cerr << "Warning: ModelBasedLearner::savePolicy is not implemented" << std::endl;
+}
+
+void ModelBasedLearner::saveStatus(const std::string & prefix)
+{
+  std::cerr << "Warning: ModelBasedLearner::saveStatus is not implemented" << std::endl;
+}
+
 
 void ModelBasedLearner::internalUpdate()
 {
@@ -92,6 +118,20 @@ void ModelBasedLearner::updatePolicy()
   std::unique_ptr<rosban_fa::FunctionApproximator> policy_fa;
   policy_fa = policy_trainer->train(inputs, observations, model->getStateLimits());
   policy = std::unique_ptr<Policy>(new FAPolicy(std::move(policy_fa)));
+}
+
+std::string ModelBasedLearner::class_name() const
+{ return "ModelBasedLearner"; }
+
+void ModelBasedLearner::to_xml(std::ostream &out) const
+{
+  //TODO
+  throw std::logic_error("ModelBasedLearner::to_xml not implemented");
+}
+
+void ModelBasedLearner::from_xml(TiXmlNode *node)
+{
+  throw std::logic_error("ModelBasedLearner::from_xml not implemented");
 }
 
 }
