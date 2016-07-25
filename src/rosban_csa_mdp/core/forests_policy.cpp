@@ -13,10 +13,23 @@ ForestsPolicy::ForestsPolicy()
 
 Eigen::VectorXd ForestsPolicy::getRawAction(const Eigen::VectorXd &state)
 {
+  return getRawAction(state, &engine);
+}
+
+Eigen::VectorXd ForestsPolicy::getRawAction(const Eigen::VectorXd &state,
+                                            std::default_random_engine * external_engine) const
+{
+  bool delete_engine = false;
+  if (apply_noise && external_engine == nullptr)
+  {
+    delete_engine = true;
+    external_engine = rosban_random::newRandomEngine();
+  }
+
   Eigen::VectorXd cmd(policies.size());
   if (apply_noise) {
     for (int dim = 0; dim < cmd.rows(); dim++) {
-      cmd(dim) = policies[dim]->getRandomizedValue(state, engine);
+      cmd(dim) = policies[dim]->getRandomizedValue(state, *external_engine);
     }
   }
   else {
@@ -24,6 +37,7 @@ Eigen::VectorXd ForestsPolicy::getRawAction(const Eigen::VectorXd &state)
       cmd(dim) = policies[dim]->getValue(state);
     }
   }
+  if (delete_engine) { delete(external_engine); }
   return cmd;
 }
 

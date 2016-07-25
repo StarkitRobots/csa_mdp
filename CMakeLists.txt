@@ -124,6 +124,7 @@ set(DIRECTORIES
   src/rosban_csa_mdp/core
   src/rosban_csa_mdp/solvers
   src/rosban_csa_mdp/knownness
+  src/rosban_csa_mdp/reward_predictors
   src/kd_trees# Should be elsewhere...
   )
 

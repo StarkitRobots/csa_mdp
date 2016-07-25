@@ -15,7 +15,7 @@ void Policy::setActionLimits(const Eigen::MatrixXd &limits)
   action_limits = limits;
 }
 
-Eigen::VectorXd Policy::boundAction(const Eigen::VectorXd & raw_action)
+Eigen::VectorXd Policy::boundAction(const Eigen::VectorXd & raw_action) const
 {
   if (raw_action.rows() != action_limits.rows())
   {
@@ -37,5 +37,12 @@ Eigen::VectorXd Policy::getAction(const Eigen::VectorXd &state)
 {
   return boundAction(getRawAction(state));
 }
+
+Eigen::VectorXd Policy::getAction(const Eigen::VectorXd &state,
+                                  std::default_random_engine * external_engine) const
+{
+  return boundAction(getRawAction(state, external_engine));
+}
+
 
 }

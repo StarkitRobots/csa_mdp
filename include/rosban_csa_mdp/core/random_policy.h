@@ -7,13 +7,15 @@
 namespace csa_mdp
 {
 
-/// This class implements a policy as a set of regression forests, one for each dimension
 class RandomPolicy : Policy
 {
 public:
   RandomPolicy();
 
   Eigen::VectorXd getRawAction(const Eigen::VectorXd &state) override;
+
+  Eigen::VectorXd getRawAction(const Eigen::VectorXd &state,
+                               std::default_random_engine * engine) const override;
 
   void to_xml(std::ostream & out) const override;
   void from_xml(TiXmlNode * node) override;
