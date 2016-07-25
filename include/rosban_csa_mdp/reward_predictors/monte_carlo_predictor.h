@@ -17,6 +17,7 @@ public:
                int nb_steps,
                std::shared_ptr<Problem> model,//TODO: Model class ?
                RewardFunction reward_function,
+               ValueFunction value_function,
                double discount,
                double * mean,
                double * var) override;

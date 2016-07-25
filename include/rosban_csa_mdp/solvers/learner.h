@@ -12,9 +12,9 @@ class Learner : public rosban_utils::Serializable
 {
 public:
   /// Inform the learner of the state space
-  virtual void setStateLimits(const Eigen::VectorXd & state_limits);
+  virtual void setStateLimits(const Eigen::MatrixXd & state_limits);
   /// Inform the learner of the action space
-  virtual void setActionLimits(const Eigen::VectorXd & action_limits);
+  virtual void setActionLimits(const Eigen::MatrixXd & action_limits);
 
   Eigen::MatrixXd getStateLimits() const;
   Eigen::MatrixXd getActionLimits() const;

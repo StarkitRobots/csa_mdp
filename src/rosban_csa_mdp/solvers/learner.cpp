@@ -3,12 +3,12 @@
 namespace csa_mdp
 {
 
-void Learner::setStateLimits(const Eigen::VectorXd & new_state_limits)
+void Learner::setStateLimits(const Eigen::MatrixXd & new_state_limits)
 {
   state_limits = new_state_limits;
 }
 
-void Learner::setActionLimits(const Eigen::VectorXd & new_action_limits)
+void Learner::setActionLimits(const Eigen::MatrixXd & new_action_limits)
 {
   action_limits = new_action_limits;
 }

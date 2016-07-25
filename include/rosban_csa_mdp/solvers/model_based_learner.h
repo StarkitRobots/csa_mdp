@@ -22,6 +22,10 @@ public:
 
   ModelBasedLearner();
 
+  /// if no policy has been computed yet, return a random policy which
+  /// corresponds to the action space
+  const std::shared_ptr<const Policy> getPolicy() const;
+
   Eigen::VectorXd getAction(const Eigen::VectorXd & state) override;
   bool hasAvailablePolicy() override;
   void savePolicy(const std::string & prefix) override;

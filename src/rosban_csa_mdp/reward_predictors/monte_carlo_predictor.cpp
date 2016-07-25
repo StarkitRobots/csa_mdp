@@ -18,10 +18,14 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
                                   int nb_steps,
                                   std::shared_ptr<Problem> model,//TODO: Model class ?
                                   RewardFunction reward_function,
+                                  ValueFunction value_function,
                                   double discount,
                                   double * mean,
                                   double * var)
 {
+  if (!policy) {
+    throw std::logic_error("MonteCarloPredictor cannot predict if it is given a null policy!");
+  }
   std::vector<double> rewards;
   rewards.reserve(nb_predictions);
   for (int prediction = 0; prediction < nb_predictions; prediction++)
@@ -29,6 +33,7 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
     double coeff = 1;
     double reward = 0;
     Eigen::VectorXd state = input;
+    // Compute the reward over the next 'nb_steps'
     for (int i = 0; i < nb_steps; i++)
     {
       Eigen::VectorXd action = policy->getAction(state, &engine);
@@ -37,6 +42,8 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
       state = next_state;
       coeff *= discount;
     }
+    // Use the value function to estimate long time reward
+    reward += coeff * value_function(state);
     rewards.push_back(reward);
   }
   double internal_mean = regression_forests::Statistics::mean(rewards);

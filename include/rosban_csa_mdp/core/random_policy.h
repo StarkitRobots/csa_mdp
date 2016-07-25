@@ -7,7 +7,7 @@
 namespace csa_mdp
 {
 
-class RandomPolicy : Policy
+class RandomPolicy : public Policy
 {
 public:
   RandomPolicy();
