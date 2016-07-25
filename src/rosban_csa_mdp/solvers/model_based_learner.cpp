@@ -1,14 +1,22 @@
 #include "rosban_csa_mdp/solvers/model_based_learner.h"
 
+#include "rosban_csa_mdp/core/fa_policy.h"
+
 namespace csa_mdp
 {
 
+ModelBasedLearner::ModelBasedLearner()
+  : value_steps(5), discount(0.98)
+{
+  //TODO remove code, it is only temporary. also remove associated headers
+  //...
+}
+
 void ModelBasedLearner::internalUpdate()
 {
-  // 1. update transition model
-  // TODO
-  // 2. Update value Model
+  //TODO: update transition model and cost model
   updateValue();
+  updatePolicy();
 }
 
 void ModelBasedLearner::updateValue()
@@ -22,18 +30,26 @@ void ModelBasedLearner::updateValue()
     throw std::logic_error("ModelBasedLearner::updateValue: value trainer is not initialized");
   }
   int nb_samples = samples.size();
-  Eigen::MatrixXd inputs(problem.stateDims(), nb_samples);
+  Eigen::MatrixXd inputs(model->stateDims(), nb_samples);
   Eigen::VectorXd observations(nb_samples);
+  RewardPredictor::RewardFunction reward_function =
+    [this] (const Eigen::VectorXd & state,
+            const Eigen::VectorXd & action,
+            const Eigen::VectorXd & next_state)
+  {
+    return this->model->getReward(state, action, next_state);
+  };
   for (int sample = 0; sample < nb_samples; sample++)
   {
-    Eigen::VectorXd state = samples[samples].state;
-    double mean, double var;
-    reward_predictor->predict(state, policy, value_steps, model, discount,
+    Eigen::VectorXd state = samples[sample].state;
+    double mean, var;
+    reward_predictor->predict(state, policy, value_steps, model,
+                              reward_function, discount,
                               &mean, &var);
     inputs.col(sample) = state;
     observations(sample) = mean;
   }
-  value = value_trainer->train(inputs, observations, problem->getStateLimits());
+  value = value_trainer->train(inputs, observations, model->getStateLimits());
 }
 
 void ModelBasedLearner::updatePolicy()
@@ -47,17 +63,35 @@ void ModelBasedLearner::updatePolicy()
     throw std::logic_error("ModelBasedLearner::updateValue: policy trainer is not initialized");
   }
   int nb_samples = samples.size();
-  Eigen::MatrixXd inputs(problem.stateDims(), nb_samples);
-  Eigen::MatrixXd observations(nb_samples, problem.actionDims());
+  Eigen::MatrixXd inputs(model->stateDims(), nb_samples);
+  Eigen::MatrixXd observations(nb_samples, model->actionDims());
+  ActionOptimizer::RewardFunction reward_function =
+    [this] (const Eigen::VectorXd & state,
+            const Eigen::VectorXd & action,
+            const Eigen::VectorXd & next_state)
+  {
+    return this->model->getReward(state, action, next_state);
+  };
+  ActionOptimizer::ValueFunction value_function =
+    [this] (const Eigen::VectorXd & state)
+  {
+    double mean, var;
+    this->value->predict(state, mean, var);
+    return mean;
+  };
   for (int sample = 0; sample < nb_samples; sample++)
   {
-    Eigen::VectorXd state = samples[samples].state;
+    Eigen::VectorXd state = samples[sample].state;
     Eigen::VectorXd best_action;
-    best_action = action_optimizer->optimize(...);
+    best_action = action_optimizer->optimize(state, policy, model,
+                                             reward_function, value_function,
+                                             discount);
     inputs.col(sample) = state;
     observations.row(sample) = best_action.transpose();
   }
-  policy = policy_trainer->train(inputs, observations, problem->getStateLimits());
+  std::unique_ptr<rosban_fa::FunctionApproximator> policy_fa;
+  policy_fa = policy_trainer->train(inputs, observations, model->getStateLimits());
+  policy = std::unique_ptr<Policy>(new FAPolicy(std::move(policy_fa)));
 }
 
 }

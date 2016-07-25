@@ -1,10 +1,11 @@
 #pragma once
 
-#include "rosban_csa_mdp/core/model.h"
+#include "rosban_csa_mdp/core/problem.h"
 #include "rosban_csa_mdp/reward_predictors/reward_predictor.h"
 #include "rosban_csa_mdp/action_optimizers/action_optimizer.h"
 
 #include "rosban_fa/function_approximator.h"
+#include "rosban_fa/trainer.h"
 
 namespace csa_mdp
 {
@@ -16,12 +17,15 @@ class ModelBasedLearner : public rosban_utils::Serializable
 {
 public:
 
-  //TODO!!!
+  ModelBasedLearner();
 
   void internalUpdate();
 
   /// Performs an update of current value using internal parameters
   void updateValue();
+
+  /// Performs an update of current value using internal parameters
+  void updatePolicy();
 
 private:
   /// The current state of the model
@@ -50,4 +54,12 @@ private:
 
   /// Acquired samples until now
   std::vector<Sample> samples;
+
+  /// Number of steps taken at each value update
+  int value_steps;
+
+  /// The discount gain
+  double discount;
 };
+
+}
