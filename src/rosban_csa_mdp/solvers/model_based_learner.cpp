@@ -1,5 +1,6 @@
 #include "rosban_csa_mdp/solvers/model_based_learner.h"
 
+#include "rosban_csa_mdp/action_optimizers/action_optimizer_factory.h"
 #include "rosban_csa_mdp/core/fa_policy.h"
 #include "rosban_csa_mdp/core/problem_factory.h"
 #include "rosban_csa_mdp/core/random_policy.h"
@@ -228,11 +229,7 @@ void ModelBasedLearner::from_xml(TiXmlNode *node)
     value_trainer = std::unique_ptr<Trainer>(TrainerFactory().build(value_trainer_node));
   }
   // 4: read action_optimizer (optional)
-  TiXmlNode * action_optimizer_node = node->FirstChild("action_optimizer");
-  if(action_optimizer_node) {
-    //TODO
-    //action_optimizer = std::unique_ptr<ActionOptimizer>(ActionOptimizerFactory().build(action_optimizer_node));
-  }
+  ActionOptimizerFactory().tryRead(node, "action_optimizer", action_optimizer);
   // 5: read policy_trainer (optional)
   TiXmlNode * policy_trainer_node = node->FirstChild("policy_trainer");
   if(policy_trainer_node) {
