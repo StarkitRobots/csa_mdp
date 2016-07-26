@@ -18,6 +18,9 @@ public:
   /// Inform the learner that the process just started
   void setStart();
 
+  /// Set the maximal number of threads allowed to the learner
+  virtual void setNbThreads(int nb_threads);
+
   /// Inform the learner of the state space
   virtual void setStateLimits(const Eigen::MatrixXd & state_limits);
   /// Inform the learner of the action space
@@ -66,6 +69,8 @@ protected:
 protected:
   /// The discount factor of the learning process
   double discount;
+  /// The number of threads allowed to the learner
+  int nb_threads;
   /// The beginning of the learning
   rosban_utils::TimeStamp learning_start;
   /// Store time repartition for the last internal update [s]

@@ -153,6 +153,7 @@ void ModelBasedLearner::updatePolicy()
     return mean;
   };
   TimeStamp start_action_optimizer = TimeStamp::now();
+  action_optimizer->setNbThreads(nb_threads);
   for (int sample = 0; sample < nb_samples; sample++)
   {
     Eigen::VectorXd state = samples[sample].state;
@@ -180,61 +181,23 @@ std::string ModelBasedLearner::class_name() const
 void ModelBasedLearner::to_xml(std::ostream &out) const
 {
   Learner::to_xml(out);
-  if (model) {
-    out << "<model>";
-    model->write(model->class_name(), out);
-    out << "</model>";
-  }
-  if (reward_predictor) {
-    out << "<reward_predictor>";
-    reward_predictor->write(reward_predictor->class_name(), out);
-    out << "</reward_predictor>";
-  }
-  if (value_trainer) {
-    out << "<value_trainer>";
-    value_trainer->write(value_trainer->class_name(), out);
-    out << "</value_trainer>";
-  }
-  if (action_optimizer) {
-    out << "<action_optimizer>";
-    action_optimizer->write(action_optimizer->class_name(), out);
-    out << "</action_optimizer>";
-  }
-  if (policy_trainer) {
-    out << "<policy_trainer>";
-    policy_trainer->write(policy_trainer->class_name(), out);
-    out << "</policy_trainer>";
-  }
+  if (model)            model->factoryWrite("model", out);
+  if (reward_predictor) reward_predictor->factoryWrite("reward_predictor", out);
+  if (value_trainer)    value_trainer->factoryWrite("value_trainer", out);
+  if (action_optimizer) action_optimizer->factoryWrite("action_optimizer", out);
+  if (policy_trainer)   policy_trainer->factoryWrite("policy_trainer", out);
   rosban_utils::xml_tools::write<int>   ("values_steps", value_steps, out);
 }
 
 void ModelBasedLearner::from_xml(TiXmlNode *node)
 {
   Learner::from_xml(node);
-  // 1: read model (mandatory)
-  TiXmlNode * model_node = node->FirstChild("model");
-  if(!model_node) {
-    throw std::runtime_error("Failed to find node 'model' in '" + node->ValueStr() + "'");
-  }
-  model  = std::shared_ptr<Problem>(ProblemFactory().build(model_node));
-  // 2: read reward predictor (optional)
-  TiXmlNode * reward_predictor_node = node->FirstChild("reward_predictor");
-  if(reward_predictor_node) {
-    //TODO
-    //reward_predictor = std::unique_ptr<RewardPredictor>(RewardPredictorFactory().build(reward_predictor_node));
-  }
-  // 3: read value_trainer (optional)
-  TiXmlNode * value_trainer_node = node->FirstChild("value_trainer");
-  if(value_trainer_node) {
-    value_trainer = std::unique_ptr<Trainer>(TrainerFactory().build(value_trainer_node));
-  }
-  // 4: read action_optimizer (optional)
+  model  = ProblemFactory().read(node, "model");
+  //TODO
+  //RewardPredictorFactory().tryRead("reward_predictor", node, reward_predictor);
+  TrainerFactory().tryRead(node, "value_trainer", value_trainer);
   ActionOptimizerFactory().tryRead(node, "action_optimizer", action_optimizer);
-  // 5: read policy_trainer (optional)
-  TiXmlNode * policy_trainer_node = node->FirstChild("policy_trainer");
-  if(policy_trainer_node) {
-    policy_trainer = std::unique_ptr<Trainer>(TrainerFactory().build(policy_trainer_node));
-  }
+  TrainerFactory().tryRead(node, "policy_trainer", policy_trainer);
   rosban_utils::xml_tools::try_read<int>   (node, "values_steps", value_steps);
 }
 

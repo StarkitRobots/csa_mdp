@@ -16,11 +16,16 @@ namespace csa_mdp
 class ActionOptimizer : public rosban_utils::Serializable
 {
 public:
-
   typedef std::function<double(const Eigen::VectorXd & state,
                                const Eigen::VectorXd & action,
                                const Eigen::VectorXd & next_state)> RewardFunction;
   typedef std::function<double(const Eigen::VectorXd & state)> ValueFunction;
+
+  ActionOptimizer();
+  virtual ~ActionOptimizer();
+
+  /// Set the maximal number of threads allowed
+  void setNbThreads(int nb_threads);
 
   /// Try to find the best action with the given parameters
   virtual Eigen::VectorXd optimize(const Eigen::VectorXd & input,
@@ -29,6 +34,9 @@ public:
                                    RewardFunction reward_function,
                                    ValueFunction value_function,
                                    double discount) = 0;
+
+protected:
+  int nb_threads;
 };
 
 }

@@ -62,7 +62,7 @@ private:
   std::unique_ptr<ActionOptimizer> action_optimizer;
 
   /// The policy trainer
-  std::unique_ptr<const rosban_fa::Trainer> policy_trainer;
+  std::unique_ptr<rosban_fa::Trainer> policy_trainer;
 
   /// The current policy
   std::shared_ptr<const Policy> policy;
