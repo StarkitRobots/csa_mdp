@@ -29,8 +29,9 @@ BasicOptimizer::BasicOptimizer()
 Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
                                          std::shared_ptr<const Policy> current_policy,
                                          std::shared_ptr<Problem> model,
-                                         RewardFunction reward_function,
-                                         ValueFunction value_function,
+                                         Problem::RewardFunction reward_function,
+                                         Problem::ValueFunction value_function,
+                                         Problem::TerminalFunction terminal_function,
                                          double discount,
                                          std::default_random_engine * engine) const
 {
@@ -40,6 +41,7 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
     clean_engine = true;
   }
 
+  // actionDim by nb_actions
   Eigen::MatrixXd actions = rosban_random::getUniformSamplesMatrix(model->getActionLimits(),
                                                                    nb_actions,
                                                                    engine);
@@ -49,7 +51,8 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
   engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_actions), engine);
   // Preparing function:
   auto simulator =
-    [this, input, actions, current_policy, model, reward_function, value_function,
+    [this, input, actions, current_policy, model,
+     reward_function, value_function, terminal_function,
      discount, &results]
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
@@ -67,6 +70,9 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
           // 2. Using current_policy for a few steps
           for (int i = 0; i < this->nb_additional_steps; i++)
           {
+            // Stop predicting steps if a terminal state has been reached
+            if (terminal_function(state)) break;
+
             Eigen::VectorXd action = current_policy->getAction(state, engine);
             Eigen::VectorXd next_state = model->getSuccessor(state, action);
             total_reward += coeff * reward_function(state, action, next_state);
@@ -74,7 +80,9 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
             coeff *= discount;
           }
           // 3. Using value at final state if provided
-          if (value_function) total_reward += coeff * value_function(state);
+          if (value_function && !terminal_function(state)) {
+            total_reward += coeff * value_function(state);
+          }
         }
         results(action) = total_reward / nb_simulations;
       }
@@ -90,6 +98,18 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
                            best_guess,
                            best_output);
   if (clean_engine) delete(engine);
+
+
+  // Debug:
+  //std::ostringstream oss;
+  //oss << "-----------------------" << std::endl
+  //    << "Optimizing action in state: " << input.transpose() << std::endl;
+  //for (int i = 0; i < nb_actions; i++) {
+  //  oss << "\tAction '" << actions.col(i).transpose() << "' -> " << results(i) << std::endl;
+  //}
+  //oss << "Best action: " << best_guess.transpose() << std::endl
+  //    << "-----------------------" << std::endl;
+  //std::cout << oss.str();
   return best_guess;
 }
 

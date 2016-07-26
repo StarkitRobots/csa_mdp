@@ -17,8 +17,9 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
                                   std::shared_ptr<const Policy> policy,
                                   int nb_steps,
                                   std::shared_ptr<Problem> model,//TODO: Model class ?
-                                  RewardFunction reward_function,
-                                  ValueFunction value_function,
+                                  Problem::RewardFunction reward_function,
+                                  Problem::ValueFunction value_function,
+                                  Problem::TerminalFunction terminal_function,
                                   double discount,
                                   double * mean,
                                   double * var)
@@ -36,6 +37,9 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
     // Compute the reward over the next 'nb_steps'
     for (int i = 0; i < nb_steps; i++)
     {
+      // Stop predicting steps if a terminal state has been reached
+      if (terminal_function(state)) break;
+
       Eigen::VectorXd action = policy->getAction(state, &engine);
       Eigen::VectorXd next_state = model->getSuccessor(state, action);
       reward += coeff * reward_function(state, action, next_state);

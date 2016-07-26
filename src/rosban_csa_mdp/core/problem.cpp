@@ -15,6 +15,33 @@ Problem::~Problem()
 {
 }
 
+Problem::RewardFunction Problem::getRewardFunction()
+{
+  return [this](const Eigen::VectorXd &state,
+                const Eigen::VectorXd &action,
+                const Eigen::VectorXd &next_state)
+  {
+    return this->getReward(state, action, next_state);
+  };
+}
+
+Problem::TransitionFunction Problem::getTransitionFunction()
+{
+  return [this](const Eigen::VectorXd &state,
+                const Eigen::VectorXd &action)
+  {
+    return this->getSuccessor(state, action);
+  };
+}
+
+Problem::TerminalFunction Problem::getTerminalFunction()
+{
+  return [this](const Eigen::VectorXd &state)
+  {
+    return this->isTerminal(state);
+  };
+}
+
 int Problem::stateDims() const
 {
   return state_limits.rows();

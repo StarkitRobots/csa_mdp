@@ -26,6 +26,9 @@ public:
   /// corresponds to the action space
   const std::shared_ptr<const Policy> getPolicy() const;
 
+  Problem::RewardFunction getRewardFunction();
+  Problem::ValueFunction getValueFunction();
+
   Eigen::VectorXd getAction(const Eigen::VectorXd & state) override;
   bool hasAvailablePolicy() override;
   void savePolicy(const std::string & prefix) override;

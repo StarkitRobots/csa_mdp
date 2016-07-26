@@ -15,9 +15,16 @@ namespace csa_mdp
 class Problem : public rosban_utils::Serializable
 {
 public:
+  /// Return true if state is terminal
+  typedef std::function<bool(const Eigen::VectorXd &state)> TerminalFunction;
+  /// Return a value associate to the state
+  typedef std::function<double(const Eigen::VectorXd &state)> ValueFunction;
+  /// Return action for given state
   typedef std::function<Eigen::VectorXd(const Eigen::VectorXd &state)> Policy;
+  /// Sample successor state from a couple (state, action)
   typedef std::function<Eigen::VectorXd(const Eigen::VectorXd &state,
                                         const Eigen::VectorXd &action)> TransitionFunction;
+  /// Return Reward for the given triplet (state, action, next_state)
   typedef std::function<double(const Eigen::VectorXd &state,
                                const Eigen::VectorXd &action,
                                const Eigen::VectorXd &next_state)> RewardFunction;
@@ -38,6 +45,10 @@ protected:
 public:
   Problem();
   virtual ~Problem();
+
+  RewardFunction getRewardFunction();
+  TransitionFunction getTransitionFunction();
+  TerminalFunction getTerminalFunction();
 
   int stateDims() const;
   int actionDims() const;

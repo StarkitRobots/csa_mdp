@@ -15,8 +15,9 @@ public:
   virtual Eigen::VectorXd optimize(const Eigen::VectorXd & input,
                                    std::shared_ptr<const Policy> current_policy,
                                    std::shared_ptr<Problem> model,
-                                   RewardFunction reward_function,
-                                   ValueFunction value_function,
+                                   Problem::RewardFunction reward_function,
+                                   Problem::ValueFunction value_function,
+                                   Problem::TerminalFunction terminal_function,
                                    double discount,
                                    std::default_random_engine * engine) const override;
 

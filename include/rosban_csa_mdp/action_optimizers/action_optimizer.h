@@ -16,11 +16,6 @@ namespace csa_mdp
 class ActionOptimizer : public rosban_utils::Serializable
 {
 public:
-  typedef std::function<double(const Eigen::VectorXd & state,
-                               const Eigen::VectorXd & action,
-                               const Eigen::VectorXd & next_state)> RewardFunction;
-  typedef std::function<double(const Eigen::VectorXd & state)> ValueFunction;
-
   ActionOptimizer();
   virtual ~ActionOptimizer();
 
@@ -32,8 +27,9 @@ public:
   virtual Eigen::VectorXd optimize(const Eigen::VectorXd & input,
                                    std::shared_ptr<const Policy> current_policy,
                                    std::shared_ptr<Problem> model,//TODO: Model class ?
-                                   RewardFunction reward_function,
-                                   ValueFunction value_function,
+                                   Problem::RewardFunction reward_function,
+                                   Problem::ValueFunction value_function,
+                                   Problem::TerminalFunction terminal_function,
                                    double discount,
                                    std::default_random_engine * engine = nullptr) const = 0;
 

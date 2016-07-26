@@ -81,6 +81,22 @@ void ModelBasedLearner::internalUpdate()
   updatePolicy();
 }
 
+Problem::RewardFunction ModelBasedLearner::getRewardFunction()
+{
+  return this->model->getRewardFunction();
+}
+
+Problem::ValueFunction ModelBasedLearner::getValueFunction()
+{
+  return [this] (const Eigen::VectorXd & state)
+  {
+    if (!this->value) return 0.0;
+    double mean, var;
+    this->value->predict(state, mean, var);
+    return mean;
+  };
+}
+
 void ModelBasedLearner::updateValue()
 {
   if (!reward_predictor)
@@ -94,28 +110,14 @@ void ModelBasedLearner::updateValue()
   int nb_samples = samples.size();
   Eigen::MatrixXd inputs(getStateLimits().rows(), nb_samples);
   Eigen::VectorXd observations(nb_samples);
-  RewardPredictor::RewardFunction reward_function =
-    [this] (const Eigen::VectorXd & state,
-            const Eigen::VectorXd & action,
-            const Eigen::VectorXd & next_state)
-  {
-    return this->model->getReward(state, action, next_state);
-  };
-  ActionOptimizer::ValueFunction value_function =
-    [this] (const Eigen::VectorXd & state)
-  {
-    if (!this->value) return 0.0;
-    double mean, var;
-    this->value->predict(state, mean, var);
-    return mean;
-  };
   TimeStamp start_reward_predictor = TimeStamp::now();
   for (int sample = 0; sample < nb_samples; sample++)
   {
     Eigen::VectorXd state = samples[sample].state;
     double mean, var;
     reward_predictor->predict(state, getPolicy(), value_steps, model,
-                              reward_function, value_function, discount,
+                              getRewardFunction(), getValueFunction(),
+                              terminal_function, discount,
                               &mean, &var);
     inputs.col(sample) = state;
     observations(sample) = mean;
@@ -140,24 +142,9 @@ void ModelBasedLearner::updatePolicy()
   int nb_samples = samples.size();
   Eigen::MatrixXd inputs(getStateLimits().rows(), nb_samples);
   Eigen::MatrixXd observations(nb_samples, model->actionDims());
-  ActionOptimizer::RewardFunction reward_function =
-    [this] (const Eigen::VectorXd & state,
-            const Eigen::VectorXd & action,
-            const Eigen::VectorXd & next_state)
-  {
-    return this->model->getReward(state, action, next_state);
-  };
-  ActionOptimizer::ValueFunction value_function =
-    [this] (const Eigen::VectorXd & state)
-  {
-    if (!this->value) return 0.0;
-    double mean, var;
-    this->value->predict(state, mean, var);
-    return mean;
-  };
   TimeStamp start_action_optimizer = TimeStamp::now();
   MultiCore::StochasticTask ao_task;
-  ao_task = [this, reward_function, value_function, &inputs, &observations]
+  ao_task = [this, &inputs, &observations]
     (int start_idx, int end_idx, std::default_random_engine * thread_engine)
     {
       for (int sample = start_idx; sample < end_idx; sample++)
@@ -166,8 +153,9 @@ void ModelBasedLearner::updatePolicy()
         Eigen::VectorXd best_action;
         best_action = this->action_optimizer->optimize(state, this->getPolicy(), 
                                                        this->model,
-                                                       reward_function,
-                                                       value_function,
+                                                       getRewardFunction(),
+                                                       getValueFunction(),
+                                                       terminal_function,
                                                        this->discount,
                                                        thread_engine);
         inputs.col(sample) = state;
