@@ -25,6 +25,8 @@ public:
   virtual void setStateLimits(const Eigen::MatrixXd & state_limits);
   /// Inform the learner of the action space
   virtual void setActionLimits(const Eigen::MatrixXd & action_limits);
+  /// Inform the learner of the terminal function used
+  virtual void setTerminalFunction(std::function<bool(const Eigen::VectorXd &)> is_terminal);
   /// Update the discount factor used for the learner
   virtual void setDiscount(double discount);
 
@@ -67,6 +69,8 @@ protected:
   std::vector<Sample> samples;
 
 protected:
+  /// This function allows to test if a state is terminal
+  std::function<bool(const Eigen::VectorXd &)> terminal_function;
   /// The discount factor of the learning process
   double discount;
   /// The number of threads allowed to the learner

@@ -72,7 +72,7 @@ public:
   /// Which state dimensions are used as input for learning (default is all)
   virtual std::vector<int> getLearningDimensions() const;
   
-  virtual bool isTerminal(const Eigen::VectorXd &) const = 0;
+  virtual bool isTerminal(const Eigen::VectorXd & state) const = 0;
   /// This function is allowed to be stochastic
   virtual double getReward(const Eigen::VectorXd &state,
                            const Eigen::VectorXd &action,

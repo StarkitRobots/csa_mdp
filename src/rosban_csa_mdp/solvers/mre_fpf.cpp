@@ -55,6 +55,11 @@ MREFPF::MREFPF(std::shared_ptr<KnownnessFunction> knownness_func_)
 {
 }
 
+void MREFPF::setKnownnessFunc(std::shared_ptr<KnownnessFunction> new_knownness_func)
+{
+  knownness_func = new_knownness_func;
+}
+
 TrainingSet MREFPF::getTrainingSet(const std::vector<Sample> &samples,
                                    std::function<bool(const Eigen::VectorXd&)> is_terminal,
                                    const FPF::Config &conf_fpf,

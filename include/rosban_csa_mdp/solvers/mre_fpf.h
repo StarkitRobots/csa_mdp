@@ -39,6 +39,8 @@ public:
   MREFPF();
   MREFPF(std::shared_ptr<KnownnessFunction> knownness_func);
 
+  void setKnownnessFunc(std::shared_ptr<KnownnessFunction> knownness_func);
+
 protected:
 
   /// TrueType of conf must be MREFPF::Config

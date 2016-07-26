@@ -29,6 +29,11 @@ void Learner::setActionLimits(const Eigen::MatrixXd & new_action_limits)
   action_limits = new_action_limits;
 }
 
+void Learner::setTerminalFunction(std::function<bool(const Eigen::VectorXd &)> is_terminal)
+{
+  terminal_function = is_terminal;
+}
+
 void Learner::setDiscount(double new_discount)
 {
   discount = new_discount;

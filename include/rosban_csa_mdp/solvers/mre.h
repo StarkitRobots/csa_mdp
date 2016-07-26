@@ -1,5 +1,7 @@
 #pragma once
 
+#include "rosban_csa_mdp/solvers/learner.h"
+
 #include "rosban_csa_mdp/core/sample.h"
 #include "rosban_csa_mdp/solvers/mre_fpf.h"
 #include "rosban_csa_mdp/knownness/knownness_forest.h"
@@ -17,35 +19,23 @@
 namespace csa_mdp
 {
 
-class MRE {
+class MRE : public Learner{
 public:
-  class Config : public rosban_utils::Serializable
-  {
-  public:
-    Config();
+  MRE();
 
-    std::string class_name() const override;
-    void to_xml(std::ostream &out) const override;
-    void from_xml(TiXmlNode *node) override;
-
-    int plan_period;
-    MREFPF::Config mrefpf_conf;
-    KnownnessForest::Config knownness_conf;
-  };
-
-public:
-  MRE(const Config &conf,
-      std::function<bool(const Eigen::VectorXd &)> is_terminal);
+  /// Also update internal structure
+  virtual void setNbThreads(int nb_threads) override;
 
   /// Feed the learning process with a new sample, update policy if required
-  void feed(const Sample &s);
+  void feed(const Sample &s) override;
 
   /// Return the best action according to current policy
   /// if there is no policy available yet, return a random action
-  Eigen::VectorXd getAction(const Eigen::VectorXd &state);
+  Eigen::VectorXd getAction(const Eigen::VectorXd &state) override;
 
+  /// Update policy and solver status
   /// Called automatically on feed each plan_period samples
-  void updatePolicy();
+  void internalUpdate() override;
 
   /// While policy has not been updated with enough samples, this is false and actions
   /// are chosen at uniformous random
@@ -53,31 +43,32 @@ public:
 
   const regression_forests::Forest & getPolicy(int dim);
 
-  void savePolicies(const std::string &prefix);
+  void savePolicy(const std::string &prefix) override;
   void saveValue(const std::string &prefix);
   void saveKnownnessTree(const std::string &prefix);
-  void saveStatus(const std::string &prefix);
+  void saveStatus(const std::string &prefix) override;
 
-  double getQValueTrainingSetTime() const;
-  double getQValueExtraTreesTime()  const;
-  double getPolicyTrainingSetTime() const;
-  double getPolicyExtraTreesTime()  const;
+  void setStateLimits(const Eigen::MatrixXd & limits) override;
+  void setActionLimits(const Eigen::MatrixXd & limits) override;
+  void updateQSpaceLimits();
 
-  const Eigen::MatrixXd & getStateSpace();
-  const Eigen::MatrixXd & getActionSpace();
+  std::string class_name() const override;
+  void to_xml(std::ostream &out) const override;
+  void from_xml(TiXmlNode *node) override;
 
 private:
-  /// MRE Configuration
-  Config conf;
+  /// Which is the plan frequency: '-1' -> update only when requested
+  int plan_period;
+  /// Configuration used for the solver
+  MREFPF::Config mrefpf_conf;
+  /// Configuration used for the knownness function
+  KnownnessForest::Config knownness_conf;
 
   /// Solver
   MREFPF solver;
 
   /// Knownness Forest
   std::shared_ptr<KnownnessForest> knownness_forest;
-
-  /// Terminal function
-  std::function<bool(const Eigen::VectorXd &state)> is_terminal;
 
   /// Acquired samples until now
   std::vector<Sample> samples;
