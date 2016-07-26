@@ -9,11 +9,14 @@
 
 #include "rosban_random/tools.h"
 
+#include "rosban_utils/multi_core.h"
+
 using csa_mdp::ProblemFactory;
 using csa_mdp::RandomPolicy;
 using rosban_fa::Trainer;
 using rosban_fa::TrainerFactory;
 
+using rosban_utils::MultiCore;
 using rosban_utils::TimeStamp;
 
 // Default types
@@ -153,17 +156,42 @@ void ModelBasedLearner::updatePolicy()
     return mean;
   };
   TimeStamp start_action_optimizer = TimeStamp::now();
-  action_optimizer->setNbThreads(nb_threads);
-  for (int sample = 0; sample < nb_samples; sample++)
-  {
-    Eigen::VectorXd state = samples[sample].state;
-    Eigen::VectorXd best_action;
-    best_action = action_optimizer->optimize(state, getPolicy(), model,
-                                             reward_function, value_function,
-                                             discount);
-    inputs.col(sample) = state;
-    observations.row(sample) = best_action.transpose();
+  MultiCore::StochasticTask ao_task;
+  ao_task = [this, reward_function, value_function, &inputs, &observations]
+    (int start_idx, int end_idx, std::default_random_engine * thread_engine)
+    {
+      for (int sample = start_idx; sample < end_idx; sample++)
+      {
+        Eigen::VectorXd state = this->samples[sample].state;
+        Eigen::VectorXd best_action;
+        best_action = this->action_optimizer->optimize(state, this->getPolicy(), 
+                                                       this->model,
+                                                       reward_function,
+                                                       value_function,
+                                                       this->discount,
+                                                       thread_engine);
+        inputs.col(sample) = state;
+        observations.row(sample) = best_action.transpose();
+      }
+    };
+  // Choosing how many threads will be used for the samples and how many
+  // subthreads will be spawned by each thread
+  int wished_threads = nb_threads;
+  int subthreads = 1;
+  // Increasing performances when the number of samples is small, but ensuring that
+  // no more than nb_threads are created
+  if (nb_threads > nb_samples) {
+    subthreads = std::ceil(nb_threads / (double)nb_samples);
+    wished_threads = nb_threads / subthreads;
   }
+  action_optimizer->setNbThreads(subthreads);
+
+  // Preparing random_engines
+  std::vector<std::default_random_engine> engines;
+  engines = rosban_random::getRandomEngines(wished_threads, &engine);
+  // Run threads in parallel
+  MultiCore::runParallelStochasticTask(ao_task, nb_samples, &engines);
+
   TimeStamp end_action_optimizer = TimeStamp::now();
   std::unique_ptr<rosban_fa::FunctionApproximator> new_policy_fa;
   new_policy_fa = policy_trainer->train(inputs, observations, getStateLimits());

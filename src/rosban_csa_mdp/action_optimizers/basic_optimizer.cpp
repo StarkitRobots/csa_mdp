@@ -24,59 +24,63 @@ BasicOptimizer::BasicOptimizer()
     nb_simulations(100),
     nb_actions(15),
     trainer(new GPTrainer)
-{
-  engine = rosban_random::getRandomEngine();
-}
+{}
 
 Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
                                          std::shared_ptr<const Policy> current_policy,
                                          std::shared_ptr<Problem> model,
                                          RewardFunction reward_function,
                                          ValueFunction value_function,
-                                         double discount)
+                                         double discount,
+                                         std::default_random_engine * engine) const
 {
+  bool clean_engine = false;
+  if (engine == nullptr) {
+    engine = rosban_random::newRandomEngine();
+    clean_engine = true;
+  }
+
   Eigen::MatrixXd actions = rosban_random::getUniformSamplesMatrix(model->getActionLimits(),
                                                                    nb_actions,
-                                                                   &engine);
+                                                                   engine);
   Eigen::VectorXd results = Eigen::VectorXd::Zero(nb_actions);
-  for (int action = 0; action < nb_actions; action++)
-  {
-    Eigen::VectorXd initial_action = actions.col(action);
-    // Prepare simulations data
-    std::vector<double> rewards(nb_simulations);
-    std::vector<std::default_random_engine> engines;
-    engines = rosban_random::getRandomEngines(nb_threads, &engine);
-    // Preparing function:
-    auto simulator =
-      [this, input, initial_action, current_policy, model, reward_function, value_function,
-       discount, &rewards]
-      (int start_idx, int end_idx, std::default_random_engine * engine)
+  // Preparing random_engines
+  std::vector<std::default_random_engine> engines;
+  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_actions), engine);
+  // Preparing function:
+  auto simulator =
+    [this, input, actions, current_policy, model, reward_function, value_function,
+     discount, &results]
+    (int start_idx, int end_idx, std::default_random_engine * engine)
     {
-      // Compute several simulations
-      for (int sim = start_idx; sim < end_idx; sim++) {
-        // 1. Using chosen action
-        Eigen::VectorXd state = model->getSuccessor(input, initial_action);
-        double reward = reward_function(input, initial_action, state);
-        double coeff = discount;
-        // 2. Using current_policy for a few steps
-        for (int i = 0; i < this->nb_additional_steps; i++)
-        {
-          Eigen::VectorXd action = current_policy->getAction(state, engine);
-          Eigen::VectorXd next_state = model->getSuccessor(state, action);
-          reward += coeff * reward_function(state, action, next_state);
-          state = next_state;
-          coeff *= discount;
+      for (int action = start_idx; action < end_idx; action++)
+      {
+        Eigen::VectorXd initial_action = actions.col(action);
+        // Prepare simulations data
+        double total_reward = 0;
+        // Compute several simulations
+        for (int sim = 0; sim < nb_simulations; sim++) {
+          // 1. Using chosen action
+          Eigen::VectorXd state = model->getSuccessor(input, initial_action);
+          total_reward += reward_function(input, initial_action, state);
+          double coeff = discount;
+          // 2. Using current_policy for a few steps
+          for (int i = 0; i < this->nb_additional_steps; i++)
+          {
+            Eigen::VectorXd action = current_policy->getAction(state, engine);
+            Eigen::VectorXd next_state = model->getSuccessor(state, action);
+            total_reward += coeff * reward_function(state, action, next_state);
+            state = next_state;
+            coeff *= discount;
+          }
+          // 3. Using value at final state if provided
+          if (value_function) total_reward += coeff * value_function(state);
         }
-        // 3. Using value at final state if provided
-        if (value_function) reward += coeff * value_function(state);
-        rewards[sim] += reward;
+        results(action) = total_reward / nb_simulations;
       }
     };// End of simulator
-    // Now filling reward in parallel
-    MultiCore::runParallelStochasticTask(simulator, nb_simulations, &engines);
-    results(action) = regression_forests::Statistics::mean(rewards);
-  }
-  // Averaging the rewards is useless
+  // Now filling reward in parallel
+  MultiCore::runParallelStochasticTask(simulator, nb_actions, &engines);
   // Train a function approximator
   std::unique_ptr<rosban_fa::FunctionApproximator> approximator;
   approximator = trainer->train(actions, results, model->getActionLimits());
@@ -85,6 +89,7 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
   approximator->getMaximum(model->getActionLimits(),
                            best_guess,
                            best_output);
+  if (clean_engine) delete(engine);
   return best_guess;
 }
 

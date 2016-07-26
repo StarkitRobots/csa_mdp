@@ -28,12 +28,14 @@ public:
   void setNbThreads(int nb_threads);
 
   /// Try to find the best action with the given parameters
+  /// if engine is note provided, it should handle its own
   virtual Eigen::VectorXd optimize(const Eigen::VectorXd & input,
                                    std::shared_ptr<const Policy> current_policy,
                                    std::shared_ptr<Problem> model,//TODO: Model class ?
                                    RewardFunction reward_function,
                                    ValueFunction value_function,
-                                   double discount) = 0;
+                                   double discount,
+                                   std::default_random_engine * engine = nullptr) const = 0;
 
 protected:
   int nb_threads;
