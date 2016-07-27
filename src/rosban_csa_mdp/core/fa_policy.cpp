@@ -59,4 +59,10 @@ void FAPolicy::from_xml(TiXmlNode * node)
   rosban_utils::xml_tools::try_read<bool>(node, "noise", apply_noise);
 }
 
+void FAPolicy::saveFA(const std::string & filename) const
+{
+  if (!fa) return;
+  fa->save(filename);
+}
+
 }

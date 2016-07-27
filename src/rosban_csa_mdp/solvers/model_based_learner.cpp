@@ -64,12 +64,20 @@ bool ModelBasedLearner::hasAvailablePolicy()
 
 void ModelBasedLearner::savePolicy(const std::string & prefix)
 {
-  std::cerr << "Warning: ModelBasedLearner::savePolicy is not implemented" << std::endl;
+  std::shared_ptr<const FAPolicy> fa_policy = std::dynamic_pointer_cast<const FAPolicy>(policy);
+  if (fa_policy) {
+    fa_policy->saveFA(prefix + "policy.data");
+  }
+  else {
+    std::cerr << "Warning: ModelBasedLearner::savePolicy only saves FAPolicy" << std::endl;
+  }
 }
 
 void ModelBasedLearner::saveStatus(const std::string & prefix)
 {
-  std::cerr << "Warning: ModelBasedLearner::saveStatus is not implemented" << std::endl;
+  value->save(prefix + "value.data");
+  savePolicy(prefix);
+  std::cerr << "Warning: ModelBasedLearner::saveStatus is not fully implemented" << std::endl;
 }
 
 
