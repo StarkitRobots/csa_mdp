@@ -20,7 +20,8 @@ public:
                Problem::TerminalFunction terminal_function,
                double discount,
                double * mean,
-               double * var) override;
+               double * var,
+               std::default_random_engine * engine) override;
 
   virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;

@@ -119,18 +119,42 @@ void ModelBasedLearner::updateValue()
   Eigen::MatrixXd inputs(getStateLimits().rows(), nb_samples);
   Eigen::VectorXd observations(nb_samples);
   TimeStamp start_reward_predictor = TimeStamp::now();
-  for (int sample = 0; sample < nb_samples; sample++)
-  {
-    Eigen::VectorXd state = samples[sample].state;
-    double mean, var;
-    reward_predictor->predict(state, getPolicy(), model,
-                              getRewardFunction(), getValueFunction(),
-                              terminal_function, discount,
-                              &mean, &var);
-    inputs.col(sample) = state;
-    observations(sample) = mean;
+  // Creating reward predictor task
+  MultiCore::StochasticTask rp_task;
+  rp_task = [this, &inputs, &observations]
+    (int start_idx, int end_idx, std::default_random_engine * thread_engine)
+    {
+      for (int sample = start_idx; sample < end_idx; sample++)
+      {
+        Eigen::VectorXd state = this->samples[sample].state;
+        double mean, var;
+        reward_predictor->predict(state, this->getPolicy(), this->model,
+                                  getRewardFunction(), getValueFunction(),
+                                  terminal_function, this->discount,
+                                  &mean, &var, thread_engine);
+        inputs.col(sample) = state;
+        observations(sample) = mean;
+      }
+    };
+  // Choosing how many threads will be used for the samples and how many
+  // subthreads will be spawned by each thread
+  int wished_threads = nb_threads;
+  int subthreads = 1;
+  // Increasing performances when the number of samples is small, but ensuring that
+  // no more than nb_threads are created
+  if (nb_threads > nb_samples) {
+    subthreads = std::ceil(nb_threads / (double)nb_samples);
+    wished_threads = nb_threads / subthreads;
   }
+  reward_predictor->setNbThreads(subthreads);
+
+  // Preparing random_engines
+  std::vector<std::default_random_engine> engines;
+  engines = rosban_random::getRandomEngines(wished_threads, &engine);
+  // Run threads in parallel
+  MultiCore::runParallelStochasticTask(rp_task, nb_samples, &engines);
   TimeStamp end_reward_predictor = TimeStamp::now();
+  // Approximate the gathered samples
   value = value_trainer->train(inputs, observations, getStateLimits());
   TimeStamp end_value_trainer = TimeStamp::now();
   time_repartition["reward_predictor"] = diffSec(start_reward_predictor, end_reward_predictor);
