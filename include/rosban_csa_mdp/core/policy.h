@@ -4,6 +4,8 @@
 
 #include <Eigen/Core>
 
+#include <random>
+
 namespace csa_mdp
 {
 
