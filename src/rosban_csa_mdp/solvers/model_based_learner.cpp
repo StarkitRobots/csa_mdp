@@ -1,6 +1,7 @@
 #include "rosban_csa_mdp/solvers/model_based_learner.h"
 
 #include "rosban_csa_mdp/action_optimizers/action_optimizer_factory.h"
+#include "rosban_csa_mdp/reward_predictors/reward_predictor_factory.h"
 #include "rosban_csa_mdp/core/fa_policy.h"
 #include "rosban_csa_mdp/core/problem_factory.h"
 #include "rosban_csa_mdp/core/random_policy.h"
@@ -12,6 +13,7 @@
 #include "rosban_utils/multi_core.h"
 
 using csa_mdp::ProblemFactory;
+using csa_mdp::RewardPredictorFactory;
 using csa_mdp::RandomPolicy;
 using rosban_fa::Trainer;
 using rosban_fa::TrainerFactory;
@@ -37,11 +39,9 @@ ModelBasedLearner::ModelBasedLearner()
   : reward_predictor(new MonteCarloPredictor()),
     value_trainer(new GPForestTrainer()),
     action_optimizer(new BasicOptimizer()),
-    policy_trainer(new PWLForestTrainer()),
-    value_steps(5)
+    policy_trainer(new PWLForestTrainer())
 {
   engine = rosban_random::getRandomEngine();
-  //TODO add experimental code and remove it later (with associated headers)
 }
 
 const std::shared_ptr<const Policy> ModelBasedLearner::getPolicy() const
@@ -123,7 +123,7 @@ void ModelBasedLearner::updateValue()
   {
     Eigen::VectorXd state = samples[sample].state;
     double mean, var;
-    reward_predictor->predict(state, getPolicy(), value_steps, model,
+    reward_predictor->predict(state, getPolicy(), model,
                               getRewardFunction(), getValueFunction(),
                               terminal_function, discount,
                               &mean, &var);
@@ -207,22 +207,19 @@ void ModelBasedLearner::to_xml(std::ostream &out) const
   Learner::to_xml(out);
   if (model)            model->factoryWrite("model", out);
   if (reward_predictor) reward_predictor->factoryWrite("reward_predictor", out);
-  if (value_trainer)    value_trainer->factoryWrite("value_trainer", out);
+  if (value_trainer)    value_trainer   ->factoryWrite("value_trainer"   , out);
   if (action_optimizer) action_optimizer->factoryWrite("action_optimizer", out);
-  if (policy_trainer)   policy_trainer->factoryWrite("policy_trainer", out);
-  rosban_utils::xml_tools::write<int>   ("values_steps", value_steps, out);
+  if (policy_trainer)   policy_trainer  ->factoryWrite("policy_trainer"  , out);
 }
 
 void ModelBasedLearner::from_xml(TiXmlNode *node)
 {
   Learner::from_xml(node);
   model  = ProblemFactory().read(node, "model");
-  //TODO
-  //RewardPredictorFactory().tryRead("reward_predictor", node, reward_predictor);
-  TrainerFactory().tryRead(node, "value_trainer", value_trainer);
+  RewardPredictorFactory().tryRead(node, "reward_predictor", reward_predictor);
+  TrainerFactory().tryRead        (node, "value_trainer"   , value_trainer   );
   ActionOptimizerFactory().tryRead(node, "action_optimizer", action_optimizer);
-  TrainerFactory().tryRead(node, "policy_trainer", policy_trainer);
-  rosban_utils::xml_tools::try_read<int>   (node, "values_steps", value_steps);
+  TrainerFactory().tryRead        (node, "policy_trainer"  , policy_trainer  );
 }
 
 }

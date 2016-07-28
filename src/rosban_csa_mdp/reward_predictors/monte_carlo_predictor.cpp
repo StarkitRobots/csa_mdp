@@ -8,14 +8,13 @@ namespace csa_mdp
 {
 
 MonteCarloPredictor::MonteCarloPredictor()
-  : nb_predictions(100)
+  : nb_predictions(100), nb_steps(5)
 {
   engine = rosban_random::getRandomEngine();
 }
 
 void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
                                   std::shared_ptr<const Policy> policy,
-                                  int nb_steps,
                                   std::shared_ptr<Problem> model,//TODO: Model class ?
                                   Problem::RewardFunction reward_function,
                                   Problem::ValueFunction value_function,
@@ -47,7 +46,7 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
       coeff *= discount;
     }
     // Use the value function to estimate long time reward
-    reward += coeff * value_function(state);
+    if (!terminal_function(state)) reward += coeff * value_function(state);
     rewards.push_back(reward);
   }
   double internal_mean = regression_forests::Statistics::mean(rewards);
@@ -63,11 +62,13 @@ std::string MonteCarloPredictor::class_name() const
 void MonteCarloPredictor::to_xml(std::ostream & out) const
 {
   rosban_utils::xml_tools::write<int>("nb_predictions", nb_predictions, out);
+  rosban_utils::xml_tools::write<int>("nb_steps"      , nb_steps      , out);
 }
 
 void MonteCarloPredictor::from_xml(TiXmlNode * node)
 {
   rosban_utils::xml_tools::try_read<int>(node, "nb_predictions", nb_predictions);
+  rosban_utils::xml_tools::try_read<int>(node, "nb_steps"      , nb_steps      );
 }
 
 }
