@@ -70,9 +70,6 @@ private:
   /// The current policy
   std::shared_ptr<const Policy> policy;
 
-  /// Number of steps taken at each value update
-  int value_steps;
-
   /// Random machine
   std::default_random_engine engine;
 };

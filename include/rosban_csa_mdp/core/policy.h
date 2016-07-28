@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rosban_utils/serializable.h"
+#include "rosban_utils/stream_serializable.h"
 
 #include <Eigen/Core>
 

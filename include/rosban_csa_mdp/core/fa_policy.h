@@ -24,6 +24,8 @@ public:
   void from_xml(TiXmlNode * node) override;
   std::string class_name() const override;
 
+  void saveFA(const std::string & filename) const;
+
 private:
   /// The policies
   std::unique_ptr<rosban_fa::FunctionApproximator> fa;

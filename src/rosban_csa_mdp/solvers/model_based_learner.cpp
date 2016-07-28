@@ -1,6 +1,7 @@
 #include "rosban_csa_mdp/solvers/model_based_learner.h"
 
 #include "rosban_csa_mdp/action_optimizers/action_optimizer_factory.h"
+#include "rosban_csa_mdp/reward_predictors/reward_predictor_factory.h"
 #include "rosban_csa_mdp/core/fa_policy.h"
 #include "rosban_csa_mdp/core/problem_factory.h"
 #include "rosban_csa_mdp/core/random_policy.h"
@@ -12,6 +13,7 @@
 #include "rosban_utils/multi_core.h"
 
 using csa_mdp::ProblemFactory;
+using csa_mdp::RewardPredictorFactory;
 using csa_mdp::RandomPolicy;
 using rosban_fa::Trainer;
 using rosban_fa::TrainerFactory;
@@ -37,11 +39,9 @@ ModelBasedLearner::ModelBasedLearner()
   : reward_predictor(new MonteCarloPredictor()),
     value_trainer(new GPForestTrainer()),
     action_optimizer(new BasicOptimizer()),
-    policy_trainer(new PWLForestTrainer()),
-    value_steps(5)
+    policy_trainer(new PWLForestTrainer())
 {
   engine = rosban_random::getRandomEngine();
-  //TODO add experimental code and remove it later (with associated headers)
 }
 
 const std::shared_ptr<const Policy> ModelBasedLearner::getPolicy() const
@@ -64,12 +64,20 @@ bool ModelBasedLearner::hasAvailablePolicy()
 
 void ModelBasedLearner::savePolicy(const std::string & prefix)
 {
-  std::cerr << "Warning: ModelBasedLearner::savePolicy is not implemented" << std::endl;
+  std::shared_ptr<const FAPolicy> fa_policy = std::dynamic_pointer_cast<const FAPolicy>(policy);
+  if (fa_policy) {
+    fa_policy->saveFA(prefix + "policy.data");
+  }
+  else {
+    std::cerr << "Warning: ModelBasedLearner::savePolicy only saves FAPolicy" << std::endl;
+  }
 }
 
 void ModelBasedLearner::saveStatus(const std::string & prefix)
 {
-  std::cerr << "Warning: ModelBasedLearner::saveStatus is not implemented" << std::endl;
+  value->save(prefix + "value.data");
+  savePolicy(prefix);
+  std::cerr << "Warning: ModelBasedLearner::saveStatus is not fully implemented" << std::endl;
 }
 
 
@@ -111,18 +119,42 @@ void ModelBasedLearner::updateValue()
   Eigen::MatrixXd inputs(getStateLimits().rows(), nb_samples);
   Eigen::VectorXd observations(nb_samples);
   TimeStamp start_reward_predictor = TimeStamp::now();
-  for (int sample = 0; sample < nb_samples; sample++)
-  {
-    Eigen::VectorXd state = samples[sample].state;
-    double mean, var;
-    reward_predictor->predict(state, getPolicy(), value_steps, model,
-                              getRewardFunction(), getValueFunction(),
-                              terminal_function, discount,
-                              &mean, &var);
-    inputs.col(sample) = state;
-    observations(sample) = mean;
+  // Creating reward predictor task
+  MultiCore::StochasticTask rp_task;
+  rp_task = [this, &inputs, &observations]
+    (int start_idx, int end_idx, std::default_random_engine * thread_engine)
+    {
+      for (int sample = start_idx; sample < end_idx; sample++)
+      {
+        Eigen::VectorXd state = this->samples[sample].state;
+        double mean, var;
+        reward_predictor->predict(state, this->getPolicy(), this->model,
+                                  getRewardFunction(), getValueFunction(),
+                                  terminal_function, this->discount,
+                                  &mean, &var, thread_engine);
+        inputs.col(sample) = state;
+        observations(sample) = mean;
+      }
+    };
+  // Choosing how many threads will be used for the samples and how many
+  // subthreads will be spawned by each thread
+  int wished_threads = nb_threads;
+  int subthreads = 1;
+  // Increasing performances when the number of samples is small, but ensuring that
+  // no more than nb_threads are created
+  if (nb_threads > nb_samples) {
+    subthreads = std::ceil(nb_threads / (double)nb_samples);
+    wished_threads = nb_threads / subthreads;
   }
+  reward_predictor->setNbThreads(subthreads);
+
+  // Preparing random_engines
+  std::vector<std::default_random_engine> engines;
+  engines = rosban_random::getRandomEngines(wished_threads, &engine);
+  // Run threads in parallel
+  MultiCore::runParallelStochasticTask(rp_task, nb_samples, &engines);
   TimeStamp end_reward_predictor = TimeStamp::now();
+  // Approximate the gathered samples
   value = value_trainer->train(inputs, observations, getStateLimits());
   TimeStamp end_value_trainer = TimeStamp::now();
   time_repartition["reward_predictor"] = diffSec(start_reward_predictor, end_reward_predictor);
@@ -199,22 +231,19 @@ void ModelBasedLearner::to_xml(std::ostream &out) const
   Learner::to_xml(out);
   if (model)            model->factoryWrite("model", out);
   if (reward_predictor) reward_predictor->factoryWrite("reward_predictor", out);
-  if (value_trainer)    value_trainer->factoryWrite("value_trainer", out);
+  if (value_trainer)    value_trainer   ->factoryWrite("value_trainer"   , out);
   if (action_optimizer) action_optimizer->factoryWrite("action_optimizer", out);
-  if (policy_trainer)   policy_trainer->factoryWrite("policy_trainer", out);
-  rosban_utils::xml_tools::write<int>   ("values_steps", value_steps, out);
+  if (policy_trainer)   policy_trainer  ->factoryWrite("policy_trainer"  , out);
 }
 
 void ModelBasedLearner::from_xml(TiXmlNode *node)
 {
   Learner::from_xml(node);
   model  = ProblemFactory().read(node, "model");
-  //TODO
-  //RewardPredictorFactory().tryRead("reward_predictor", node, reward_predictor);
-  TrainerFactory().tryRead(node, "value_trainer", value_trainer);
+  RewardPredictorFactory().tryRead(node, "reward_predictor", reward_predictor);
+  TrainerFactory().tryRead        (node, "value_trainer"   , value_trainer   );
   ActionOptimizerFactory().tryRead(node, "action_optimizer", action_optimizer);
-  TrainerFactory().tryRead(node, "policy_trainer", policy_trainer);
-  rosban_utils::xml_tools::try_read<int>   (node, "values_steps", value_steps);
+  TrainerFactory().tryRead        (node, "policy_trainer"  , policy_trainer  );
 }
 
 }
