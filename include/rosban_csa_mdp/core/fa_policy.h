@@ -16,6 +16,8 @@ class FAPolicy : public Policy
 public:
   FAPolicy(std::unique_ptr<rosban_fa::FunctionApproximator> fa);
 
+  void setRandomness(bool apply_noise);
+
   Eigen::VectorXd getRawAction(const Eigen::VectorXd &state) override;
   Eigen::VectorXd getRawAction(const Eigen::VectorXd &state,
                                std::default_random_engine * engine) const override;

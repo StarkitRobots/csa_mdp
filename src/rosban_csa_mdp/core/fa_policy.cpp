@@ -14,6 +14,11 @@ FAPolicy::FAPolicy(std::unique_ptr<rosban_fa::FunctionApproximator> fa_)
   engine = rosban_random::getRandomEngine();
 }
 
+void FAPolicy::setRandomness(bool new_apply_noise)
+{
+  apply_noise = new_apply_noise;
+}
+
 Eigen::VectorXd FAPolicy::getRawAction(const Eigen::VectorXd &state)
 {
   return getRawAction(state, &engine);

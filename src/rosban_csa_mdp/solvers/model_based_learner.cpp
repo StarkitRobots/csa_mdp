@@ -39,7 +39,8 @@ ModelBasedLearner::ModelBasedLearner()
   : reward_predictor(new MonteCarloPredictor()),
     value_trainer(new GPForestTrainer()),
     action_optimizer(new BasicOptimizer()),
-    policy_trainer(new PWLForestTrainer())
+    policy_trainer(new PWLForestTrainer()),
+    use_stochastic_policies(true)
 {
   engine = rosban_random::getRandomEngine();
 }
@@ -215,8 +216,9 @@ void ModelBasedLearner::updatePolicy()
   TimeStamp end_action_optimizer = TimeStamp::now();
   std::unique_ptr<rosban_fa::FunctionApproximator> new_policy_fa;
   new_policy_fa = policy_trainer->train(inputs, observations, getStateLimits());
-  std::unique_ptr<Policy> new_policy(new FAPolicy(std::move(new_policy_fa)));
+  std::unique_ptr<FAPolicy> new_policy(new FAPolicy(std::move(new_policy_fa)));
   new_policy->setActionLimits(getActionLimits());
+  new_policy->setRandomness(use_stochastic_policies);
   policy = std::move(new_policy);
   TimeStamp end_policy_trainer = TimeStamp::now();
   time_repartition["action_optimizer"] = diffSec(start_action_optimizer, end_action_optimizer);
@@ -234,6 +236,7 @@ void ModelBasedLearner::to_xml(std::ostream &out) const
   if (value_trainer)    value_trainer   ->factoryWrite("value_trainer"   , out);
   if (action_optimizer) action_optimizer->factoryWrite("action_optimizer", out);
   if (policy_trainer)   policy_trainer  ->factoryWrite("policy_trainer"  , out);
+  rosban_utils::xml_tools::write<bool>("use_stochastic_policies", use_stochastic_policies, out);
 }
 
 void ModelBasedLearner::from_xml(TiXmlNode *node)
@@ -244,6 +247,7 @@ void ModelBasedLearner::from_xml(TiXmlNode *node)
   TrainerFactory().tryRead        (node, "value_trainer"   , value_trainer   );
   ActionOptimizerFactory().tryRead(node, "action_optimizer", action_optimizer);
   TrainerFactory().tryRead        (node, "policy_trainer"  , policy_trainer  );
+  rosban_utils::xml_tools::try_read<bool>(node, "use_stochastic_policies", use_stochastic_policies);
 }
 
 }
