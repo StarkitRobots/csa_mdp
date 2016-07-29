@@ -67,6 +67,10 @@ private:
   /// The policy trainer
   std::unique_ptr<rosban_fa::Trainer> policy_trainer;
 
+  /// Do we produce stochastic policies? (Should disappear if we use a policy trainer
+  /// instead of the fa::Trainer)
+  bool use_stochastic_policies;
+
   /// The current policy
   std::shared_ptr<const Policy> policy;
 
