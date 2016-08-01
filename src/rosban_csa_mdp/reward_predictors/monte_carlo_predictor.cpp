@@ -31,10 +31,32 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
   }
   std::vector<double> rewards(nb_predictions);
   // Preparing function:
-  auto prediction_task =
-    [this, input, policy, model,
-     reward_function, value_function, terminal_function,
-     discount, &rewards]
+  MonteCarloPredictor::RPTask prediction_task;
+  prediction_task = getTask(input, policy, model, reward_function, value_function,
+                            terminal_function, discount, rewards);
+  // Preparing random_engines
+  std::vector<std::default_random_engine> engines;
+  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_predictions), engine);
+  // Now filling reward in parallel
+  MultiCore::runParallelStochasticTask(prediction_task, nb_predictions, &engines);
+  double internal_mean = regression_forests::Statistics::mean(rewards);
+  if (mean != nullptr) *mean = internal_mean;
+  if (var != nullptr) *var = regression_forests::Statistics::variance(rewards);
+}
+
+MonteCarloPredictor::RPTask
+MonteCarloPredictor::getTask(const Eigen::VectorXd & input,
+                             std::shared_ptr<const Policy> policy,
+                             std::shared_ptr<Problem> model,//TODO: Model class ?
+                             Problem::RewardFunction reward_function,
+                             Problem::ValueFunction value_function,
+                             Problem::TerminalFunction terminal_function,
+                             double discount,
+                             std::vector<double> & rewards)
+{
+  return [this, input, policy, model,
+          reward_function, value_function, terminal_function,
+          discount, &rewards]
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
       for (int prediction = start_idx; prediction < end_idx; prediction++)
@@ -59,14 +81,6 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
         rewards[prediction] = reward;
       }
     };
-  // Preparing random_engines
-  std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_predictions), engine);
-  // Now filling reward in parallel
-  MultiCore::runParallelStochasticTask(prediction_task, nb_predictions, &engines);
-  double internal_mean = regression_forests::Statistics::mean(rewards);
-  if (mean != nullptr) *mean = internal_mean;
-  if (var != nullptr) *var = regression_forests::Statistics::variance(rewards);
 }
 
 std::string MonteCarloPredictor::class_name() const

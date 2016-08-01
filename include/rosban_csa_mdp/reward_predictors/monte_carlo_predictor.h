@@ -23,6 +23,17 @@ public:
                double * var,
                std::default_random_engine * engine) override;
 
+  typedef std::function<void(int start, int end, std::default_random_engine * engine)> RPTask;
+
+  virtual RPTask getTask(const Eigen::VectorXd & input,
+                         std::shared_ptr<const Policy> policy,
+                         std::shared_ptr<Problem> model,//TODO: Model class ?
+                         Problem::RewardFunction reward_function,
+                         Problem::ValueFunction value_function,
+                         Problem::TerminalFunction terminal_function,
+                         double discount,
+                         std::vector<double> & rewards);
+
   virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
