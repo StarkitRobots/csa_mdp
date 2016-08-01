@@ -76,7 +76,7 @@ void ModelBasedLearner::savePolicy(const std::string & prefix)
 
 void ModelBasedLearner::saveStatus(const std::string & prefix)
 {
-  value->save(prefix + "value.data");
+  if (value) value->save(prefix + "value.data");
   savePolicy(prefix);
   std::cerr << "Warning: ModelBasedLearner::saveStatus is not fully implemented" << std::endl;
 }
