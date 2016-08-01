@@ -1,12 +1,20 @@
 #include "rosban_csa_mdp/core/fa_policy.h"
 
+#include "rosban_fa/function_approximator_factory.h"
+
 #include "rosban_random/multivariate_gaussian.h"
 #include "rosban_random/tools.h"
 
+using rosban_fa::FunctionApproximatorFactory;
 using rosban_random::MultiVariateGaussian;
 
 namespace csa_mdp
 {
+
+FAPolicy::FAPolicy() : apply_noise(false)
+{
+  engine = rosban_random::getRandomEngine();
+}
 
 FAPolicy::FAPolicy(std::unique_ptr<rosban_fa::FunctionApproximator> fa_)
   : fa(std::move(fa_)), apply_noise(false)
@@ -62,6 +70,8 @@ void FAPolicy::to_xml(std::ostream & out) const
 void FAPolicy::from_xml(TiXmlNode * node)
 {
   rosban_utils::xml_tools::try_read<bool>(node, "noise", apply_noise);
+  std::string path = rosban_utils::xml_tools::read<std::string>(node, "path");
+  FunctionApproximatorFactory().loadFromFile(path, fa);
 }
 
 void FAPolicy::saveFA(const std::string & filename) const

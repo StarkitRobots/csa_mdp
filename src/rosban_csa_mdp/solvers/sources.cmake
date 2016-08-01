@@ -1,4 +1,5 @@
 set(SOURCES
+  fake_learner.cpp
   fpf.cpp
   learner.cpp
   learner_factory.cpp

@@ -14,6 +14,7 @@ namespace csa_mdp
 class FAPolicy : public Policy
 {
 public:
+  FAPolicy();
   FAPolicy(std::unique_ptr<rosban_fa::FunctionApproximator> fa);
 
   void setRandomness(bool apply_noise);
