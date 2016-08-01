@@ -13,8 +13,9 @@ public:
   BasicOptimizer();
 
   virtual Eigen::VectorXd optimize(const Eigen::VectorXd & input,
+                                   const Eigen::MatrixXd & action_limits,
                                    std::shared_ptr<const Policy> current_policy,
-                                   std::shared_ptr<Problem> model,
+                                   Problem::TransitionFunction transition_function,
                                    Problem::RewardFunction reward_function,
                                    Problem::ValueFunction value_function,
                                    Problem::TerminalFunction terminal_function,
@@ -26,7 +27,7 @@ public:
   virtual AOTask getTask(const Eigen::VectorXd & input,
                          const Eigen::MatrixXd & actions,
                          std::shared_ptr<const Policy> policy,
-                         std::shared_ptr<Problem> model,
+                         Problem::TransitionFunction transition_function,
                          Problem::RewardFunction reward_function,
                          Problem::ValueFunction value_function,
                          Problem::TerminalFunction terminal_function,

@@ -25,8 +25,9 @@ public:
   /// Try to find the best action with the given parameters
   /// if engine is note provided, it should handle its own
   virtual Eigen::VectorXd optimize(const Eigen::VectorXd & input,
+                                   const Eigen::MatrixXd & action_limits,
                                    std::shared_ptr<const Policy> current_policy,
-                                   std::shared_ptr<Problem> model,//TODO: Model class ?
+                                   Problem::TransitionFunction transition_function,
                                    Problem::RewardFunction reward_function,
                                    Problem::ValueFunction value_function,
                                    Problem::TerminalFunction terminal_function,

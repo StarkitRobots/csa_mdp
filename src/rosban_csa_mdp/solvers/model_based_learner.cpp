@@ -129,7 +129,8 @@ void ModelBasedLearner::updateValue()
       {
         Eigen::VectorXd state = this->samples[sample].state;
         double mean, var;
-        reward_predictor->predict(state, this->getPolicy(), this->model,
+        reward_predictor->predict(state, this->getPolicy(),
+                                  this->model->getTransitionFunction(),
                                   getRewardFunction(), getValueFunction(),
                                   terminal_function, this->discount,
                                   &mean, &var, thread_engine);
@@ -184,8 +185,9 @@ void ModelBasedLearner::updatePolicy()
       {
         Eigen::VectorXd state = this->samples[sample].state;
         Eigen::VectorXd best_action;
-        best_action = this->action_optimizer->optimize(state, this->getPolicy(), 
-                                                       this->model,
+        best_action = this->action_optimizer->optimize(state, this->model->getActionLimits(),
+                                                       this->getPolicy(), 
+                                                       this->model->getTransitionFunction(),
                                                        getRewardFunction(),
                                                        getValueFunction(),
                                                        terminal_function,

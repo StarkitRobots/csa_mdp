@@ -14,7 +14,7 @@ public:
 
   void predict(const Eigen::VectorXd & input,
                std::shared_ptr<const Policy> policy,
-               std::shared_ptr<Problem> model,//TODO: Model class ?
+               Problem::TransitionFunction transition_function,
                Problem::RewardFunction reward_function,
                Problem::ValueFunction value_function,
                Problem::TerminalFunction terminal_function,
@@ -27,7 +27,7 @@ public:
 
   virtual RPTask getTask(const Eigen::VectorXd & input,
                          std::shared_ptr<const Policy> policy,
-                         std::shared_ptr<Problem> model,//TODO: Model class ?
+                         Problem::TransitionFunction transition_function,
                          Problem::RewardFunction reward_function,
                          Problem::ValueFunction value_function,
                          Problem::TerminalFunction terminal_function,

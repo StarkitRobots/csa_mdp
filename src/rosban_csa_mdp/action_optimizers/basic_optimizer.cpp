@@ -27,8 +27,9 @@ BasicOptimizer::BasicOptimizer()
 {}
 
 Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
+                                         const Eigen::MatrixXd & action_limits,
                                          std::shared_ptr<const Policy> current_policy,
-                                         std::shared_ptr<Problem> model,
+                                         Problem::TransitionFunction transition_function,
                                          Problem::RewardFunction reward_function,
                                          Problem::ValueFunction value_function,
                                          Problem::TerminalFunction terminal_function,
@@ -42,7 +43,7 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
   }
 
   // actionDim by nb_actions
-  Eigen::MatrixXd actions = rosban_random::getUniformSamplesMatrix(model->getActionLimits(),
+  Eigen::MatrixXd actions = rosban_random::getUniformSamplesMatrix(action_limits,
                                                                    nb_actions,
                                                                    engine);
   Eigen::VectorXd results = Eigen::VectorXd::Zero(nb_actions);
@@ -50,18 +51,16 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
   std::vector<std::default_random_engine> engines;
   engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_actions), engine);
   // Preparing function:
-  AOTask task = getTask(input, actions, current_policy, model, reward_function,
+  AOTask task = getTask(input, actions, current_policy, transition_function, reward_function,
                         value_function, terminal_function, discount, results);
   // Now filling reward in parallel
   MultiCore::runParallelStochasticTask(task, nb_actions, &engines);
   // Train a function approximator
   std::unique_ptr<rosban_fa::FunctionApproximator> approximator;
-  approximator = trainer->train(actions, results, model->getActionLimits());
+  approximator = trainer->train(actions, results, action_limits);
   Eigen::VectorXd best_guess;
   double best_output;
-  approximator->getMaximum(model->getActionLimits(),
-                           best_guess,
-                           best_output);
+  approximator->getMaximum(action_limits, best_guess, best_output);
   if (clean_engine) delete(engine);
 
 
@@ -81,14 +80,14 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
 BasicOptimizer::AOTask BasicOptimizer::getTask(const Eigen::VectorXd & input,
                                                const Eigen::MatrixXd & actions,
                                                std::shared_ptr<const Policy> policy,
-                                               std::shared_ptr<Problem> model,
+                                               Problem::TransitionFunction transition_function,
                                                Problem::RewardFunction reward_function,
                                                Problem::ValueFunction value_function,
                                                Problem::TerminalFunction terminal_function,
                                                double discount,
                                                Eigen::VectorXd & results) const
 {
-  return [this, input, actions, policy, model,
+  return [this, input, actions, policy, transition_function,
           reward_function, value_function, terminal_function,
           discount, &results]
     (int start_idx, int end_idx, std::default_random_engine * engine)
@@ -101,7 +100,7 @@ BasicOptimizer::AOTask BasicOptimizer::getTask(const Eigen::VectorXd & input,
         // Compute several simulations
         for (int sim = 0; sim < nb_simulations; sim++) {
           // 1. Using chosen action
-          Eigen::VectorXd state = model->getSuccessor(input, initial_action);
+          Eigen::VectorXd state = transition_function(input, initial_action);
           total_reward += reward_function(input, initial_action, state);
           double coeff = discount;
           // 2. Using policy for a few steps
@@ -111,7 +110,7 @@ BasicOptimizer::AOTask BasicOptimizer::getTask(const Eigen::VectorXd & input,
             if (terminal_function(state)) break;
 
             Eigen::VectorXd action = policy->getAction(state, engine);
-            Eigen::VectorXd next_state = model->getSuccessor(state, action);
+            Eigen::VectorXd next_state = transition_function(state, action);
             total_reward += coeff * reward_function(state, action, next_state);
             state = next_state;
             coeff *= discount;

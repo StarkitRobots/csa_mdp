@@ -24,7 +24,7 @@ public:
   /// - Some methods might use the current policy to improve their long term predictions
   virtual void predict(const Eigen::VectorXd & input,
                        std::shared_ptr<const Policy> policy,
-                       std::shared_ptr<Problem> model,//TODO: Model class ?
+                       Problem::TransitionFunction transition_function,
                        Problem::RewardFunction reward_function,
                        Problem::ValueFunction value_function,
                        Problem::TerminalFunction terminal_function,
