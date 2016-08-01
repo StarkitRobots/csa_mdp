@@ -21,6 +21,18 @@ public:
                                    double discount,
                                    std::default_random_engine * engine) const override;
 
+  typedef std::function<void(int start, int end, std::default_random_engine * engine)> AOTask;
+
+  virtual AOTask getTask(const Eigen::VectorXd & input,
+                         const Eigen::MatrixXd & actions,
+                         std::shared_ptr<const Policy> policy,
+                         std::shared_ptr<Problem> model,
+                         Problem::RewardFunction reward_function,
+                         Problem::ValueFunction value_function,
+                         Problem::TerminalFunction terminal_function,
+                         double discount,
+                         Eigen::VectorXd & results) const;
+
   virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
