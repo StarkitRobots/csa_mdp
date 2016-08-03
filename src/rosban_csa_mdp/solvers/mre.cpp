@@ -1,5 +1,8 @@
 #include "rosban_csa_mdp/solvers/mre.h"
 
+#include "rosban_fa/forest_approximator.h"
+#include "rosban_fa/function_approximator.h"
+
 #include "rosban_regression_forests/approximations/pwc_approximation.h"
 #include "rosban_random/tools.h"
 #include "rosban_regression_forests/tools/statistics.h"
@@ -12,6 +15,10 @@
 using rosban_utils::Benchmark;
 using rosban_utils::TimeStamp;
 
+using rosban_fa::ForestApproximator;
+using rosban_fa::FunctionApproximator;
+
+using regression_forests::Forest;
 using regression_forests::TrainingSet;
 using namespace regression_forests::Statistics;
 
@@ -102,10 +109,16 @@ const regression_forests::Forest & MRE::getPolicy(int dim)
 
 void MRE::savePolicy(const std::string &prefix)
 {
+  std::unique_ptr<ForestApproximator::Forests> forests(new ForestApproximator::Forests);
   for (int dim = 0; dim < getActionLimits().rows(); dim++)
   {
-    policies[dim]->save(prefix + "policy_d" + std::to_string(dim) + ".data");
+    forests->push_back(std::unique_ptr<Forest>(policies[dim]->clone()));
   }
+  if (mrefpf_conf.gp_policies) {
+    throw std::logic_error("Saving gp_policies with MRE is not implemented yet");
+  }
+  ForestApproximator fa(std::move(forests), 0);
+  fa.save(prefix + "policy.data");
 }
 
 void MRE::saveValue(const std::string &prefix)
