@@ -7,6 +7,7 @@
 using rosban_utils::Benchmark;
 using rosban_utils::TimeStamp;
 
+using regression_forests::Approximation;
 using regression_forests::PWCApproximation;
 using regression_forests::TrainingSet;
 
@@ -108,8 +109,9 @@ void MREFPF::updateQValue(const std::vector<Sample> &samples,
                                                        const Eigen::MatrixXd & limits)
     {
       // Throw an error if approximation is not PWC
-      PWCApproximation *pwc_app = dynamic_cast<PWCApproximation*>(node->a);
-      if (pwc_app == nullptr)
+      std::shared_ptr<const PWCApproximation> pwc_app;
+      pwc_app = std::dynamic_pointer_cast<const PWCApproximation>(node->a);
+      if (!pwc_app)
       {
         throw std::logic_error("Alternative update is only available for pwc approximations");
       }
@@ -118,8 +120,7 @@ void MREFPF::updateQValue(const std::vector<Sample> &samples,
       double knownness = this->knownness_func->getValue(middle_point);
       double old_val = pwc_app->getValue();
       double new_val = old_val * knownness + (1 - knownness) * conf.reward_max;
-      node->a = new PWCApproximation(new_val);
-      delete(pwc_app);
+      node->a = std::shared_ptr<Approximation>(new PWCApproximation(new_val));
     };
   Eigen::MatrixXd limits = conf.getInputLimits();
   q_value->applyOnLeafs(limits, f);

@@ -2,6 +2,8 @@
 
 #include "rosban_random/tools.h"
 
+using regression_forests::Forest;
+
 namespace csa_mdp
 {
 
@@ -54,7 +56,9 @@ void ForestsPolicy::from_xml(TiXmlNode * node)
   policies.clear();
   for (const std::string &path : paths)
   {
-    policies.push_back(regression_forests::Forest::loadFile(path));
+    std::unique_ptr<Forest> forest(new Forest());
+    forest->load(path);
+    policies.push_back(std::move(forest));
   }
   rosban_utils::xml_tools::try_read<bool>(node, "apply_noise", apply_noise);
 }

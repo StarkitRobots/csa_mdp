@@ -4,6 +4,7 @@
 #include "rosban_random/tools.h"
 #include "rosban_regression_forests/tools/statistics.h"
 
+using regression_forests::Approximation;
 using namespace regression_forests::Statistics;
 
 namespace csa_mdp
@@ -223,7 +224,7 @@ regression_forests::Node * KnownnessTree::convertToRegNode(const kd_trees::KdNod
   {
     int nb_points = node->getPoints().size();
     double value = getValue(space, nb_points);
-    new_node->a = new regression_forests::PWCApproximation(value);
+    new_node->a = std::unique_ptr<Approximation>(new regression_forests::PWCApproximation(value));
     return new_node;
   }
   // Node case
