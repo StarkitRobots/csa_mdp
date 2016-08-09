@@ -11,7 +11,7 @@
 
 using rosban_utils::TimeStamp;
 
-using regression_forests::ApproximationType;
+using regression_forests::Approximation;
 using regression_forests::ExtraTrees;
 using regression_forests::Forest;
 using regression_forests::TrainingSet;
@@ -195,9 +195,9 @@ PF_FPF::updateQValue(const std::vector<Sample>& samples,
                      bool final_step)
 {
   // Choosing approximation type
-  ApproximationType appr_type = ApproximationType::PWC;
+  Approximation::ID appr_type = Approximation::ID::PWC;
   if (final_step)
-    appr_type = ApproximationType::PWL;
+    appr_type = Approximation::ID::PWL;
   // Creating q_learner
   ExtraTrees q_learner;
   q_learner.conf = ExtraTrees::Config::generateAuto(conf.getInputLimits(),
@@ -215,6 +215,7 @@ generatePolicy(const std::vector<Sample>& samples,
                std::unique_ptr<regression_forests::Forest> q_value)
 {
   (void) samples;
+  (void) q_value;
   std::vector<std::unique_ptr<regression_forests::Forest>> result;
   throw std::logic_error("unimplemented function");
   return result;

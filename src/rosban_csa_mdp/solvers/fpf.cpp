@@ -16,7 +16,7 @@ using rosban_utils::Benchmark;
 using rosban_utils::MultiCore;
 using rosban_utils::TimeStamp;
 
-using regression_forests::ApproximationType;
+using regression_forests::Approximation;
 using regression_forests::ExtraTrees;
 using regression_forests::TrainingSet;
 
@@ -187,11 +187,11 @@ void FPF::updateQValue(const std::vector<Sample>& samples,
   if (conf.auto_parameters)
   {
     // Using piecewise linear approximation is only allowed during the last step
-    ApproximationType appr_type = last_step ? ApproximationType::PWL : ApproximationType::PWC;
+    Approximation::ID appr_type = last_step ? Approximation::ID::PWL : Approximation::ID::PWC;
     // TODO implement alternative update with PWL approximations to allow their use
-    appr_type = ApproximationType::PWC;
+    appr_type = Approximation::ID::PWC;
     // Replacing by GP if required
-    if (conf.gp_values) appr_type = ApproximationType::GP;
+    if (conf.gp_values) appr_type = Approximation::ID::GP;
     // Generating the configuration automatically
     q_learner.conf = ExtraTrees::Config::generateAuto(conf.getInputLimits(),
                                                       samples.size(),
@@ -247,9 +247,9 @@ void FPF::solve(const std::vector<Sample>& samples,
     regression_forests::ExtraTrees policy_learner;
     if (conf.auto_parameters)
     {
-      ApproximationType policy_appr_type = ApproximationType::PWL;
+      Approximation::ID policy_appr_type = Approximation::ID::PWL;
       // Use GP if required
-      if (conf.gp_policies) policy_appr_type = ApproximationType::GP;
+      if (conf.gp_policies) policy_appr_type = Approximation::ID::GP;
       policy_learner.conf = ExtraTrees::Config::generateAuto(conf.getStateLimits(),
                                                              samples.size(),
                                                              policy_appr_type);
