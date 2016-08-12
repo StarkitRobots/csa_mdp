@@ -15,7 +15,7 @@ Problem::~Problem()
 {
 }
 
-Problem::RewardFunction Problem::getRewardFunction()
+Problem::RewardFunction Problem::getRewardFunction() const
 {
   return [this](const Eigen::VectorXd &state,
                 const Eigen::VectorXd &action,
@@ -25,16 +25,17 @@ Problem::RewardFunction Problem::getRewardFunction()
   };
 }
 
-Problem::TransitionFunction Problem::getTransitionFunction()
+Problem::TransitionFunction Problem::getTransitionFunction() const
 {
   return [this](const Eigen::VectorXd &state,
-                const Eigen::VectorXd &action)
+                const Eigen::VectorXd &action,
+                std::default_random_engine * engine)
   {
-    return this->getSuccessor(state, action);
+    return this->getSuccessor(state, action, engine);
   };
 }
 
-Problem::TerminalFunction Problem::getTerminalFunction()
+Problem::TerminalFunction Problem::getTerminalFunction() const
 {
   return [this](const Eigen::VectorXd &state)
   {
@@ -156,6 +157,12 @@ std::vector<int> Problem::getLearningDimensions() const
     result.push_back(i);
   }
   return result;
+}
+
+Eigen::VectorXd Problem::getSuccessor(const Eigen::VectorXd & state,
+                                      const Eigen::VectorXd & action)
+{
+  return getSuccessor(state, action, &random_engine);
 }
 
 Eigen::VectorXd Problem::getRandomAction()

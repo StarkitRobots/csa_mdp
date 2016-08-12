@@ -21,9 +21,10 @@ public:
   typedef std::function<double(const Eigen::VectorXd &state)> ValueFunction;
   /// Return action for given state
   typedef std::function<Eigen::VectorXd(const Eigen::VectorXd &state)> Policy;
-  /// Sample successor state from a couple (state, action)
+  /// Sample successor state from a couple (state, action) using provided random engine
   typedef std::function<Eigen::VectorXd(const Eigen::VectorXd &state,
-                                        const Eigen::VectorXd &action)> TransitionFunction;
+                                        const Eigen::VectorXd &action,
+                                        std::default_random_engine * engine)> TransitionFunction;
   /// Return Reward for the given triplet (state, action, next_state)
   typedef std::function<double(const Eigen::VectorXd &state,
                                const Eigen::VectorXd &action,
@@ -46,9 +47,9 @@ public:
   Problem();
   virtual ~Problem();
 
-  RewardFunction getRewardFunction();
-  TransitionFunction getTransitionFunction();
-  TerminalFunction getTerminalFunction();
+  RewardFunction getRewardFunction() const;
+  TransitionFunction getTransitionFunction() const;
+  TerminalFunction getTerminalFunction() const;
 
   int stateDims() const;
   int actionDims() const;
@@ -84,13 +85,20 @@ public:
   virtual std::vector<int> getLearningDimensions() const;
   
   virtual bool isTerminal(const Eigen::VectorXd & state) const = 0;
-  /// This function is allowed to be stochastic
+
+  /// This function is not allowed to be stochastic
   virtual double getReward(const Eigen::VectorXd &state,
                            const Eigen::VectorXd &action,
-                           const Eigen::VectorXd &dst) = 0;
-  /// This function is allowed to be stochastic
+                           const Eigen::VectorXd &dst) const = 0;
+
+  /// This function  uses the inner random engine
+  Eigen::VectorXd getSuccessor(const Eigen::VectorXd &state,
+                               const Eigen::VectorXd &action);
+
+  /// Use an external random engine
   virtual Eigen::VectorXd getSuccessor(const Eigen::VectorXd &state,
-                                       const Eigen::VectorXd &action) = 0;
+                                       const Eigen::VectorXd &action,
+                                       std::default_random_engine * engine)  const = 0;
 
   /// Provide a random state in state_limits (uniformous distribution)
   Eigen::VectorXd getRandomState();

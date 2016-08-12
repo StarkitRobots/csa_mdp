@@ -71,7 +71,7 @@ MonteCarloPredictor::getTask(const Eigen::VectorXd & input,
           if (terminal_function(state)) break;
 
           Eigen::VectorXd action = policy->getAction(state, engine);
-          Eigen::VectorXd next_state = transition_function(state, action);
+          Eigen::VectorXd next_state = transition_function(state, action, engine);
           reward += coeff * reward_function(state, action, next_state);
           state = next_state;
           coeff *= discount;

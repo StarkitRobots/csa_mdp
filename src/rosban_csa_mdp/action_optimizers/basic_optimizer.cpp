@@ -100,7 +100,7 @@ BasicOptimizer::AOTask BasicOptimizer::getTask(const Eigen::VectorXd & input,
         // Compute several simulations
         for (int sim = 0; sim < nb_simulations; sim++) {
           // 1. Using chosen action
-          Eigen::VectorXd state = transition_function(input, initial_action);
+          Eigen::VectorXd state = transition_function(input, initial_action, engine);
           total_reward += reward_function(input, initial_action, state);
           double coeff = discount;
           // 2. Using policy for a few steps
@@ -110,7 +110,7 @@ BasicOptimizer::AOTask BasicOptimizer::getTask(const Eigen::VectorXd & input,
             if (terminal_function(state)) break;
 
             Eigen::VectorXd action = policy->getAction(state, engine);
-            Eigen::VectorXd next_state = transition_function(state, action);
+            Eigen::VectorXd next_state = transition_function(state, action, engine);
             total_reward += coeff * reward_function(state, action, next_state);
             state = next_state;
             coeff *= discount;

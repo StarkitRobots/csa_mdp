@@ -49,7 +49,7 @@ public:
 private:
   /// The current state of the model
   /// TODO: replace with a pointer of a class which can use provided models and learned models
-  std::shared_ptr<Problem> model;
+  std::shared_ptr<const Problem> model;
 
   /// The horizon finite reward predictor used to create new samples for VFA
   std::unique_ptr<RewardPredictor> reward_predictor;
