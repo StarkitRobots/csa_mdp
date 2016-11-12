@@ -19,6 +19,8 @@ void Learner::setNbThreads(int new_nb_threads)
   nb_threads = new_nb_threads;
 }
 
+void Learner::endRun(){}
+
 void Learner::setStateLimits(const Eigen::MatrixXd & new_state_limits)
 {
   state_limits = new_state_limits;

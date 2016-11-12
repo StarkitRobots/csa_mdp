@@ -32,4 +32,9 @@ void FakeLearner::from_xml(TiXmlNode *node)
   policy = PolicyFactory().read(node, "policy");
 }
 
+void FakeLearner::endRun()
+{
+  if (policy) policy->init();
+}
+
 }

@@ -21,6 +21,9 @@ public:
   /// Set the maximal number of threads allowed to the learner
   virtual void setNbThreads(int nb_threads);
 
+  /// Inform the learner that the current run is finished
+  virtual void endRun();
+
   /// Inform the learner of the state space
   virtual void setStateLimits(const Eigen::MatrixXd & state_limits);
   /// Inform the learner of the action space

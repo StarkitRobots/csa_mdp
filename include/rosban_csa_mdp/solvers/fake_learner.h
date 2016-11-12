@@ -22,6 +22,9 @@ public:
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
 
+  /// Reset effects on policy if necessary
+  virtual void endRun() override;
+
 protected:
   std::unique_ptr<Policy> policy;
 };
