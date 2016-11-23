@@ -9,9 +9,6 @@ find_package(catkin REQUIRED COMPONENTS
   rosban_fa
 )
 
-find_package(PkgConfig)
-pkg_search_module(Eigen3 REQUIRED eigen3>=3.2.3)
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++11")
 
 ## System dependencies are found with CMake's conventions
@@ -116,7 +113,6 @@ catkin_package(
 
 include_directories(
   include
-  ${EIGEN3_INCLUDE_DIR}
   ${catkin_INCLUDE_DIRS}
   )
 
