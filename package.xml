@@ -14,8 +14,10 @@
   <license>NCY</license>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>regression_experiments</build_depend>
-  <build_depend>rosban_fa</build_depend>
+
+  <build_depend>regression_experiments</build_depend> <!-- git@bitbucket.org:rhoban/regression_experiments.git -->
+  <build_depend>rosban_fa</build_depend> <!-- git@bitbucket.org:rhoban/rosban_fa.git -->
+
   <run_depend>regression_experiments</run_depend>
   <run_depend>rosban_fa</run_depend>
 
