@@ -13,7 +13,7 @@ public:
   MonteCarloPredictor();
 
   void predict(const Eigen::VectorXd & input,
-               std::shared_ptr<const Policy> policy,
+               const Policy & policy,
                Problem::TransitionFunction transition_function,
                Problem::RewardFunction reward_function,
                Problem::ValueFunction value_function,
@@ -26,7 +26,7 @@ public:
   typedef std::function<void(int start, int end, std::default_random_engine * engine)> RPTask;
 
   virtual RPTask getTask(const Eigen::VectorXd & input,
-                         std::shared_ptr<const Policy> policy,
+                         const Policy & policy,
                          Problem::TransitionFunction transition_function,
                          Problem::RewardFunction reward_function,
                          Problem::ValueFunction value_function,

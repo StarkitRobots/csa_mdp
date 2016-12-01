@@ -16,7 +16,7 @@ MonteCarloPredictor::MonteCarloPredictor()
 {}
 
 void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
-                                  std::shared_ptr<const Policy> policy,
+                                  const Policy & policy,
                                   Problem::TransitionFunction transition_function,
                                   Problem::RewardFunction reward_function,
                                   Problem::ValueFunction value_function,
@@ -26,9 +26,6 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
                                   double * var,
                                   std::default_random_engine * engine)
 {
-  if (!policy) {
-    throw std::logic_error("MonteCarloPredictor cannot predict if it is given a null policy!");
-  }
   std::vector<double> rewards(nb_predictions);
   // Preparing function:
   MonteCarloPredictor::RPTask prediction_task;
@@ -46,7 +43,7 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
 
 MonteCarloPredictor::RPTask
 MonteCarloPredictor::getTask(const Eigen::VectorXd & input,
-                             std::shared_ptr<const Policy> policy,
+                             const Policy & policy,
                              Problem::TransitionFunction transition_function,
                              Problem::RewardFunction reward_function,
                              Problem::ValueFunction value_function,
@@ -54,7 +51,7 @@ MonteCarloPredictor::getTask(const Eigen::VectorXd & input,
                              double discount,
                              std::vector<double> & rewards)
 {
-  return [this, input, policy, transition_function,
+  return [this, &input, &policy, transition_function,
           reward_function, value_function, terminal_function,
           discount, &rewards]
     (int start_idx, int end_idx, std::default_random_engine * engine)
@@ -70,7 +67,7 @@ MonteCarloPredictor::getTask(const Eigen::VectorXd & input,
           // Stop predicting steps if a terminal state has been reached
           if (terminal_function(state)) break;
 
-          Eigen::VectorXd action = policy->getAction(state, engine);
+          Eigen::VectorXd action = policy.getAction(state, engine);
           Eigen::VectorXd next_state = transition_function(state, action, engine);
           reward += coeff * reward_function(state, action, next_state);
           state = next_state;

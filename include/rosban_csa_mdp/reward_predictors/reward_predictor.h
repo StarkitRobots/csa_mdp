@@ -23,7 +23,7 @@ public:
   /// - The value function might be used to approximate after a given number of steps
   /// - Some methods might use the current policy to improve their long term predictions
   virtual void predict(const Eigen::VectorXd & input,
-                       std::shared_ptr<const Policy> policy,
+                       const Policy & policy,
                        Problem::TransitionFunction transition_function,
                        Problem::RewardFunction reward_function,
                        Problem::ValueFunction value_function,

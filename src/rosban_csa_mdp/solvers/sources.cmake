@@ -1,4 +1,5 @@
 set(SOURCES
+  black_box_learner.cpp
   fake_learner.cpp
   fpf.cpp
   learner.cpp

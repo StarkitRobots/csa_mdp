@@ -129,7 +129,7 @@ void ModelBasedLearner::updateValue()
       {
         Eigen::VectorXd state = this->samples[sample].state;
         double mean, var;
-        reward_predictor->predict(state, this->getPolicy(),
+        reward_predictor->predict(state, *(this->getPolicy()),
                                   this->model->getTransitionFunction(),
                                   getRewardFunction(), getValueFunction(),
                                   terminal_function, this->discount,
