@@ -28,10 +28,10 @@ public:
   void run(std::default_random_engine * engine);
 
   /// Update value function based on current policy
-  virtual void updateValue(std::default_random_engine * engine) = 0;
+  virtual void updateValue(std::default_random_engine * engine);
 
   /// Update policy based on current value function
-  virtual void updatePolicy(std::default_random_engine * engine) = 0;
+  virtual void updatePolicy(std::default_random_engine * engine);
 
   /// Return the average score of the given policy
   virtual double evaluatePolicy(std::default_random_engine * engine);
@@ -39,6 +39,7 @@ public:
   /// Set the maximal number of threads allowed
   virtual void setNbThreads(int nb_threads);
 
+  virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
 
@@ -53,7 +54,7 @@ protected:
   rosban_utils::TimeStamp learning_start;
 
   /// Time allocated for the learning experiment [s]
-  double allowed_time;
+  double time_budget;
 
   /// Discount factor used for the learning process
   double discount;
