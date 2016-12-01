@@ -127,9 +127,9 @@ double BlackBoxLearner::evaluatePolicy(const Policy & p,
 void BlackBoxLearner::setNbThreads(int nb_threads_)
 {
   nb_threads = nb_threads_;
-  if (!value_approximator)
+  if (value_approximator)
     value_approximator->setNbThreads(nb_threads);
-  if (!policy_trainer)
+  if (policy_trainer)
     policy_trainer->setNbThreads(nb_threads);
 }
 
@@ -162,6 +162,8 @@ void BlackBoxLearner::from_xml(TiXmlNode *node)
   // Value approximator
   value_approximator = ValueApproximatorFactory().read(node, "value_approximator");
   policy_trainer = rosban_fa::OptimizerTrainerFactory().read(node, "policy_trainer");
+  // Update number of threads for all
+  setNbThreads(nb_threads);
 }
 
 

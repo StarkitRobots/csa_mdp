@@ -99,6 +99,7 @@ void ExtraTreesApproximator::from_xml(TiXmlNode *node) {
   rosban_utils::xml_tools::try_read<int>(node, "nb_samples", nb_samples);
   RewardPredictorFactory().tryRead   (node, "predictor", predictor);
   rosban_fa::TrainerFactory().tryRead(node, "trainer"  , trainer  );
+  setNbThreads(nb_threads);
 }
 
 
