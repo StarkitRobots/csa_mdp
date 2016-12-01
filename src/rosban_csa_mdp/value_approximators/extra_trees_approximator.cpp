@@ -84,6 +84,11 @@ void ExtraTreesApproximator::setNbThreads(int nb_threads_) {
     trainer->setNbThreads(nb_threads);
 }
 
+std::string ExtraTreesApproximator::class_name() const
+{
+  return "ExtraTreesApproximator";
+}
+
 void ExtraTreesApproximator::to_xml(std::ostream &out) const {
   ValueApproximator::to_xml(out);
 }

@@ -21,6 +21,7 @@ public:
 
   virtual void setNbThreads(int nb_threads) override;
 
+  virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
 

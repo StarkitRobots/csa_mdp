@@ -2,8 +2,10 @@
 
 #include "rosban_csa_mdp/core/black_box_problem.h"
 #include "rosban_csa_mdp/core/policy.h"
+#include "rosban_csa_mdp/value_approximators/value_approximator.h"
 
 #include "rosban_fa/function_approximator.h"
+#include "rosban_fa/optimizer_trainer.h"
 
 #include "rosban_utils/serializable.h"
 #include "rosban_utils/time_stamp.h"
@@ -23,16 +25,16 @@ public:
   ~BlackBoxLearner();
 
   /// Use the allocated time to find a policy and returns it
-  void run();
+  void run(std::default_random_engine * engine);
 
   /// Update value function based on current policy
-  virtual void updateValue() = 0;
+  virtual void updateValue(std::default_random_engine * engine) = 0;
 
   /// Update policy based on current value function
-  virtual void updatePolicy() = 0;
+  virtual void updatePolicy(std::default_random_engine * engine) = 0;
 
   /// Return the average score of the given policy
-  virtual double evaluatePolicy();
+  virtual double evaluatePolicy(std::default_random_engine * engine);
 
   /// Set the maximal number of threads allowed
   virtual void setNbThreads(int nb_threads);
@@ -42,7 +44,7 @@ public:
 
 protected:
   /// The problem to solve
-  std::unique_ptr<BlackBoxProblem> problem;
+  std::shared_ptr<const BlackBoxProblem> problem;
 
   /// The number of threads allowed for the learner
   int nb_threads;
@@ -71,6 +73,12 @@ protected:
   /// Current approximation of the value function
   std::unique_ptr<rosban_fa::FunctionApproximator> value;
 
+  /// The approximator used to update the value function
+  std::unique_ptr<ValueApproximator> value_approximator;
+
+  /// TODO: make an abstract class to allow different action_optimizers
+  /// The optimizer used to train policies
+  std::unique_ptr<rosban_fa::OptimizerTrainer> policy_trainer;
 };
 
 }
