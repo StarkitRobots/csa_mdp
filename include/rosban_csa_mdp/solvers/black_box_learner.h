@@ -30,11 +30,12 @@ public:
   /// Update value function based on current policy
   virtual void updateValue(std::default_random_engine * engine);
 
-  /// Update policy based on current value function
-  virtual void updatePolicy(std::default_random_engine * engine);
+  /// Return a new policy based on current value function
+  virtual std::unique_ptr<Policy> updatePolicy(std::default_random_engine * engine);
 
   /// Return the average score of the given policy
-  virtual double evaluatePolicy(std::default_random_engine * engine);
+  virtual double evaluatePolicy(const Policy & p,
+                                std::default_random_engine * engine);
 
   /// Set the maximal number of threads allowed
   virtual void setNbThreads(int nb_threads);

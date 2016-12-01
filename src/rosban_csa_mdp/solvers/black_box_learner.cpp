@@ -7,6 +7,8 @@
 
 #include "rosban_fa/optimizer_trainer_factory.h"
 
+using rosban_utils::TimeStamp;
+
 namespace csa_mdp
 {
 
@@ -28,19 +30,34 @@ void BlackBoxLearner::run(std::default_random_engine * engine)
   int iteration = 0;
   while (true) {
     // Update function approximatiors
+    TimeStamp value_start = TimeStamp::now();
     updateValue(engine);
-    updatePolicy(engine);
+    TimeStamp value_end = TimeStamp::now();
+    std::cout << "value time: " << diffSec(value_start, value_end) << std::endl;
+    std::unique_ptr<Policy> new_policy = updatePolicy(engine);
+    TimeStamp policy_end = TimeStamp::now();
+    std::cout << "policy time: " << diffSec(value_end, policy_end) << std::endl;
     // Stop if time has elapsed
     double elapsed = diffSec(learning_start, rosban_utils::TimeStamp::now());
     if (elapsed > time_budget)
       break;
     // evaluate and save policy if it's better than previous ones
-    double score = evaluatePolicy(engine);
+    double score = evaluatePolicy(*new_policy, engine);
+    TimeStamp evaluation_end = TimeStamp::now();
+    std::cout << "evaluation time: " << diffSec(policy_end, evaluation_end) << std::endl;
+    std::cout << iteration << ": " << score << std::endl;
+    // Saving value and policy used at this iteration
+    const FAPolicy & fap = dynamic_cast<const FAPolicy &>(*new_policy);
+    std::ostringstream oss_p, oss_v;
+    oss_p << "policy" << iteration << ".bin";
+    oss_v << "value" << iteration << ".bin";
+    fap.saveFA(oss_p.str());
+    value->save(oss_v.str());
+    // Replace policy if it had a better score
     if (score > best_score) {
       best_score = score;
-      //TODO save policy (issues yet)
+      policy = std::move(new_policy);
     }
-    std::cout << iteration << ": " << score << std::endl;
     iteration++;
   }
 }
@@ -54,6 +71,7 @@ void BlackBoxLearner::updateValue(std::default_random_engine * engine) {
                                     *problem,
                                     [this](const Eigen::VectorXd & state)
                                     {
+                                      if (!this->value) return 0.0;
                                       double mean, var;
                                       this->value->predict(state, mean, var);
                                       return mean;
@@ -62,7 +80,7 @@ void BlackBoxLearner::updateValue(std::default_random_engine * engine) {
                                     engine);
 }
 
-void BlackBoxLearner::updatePolicy(std::default_random_engine * engine) {
+std::unique_ptr<Policy> BlackBoxLearner::updatePolicy(std::default_random_engine * engine) {
   rosban_fa::OptimizerTrainer::RewardFunction reward_func =
     [this]
     (const Eigen::VectorXd & parameters,
@@ -80,23 +98,27 @@ void BlackBoxLearner::updatePolicy(std::default_random_engine * engine) {
   policy_trainer->setActionsLimits(problem->getActionLimits());
   std::unique_ptr<rosban_fa::FunctionApproximator> fa;
   fa = policy_trainer->train(reward_func, engine);
-  policy = std::unique_ptr<Policy>(new FAPolicy(std::move(fa)));
-  policy->setActionLimits(problem->getActionLimits());
+  std::unique_ptr<Policy> new_policy(new FAPolicy(std::move(fa)));
+  new_policy->setActionLimits(problem->getActionLimits());
+  return std::move(new_policy);
+
 }
 
-double BlackBoxLearner::evaluatePolicy(std::default_random_engine * engine)
+double BlackBoxLearner::evaluatePolicy(const Policy & p,
+                                       std::default_random_engine * engine)
 {
   double reward = 0;
   for (int trial = 0; trial < nb_evaluation_trials; trial++) {
     Eigen::VectorXd state = problem->getStartingState(engine);
     double gain = 1.0;
     for (int step = 0; step < trial_length; step++) {
-      Eigen::VectorXd action = policy->getAction(state);
+      Eigen::VectorXd action = p.getAction(state, engine);
       Eigen::VectorXd next_state = problem->getSuccessor(state, action, engine);
       double step_reward = problem->getReward(state, action, next_state);
       state = next_state;
       reward += gain * step_reward;
       gain = gain * discount;
+      if (problem->isTerminal(state)) break;
     }
   }
   return reward / nb_evaluation_trials;

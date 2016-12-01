@@ -6,6 +6,7 @@
 #include "rosban_random/tools.h"
 
 #include "rosban_utils/multi_core.h"
+#include "rosban_utils/xml_tools.h"
 
 using rosban_utils::MultiCore;
 
@@ -95,6 +96,7 @@ void ExtraTreesApproximator::to_xml(std::ostream &out) const {
 
 void ExtraTreesApproximator::from_xml(TiXmlNode *node) {
   ValueApproximator::from_xml(node);
+  rosban_utils::xml_tools::try_read<int>(node, "nb_samples", nb_samples);
   RewardPredictorFactory().tryRead   (node, "predictor", predictor);
   rosban_fa::TrainerFactory().tryRead(node, "trainer"  , trainer  );
 }
