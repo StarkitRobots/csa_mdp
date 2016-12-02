@@ -31,8 +31,8 @@ void BlackBoxLearner::run(std::default_random_engine * engine)
   if (policy) {
     policy->init();
     policy->setActionLimits(problem->getActionLimits());
-    double seed_score = evaluatePolicy(*policy, engine);
-    std::cout << "Initial policy score: " << seed_score << std::endl;
+    best_score = evaluatePolicy(*policy, engine);
+    std::cout << "Initial policy score: " << best_score << std::endl;
   }
   // Main learning loop
   learning_start = rosban_utils::TimeStamp::now();
