@@ -1,7 +1,8 @@
 #include "rosban_csa_mdp/solvers/black_box_learner.h"
 
-#include "rosban_csa_mdp/core/problem_factory.h"
 #include "rosban_csa_mdp/core/fa_policy.h"
+#include "rosban_csa_mdp/core/policy_factory.h"
+#include "rosban_csa_mdp/core/problem_factory.h"
 #include "rosban_csa_mdp/core/random_policy.h"
 #include "rosban_csa_mdp/value_approximators/value_approximator_factory.h"
 
@@ -26,6 +27,14 @@ BlackBoxLearner::~BlackBoxLearner() {}
 
 void BlackBoxLearner::run(std::default_random_engine * engine)
 {
+  // Short message if a policy has been provided
+  if (policy) {
+    policy->init();
+    policy->setActionLimits(problem->getActionLimits());
+    double seed_score = evaluatePolicy(*policy, engine);
+    std::cout << "Initial policy score: " << seed_score << std::endl;
+  }
+  // Main learning loop
   learning_start = rosban_utils::TimeStamp::now();
   int iteration = 0;
   while (true) {
@@ -162,6 +171,8 @@ void BlackBoxLearner::from_xml(TiXmlNode *node)
   // Value approximator
   value_approximator = ValueApproximatorFactory().read(node, "value_approximator");
   policy_trainer = rosban_fa::OptimizerTrainerFactory().read(node, "policy_trainer");
+  // Initial policy might be provided
+  PolicyFactory().tryRead(node, "policy", policy);
   // Update number of threads for all
   setNbThreads(nb_threads);
 }
