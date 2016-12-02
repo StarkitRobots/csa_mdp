@@ -45,7 +45,7 @@ void BlackBoxLearner::run(std::default_random_engine * engine)
     double score = evaluatePolicy(*new_policy, engine);
     TimeStamp evaluation_end = TimeStamp::now();
     std::cout << "evaluation time: " << diffSec(policy_end, evaluation_end) << std::endl;
-    std::cout << iteration << ": " << score << std::endl;
+    std::cout << "policy " << iteration << ": " << score << std::endl;
     // Saving value and policy used at this iteration
     const FAPolicy & fap = dynamic_cast<const FAPolicy &>(*new_policy);
     std::ostringstream oss_p, oss_v;
