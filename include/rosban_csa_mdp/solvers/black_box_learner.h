@@ -10,6 +10,7 @@
 #include "rosban_utils/serializable.h"
 #include "rosban_utils/time_stamp.h"
 
+#include <fstream>
 #include <memory>
 
 namespace csa_mdp
@@ -43,6 +44,18 @@ public:
   virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
+
+  /// Open all logs streams
+  void openLogs();
+
+  /// Close all logs streams
+  void closeLogs();
+
+  /// Dump the time consumption to the time file
+  void writeTime(const std::string & name, double time);
+
+  /// Dump the score at current iteration
+  void writeScore(double score);
 
 protected:
   /// The problem to solve
@@ -81,6 +94,15 @@ protected:
   /// TODO: make an abstract class to allow different action_optimizers
   /// The optimizer used to train policies
   std::unique_ptr<rosban_fa::OptimizerTrainer> policy_trainer;
+
+  /// Number of iterations performed
+  int iterations;
+
+  /// Storing time logs
+  std::ofstream time_file;
+
+  /// Storing evaluation logs
+  std::ofstream results_file;
 };
 
 }

@@ -19,33 +19,41 @@ BlackBoxLearner::BlackBoxLearner()
     discount(0.98),
     trial_length(50),
     nb_evaluation_trials(100),
-    best_score(std::numeric_limits<double>::lowest())
+    best_score(std::numeric_limits<double>::lowest()),
+    iterations(0)
 {
+  openLogs();
 }
 
-BlackBoxLearner::~BlackBoxLearner() {}
+BlackBoxLearner::~BlackBoxLearner()
+{
+  closeLogs();
+}
 
 void BlackBoxLearner::run(std::default_random_engine * engine)
 {
-  // Short message if a policy has been provided
-  if (policy) {
-    policy->init();
-    policy->setActionLimits(problem->getActionLimits());
-    best_score = evaluatePolicy(*policy, engine);
-    std::cout << "Initial policy score: " << best_score << std::endl;
+  // Initialize a random policy if no policy has been provided
+  if (!policy) {
+    policy = std::unique_ptr<Policy>(new RandomPolicy());
   }
+  // Reset policy if necessary
+  policy->init();
+  policy->setActionLimits(problem->getActionLimits());
+  best_score = evaluatePolicy(*policy, engine);
+  writeScore(best_score);
   // Main learning loop
   learning_start = rosban_utils::TimeStamp::now();
-  int iteration = 0;
   while (true) {
+    iterations++;
+    std::cout << "Iteration " << iterations << std::endl;
     // Update function approximatiors
     TimeStamp value_start = TimeStamp::now();
     updateValue(engine);
     TimeStamp value_end = TimeStamp::now();
-    std::cout << "value time: " << diffSec(value_start, value_end) << std::endl;
+    writeTime("updateValue", diffSec(value_start, value_end));
     std::unique_ptr<Policy> new_policy = updatePolicy(engine);
     TimeStamp policy_end = TimeStamp::now();
-    std::cout << "policy time: " << diffSec(value_end, policy_end) << std::endl;
+    writeTime("updatePolicy", diffSec(value_end, policy_end));
     // Stop if time has elapsed
     double elapsed = diffSec(learning_start, rosban_utils::TimeStamp::now());
     if (elapsed > time_budget)
@@ -53,13 +61,13 @@ void BlackBoxLearner::run(std::default_random_engine * engine)
     // evaluate and save policy if it's better than previous ones
     double score = evaluatePolicy(*new_policy, engine);
     TimeStamp evaluation_end = TimeStamp::now();
-    std::cout << "evaluation time: " << diffSec(policy_end, evaluation_end) << std::endl;
-    std::cout << "policy " << iteration << ": " << score << std::endl;
+    writeTime("evaluation", diffSec(policy_end, evaluation_end));
+    writeScore(score);
     // Saving value and policy used at this iteration
     const FAPolicy & fap = dynamic_cast<const FAPolicy &>(*new_policy);
     std::ostringstream oss_p, oss_v;
-    oss_p << "policy" << iteration << ".bin";
-    oss_v << "value" << iteration << ".bin";
+    oss_p << "policy" << iterations << ".bin";
+    oss_v << "value" << iterations << ".bin";
     fap.saveFA(oss_p.str());
     value->save(oss_v.str());
     // Replace policy if it had a better score
@@ -67,15 +75,10 @@ void BlackBoxLearner::run(std::default_random_engine * engine)
       best_score = score;
       policy = std::move(new_policy);
     }
-    iteration++;
   }
 }
 
 void BlackBoxLearner::updateValue(std::default_random_engine * engine) {
-  if (!policy) {
-    policy = std::unique_ptr<Policy>(new RandomPolicy());
-    policy->setActionLimits(problem->getActionLimits());
-  }
   value = value_approximator->train(*policy,
                                     *problem,
                                     [this](const Eigen::VectorXd & state)
@@ -175,6 +178,34 @@ void BlackBoxLearner::from_xml(TiXmlNode *node)
   PolicyFactory().tryRead(node, "policy", policy);
   // Update number of threads for all
   setNbThreads(nb_threads);
+}
+
+void BlackBoxLearner::openLogs()
+{
+  // Opening files
+  time_file.open("time.csv");
+  results_file.open("results.csv");
+  // Writing headers
+  time_file << "iteration,part,time" << std::endl;
+  results_file << "iteration,score" << std::endl;
+}
+
+
+void BlackBoxLearner::closeLogs()
+{
+  time_file.close();
+  results_file.close();
+}
+
+void BlackBoxLearner::writeTime(const std::string & name, double time)
+{
+  //TODO:
+  // - Add members once available (require implementation in AdaptativeTree)
+  time_file << iterations << "," << name << "," << time << std::endl;
+}
+
+void BlackBoxLearner::writeScore(double score) {
+  results_file << iterations << "," << score << std::endl;
 }
 
 
