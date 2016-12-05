@@ -95,6 +95,10 @@ protected:
   /// The optimizer used to train policies
   std::unique_ptr<rosban_fa::OptimizerTrainer> policy_trainer;
 
+  /// If enabled, then memory of the policy_trainer is emptied before each
+  /// training process
+  bool memoryless_policy_trainer;
+
   /// Number of iterations performed
   int iterations;
 

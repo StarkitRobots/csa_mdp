@@ -20,6 +20,7 @@ BlackBoxLearner::BlackBoxLearner()
     trial_length(50),
     nb_evaluation_trials(100),
     best_score(std::numeric_limits<double>::lowest()),
+    memoryless_policy_trainer(true),
     iterations(0)
 {
   openLogs();
@@ -106,6 +107,9 @@ std::unique_ptr<Policy> BlackBoxLearner::updatePolicy(std::default_random_engine
       this->value->predict(next_state, value, value_var);
       return reward + this->discount * value;
     };
+  if (memoryless_policy_trainer) {
+    policy_trainer->reset();
+  }
   policy_trainer->setParametersLimits(problem->getStateLimits());
   policy_trainer->setActionsLimits(problem->getActionLimits());
   std::unique_ptr<rosban_fa::FunctionApproximator> fa;
@@ -159,11 +163,12 @@ void BlackBoxLearner::to_xml(std::ostream &out) const
 void BlackBoxLearner::from_xml(TiXmlNode *node)
 {
   // Reading simple parameters
-  rosban_utils::xml_tools::try_read<int>(node, "nb_threads", nb_threads);
-  rosban_utils::xml_tools::try_read<int>(node, "trial_length", trial_length);
-  rosban_utils::xml_tools::try_read<int>(node, "nb_evaluation_trials", nb_evaluation_trials);
-  rosban_utils::xml_tools::try_read<double>(node, "time_budget", time_budget);
-  rosban_utils::xml_tools::try_read<double>(node, "discount", discount);
+  rosban_utils::xml_tools::try_read<int>   (node, "nb_threads"          , nb_threads          );
+  rosban_utils::xml_tools::try_read<int>   (node, "trial_length"        , trial_length        );
+  rosban_utils::xml_tools::try_read<int>   (node, "nb_evaluation_trials", nb_evaluation_trials);
+  rosban_utils::xml_tools::try_read<double>(node, "time_budget"         , time_budget         );
+  rosban_utils::xml_tools::try_read<double>(node, "discount"            , discount            );
+  rosban_utils::xml_tools::try_read<bool>  (node, "memoryless_policy_trainer", memoryless_policy_trainer);
   // Getting problem
   std::shared_ptr<const Problem> tmp_problem;
   tmp_problem = ProblemFactory().read(node, "problem");
