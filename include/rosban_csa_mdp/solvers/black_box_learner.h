@@ -99,6 +99,9 @@ protected:
   /// training process
   bool memoryless_policy_trainer;
 
+  /// Does the learner use an approximation of the value
+  bool use_value_approximator;
+
   /// Number of iterations performed
   int iterations;
 

@@ -21,6 +21,7 @@ BlackBoxLearner::BlackBoxLearner()
     nb_evaluation_trials(100),
     best_score(std::numeric_limits<double>::lowest()),
     memoryless_policy_trainer(true),
+    use_value_approximator(true),
     iterations(0)
 {
   openLogs();
@@ -48,13 +49,16 @@ void BlackBoxLearner::run(std::default_random_engine * engine)
     iterations++;
     std::cout << "Iteration " << iterations << std::endl;
     // Update function approximatiors
-    TimeStamp value_start = TimeStamp::now();
-    updateValue(engine);
-    TimeStamp value_end = TimeStamp::now();
-    writeTime("updateValue", diffSec(value_start, value_end));
+    if (use_value_approximator) {
+      TimeStamp value_start = TimeStamp::now();
+      updateValue(engine);
+      TimeStamp value_end = TimeStamp::now();
+      writeTime("updateValue", diffSec(value_start, value_end));
+    }
+    TimeStamp policy_start = TimeStamp::now();
     std::unique_ptr<Policy> new_policy = updatePolicy(engine);
     TimeStamp policy_end = TimeStamp::now();
-    writeTime("updatePolicy", diffSec(value_end, policy_end));
+    writeTime("updatePolicy", diffSec(policy_start, policy_end));
     // Stop if time has elapsed
     double elapsed = diffSec(learning_start, rosban_utils::TimeStamp::now());
     if (elapsed > time_budget)
@@ -64,13 +68,17 @@ void BlackBoxLearner::run(std::default_random_engine * engine)
     TimeStamp evaluation_end = TimeStamp::now();
     writeTime("evaluation", diffSec(policy_end, evaluation_end));
     writeScore(score);
-    // Saving value and policy used at this iteration
+    // Save value used to build policy if enabled
+    if (use_value_approximator) {
+      std::ostringstream oss_v;
+      oss_v << "value" << iterations << ".bin";
+      value->save(oss_v.str());
+    }
+    // Saving policy used at this iteration
     const FAPolicy & fap = dynamic_cast<const FAPolicy &>(*new_policy);
-    std::ostringstream oss_p, oss_v;
+    std::ostringstream oss_p;
     oss_p << "policy" << iterations << ".bin";
-    oss_v << "value" << iterations << ".bin";
     fap.saveFA(oss_p.str());
-    value->save(oss_v.str());
     // Replace policy if it had a better score
     if (score > best_score) {
       best_score = score;
@@ -100,12 +108,33 @@ std::unique_ptr<Policy> BlackBoxLearner::updatePolicy(std::default_random_engine
      const Eigen::VectorXd & actions,
      std::default_random_engine * engine)
     {
-      const Eigen::VectorXd & state = parameters;
-      const Eigen::VectorXd & next_state = problem->getSuccessor(state, actions, engine);
+      // Computing first step reward and successor
+      Eigen::VectorXd state = parameters;
+      Eigen::VectorXd next_state = problem->getSuccessor(state, actions, engine);
       double reward = problem->getReward(state, actions, next_state);
       double value, value_var;
-      this->value->predict(next_state, value, value_var);
-      return reward + this->discount * value;
+      // If a value approximator is used, only one step is required
+      if (this->use_value_approximator) {
+        this->value->predict(next_state, value, value_var);
+        return reward + this->discount * value;
+      }
+      // Otherwise, do multiple steps
+      state = next_state;
+      double gain = this->discount;
+      for (int step = 1; step < this->trial_length; step++) {
+        // Computing step
+        Eigen::VectorXd action = policy->getAction(state, engine);
+        next_state = problem->getSuccessor(state, action, engine);
+        double step_reward = problem->getReward(state, actions, next_state);
+        // Accumulating reward
+        reward += step_reward * gain;
+        // Updating values
+        state = next_state;
+        gain *= discount;
+        // Stop iterations if we reached a terminal state
+        if (problem->isTerminal(state)) break;
+      }
+      return reward;
     };
   if (memoryless_policy_trainer) {
     policy_trainer->reset();
@@ -169,6 +198,8 @@ void BlackBoxLearner::from_xml(TiXmlNode *node)
   rosban_utils::xml_tools::try_read<double>(node, "time_budget"         , time_budget         );
   rosban_utils::xml_tools::try_read<double>(node, "discount"            , discount            );
   rosban_utils::xml_tools::try_read<bool>  (node, "memoryless_policy_trainer", memoryless_policy_trainer);
+  rosban_utils::xml_tools::try_read<bool>  (node, "use_value_approximator", use_value_approximator);
+
   // Getting problem
   std::shared_ptr<const Problem> tmp_problem;
   tmp_problem = ProblemFactory().read(node, "problem");
@@ -176,10 +207,13 @@ void BlackBoxLearner::from_xml(TiXmlNode *node)
   if (!problem) {
     throw std::runtime_error("BlackBoxLearner::from_xml: problem is not a BlackBoxProblem");
   }
-  // Value approximator
-  value_approximator = ValueApproximatorFactory().read(node, "value_approximator");
+  // Read value approximator if necessary
+  if (use_value_approximator) {
+    value_approximator = ValueApproximatorFactory().read(node, "value_approximator");
+  }
+  // Policy trainer is required
   policy_trainer = rosban_fa::OptimizerTrainerFactory().read(node, "policy_trainer");
-  // Initial policy might be provided
+  // Initial policy might be provided (not necessary)
   PolicyFactory().tryRead(node, "policy", policy);
   // Update number of threads for all
   setNbThreads(nb_threads);
