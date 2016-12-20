@@ -9,4 +9,5 @@ set(SOURCES
   mre.cpp
   mre_fpf.cpp
   pf_fpf.cpp
+  tree_policy_iteration.cpp
   )
