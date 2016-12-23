@@ -13,6 +13,9 @@ PolicyMutationLearner::~PolicyMutationLearner() {}
 
 void PolicyMutationLearner::init(std::default_random_engine * engine) {
   if (policy) {
+    // TODO:
+    // evaluate and print score from expert policy
+    // Approximate policy
     throw std::logic_error("PolicyMutationLearner::init: import from policy not implemented");
   }
   else {
@@ -22,10 +25,36 @@ void PolicyMutationLearner::init(std::default_random_engine * engine) {
     std::unique_ptr<FunctionApproximator> default_fa(new ConstantApproximator(action));
     policy_tree = FATree(std::move(split), {std::move(action)});
   }
+  //TODO: evaluate and print initial performances
 }
 
 void PolicyMutationLearner::update(std::default_random_engine * engine) {
-  //TODO: select partially randomly the best split
+  int mutation_id = getMutationId(engine);
+  mutate(mutation_id, engine);
+  // TODO evaluate policy and print results according to verbosity
+  // TODO update weights
+}
+
+int PolicyMutationLearner::getMutationId(std::default_random_engine * engine) {
+  // Getting max_score
+  double total_score = 0;
+  for (const MutationCandidate & c : mutation_candidates) {
+    total_score += c.mutation_score;
+  }
+  // Getting corresponding element
+  double c_score = std::uniform_real_distribution<double>(0, total_score)(*engine);
+  double acc = 0;
+  for (size_t id = 0, id < mutation_candidates.size(); id++) {
+    acc += mutation_candidates[id].mutation_score;
+    if (acc > c_score) {
+      return id;
+    }
+  }
+  // Should never happen except with numerical errors
+  std::ostringstream oss;
+  oss << "PolicyMutationLearner::getMutationId: c_score >= total_score"
+      << " (" << c_score << ">=" << total_score << ")";
+  throw std::logic_error(oss.str());
 }
 
 void PolicyMutationLearner::setNbThreads(int nb_threads) {
@@ -33,12 +62,55 @@ void PolicyMutationLearner::setNbThreads(int nb_threads) {
   optimizer->setNbThreads(nb_threads);
 }
 
-void PolicyMutationLearner::mutate(std::default_random_engine * engine) {
-  //TODO: add mutation candidate + difference between Leaf and PreLeaf
+void PolicyMutationLearner::mutate(int mutation_id,
+                                   std::default_random_engine * engine) {
+  if (mutation_candidates[mutation_id].is_leaf) {
+    mutateLeaf(mutation_id, engine);
+  }
+  else {
+    mutatePreLeaf(mutation_id, engine);
+  }
 }
 
 std::string PolicyMutationLearner::class_name() const {
   return "PolicyMutationLearner";
+}
+
+void PolicyMutationLearner::mutateLeaf(int mutation_id,
+                                       std::default_random_engine * engine) {
+  //TODO random choice between split and refineMutation
+  refineMutation(mutation_id, engine);
+}
+
+void PolicyMutationLearner::mutatePreLeaf(int mutation_id,
+                                          std::default_random_engine * engine) {
+  //TODO
+}
+
+void PolicyMutationLearner::refineMutation(int mutation_id,
+                                           std::default_random_engine * engine) {
+  // Get reference to the appropriate mutation
+  MutationCandidate * mutation = &(mutation_candidates[mutation_id]);
+  // Get space and center
+  Eigen::MatrixXd space = mutation->space;
+  // Training function
+  // TODO: use other models than PWL
+  // TODO: something global should be done for guesses and models
+  rosban_bbo::Optimizer::RewardFunc reward_func =
+    [this]
+    (const Eigen::VectorXd & parameters,
+     std::default_random_engine * engine)
+    {
+      //TODO:
+      // - clone tree_policy
+      // - update function_approximator (using params)
+      // - evaluate (using a generated set)
+    };
+  // Evaluate initial and final policy with updated parameters (on local space)
+  // Replace current if improvement has been seen
+  // Update mutation properties:
+  mutation->last_training = iterations;
+  // update post_training_score
 }
 
 void PolicyMutationLearner::to_xml(std::ostream &out) const {

@@ -34,7 +34,24 @@ public:
 
   virtual void setNbThreads(int nb_threads) override;
 
-  void mutate(std::default_random_engine * engine);
+  /// Choose a mutation among the available candidates according to their scores
+  int getMutationId(std::default_random_engine * engine);
+
+  /// Root of the mutation process
+  void mutate(int mutation_id, std::default_random_engine * engine);
+
+  /// Mutate a leaf: there is several possibilities:
+  /// 1: Refine FunctionApproximator for the leaf
+  /// 2: Split the leaf
+  void mutateLeaf(int mutation_id, std::default_random_engine * engine);
+
+  /// Mutate a pre-leaf: there is two possibilities:
+  /// 1: Change the properties of the split
+  /// 2: Contract the split
+  void mutatePreLeaf(int mutation_id, std::default_random_engine * engine);
+
+  /// Try to refine the function approximator for the given mutation id
+  void refineMutation(int mutation_id, std::default_random_engine * engine);
 
   virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;
