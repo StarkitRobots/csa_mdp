@@ -45,7 +45,8 @@ void PolicyMutationLearner::init(std::default_random_engine * engine) {
 void PolicyMutationLearner::update(std::default_random_engine * engine) {
   int mutation_id = getMutationId(engine);
   mutate(mutation_id, engine);
-  // TODO evaluate policy and print results according to verbosity
+  double new_reward = evaluatePolicy(*policy, engine);
+  std::cout << "New reward: " << new_reward << std::endl;
   // TODO update weights
 }
 
@@ -104,6 +105,7 @@ void PolicyMutationLearner::mutatePreLeaf(int mutation_id,
 
 void PolicyMutationLearner::refineMutation(int mutation_id,
                                            std::default_random_engine * engine) {
+  std::cout << "-> Applying a refine mutation" << std::endl;
   // Get reference to the appropriate mutation
   MutationCandidate * mutation = &(mutation_candidates[mutation_id]);
   // Get space and center
@@ -149,6 +151,8 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   // Evaluate initial and refined policy with updated parameters (on local space)
   double initial_reward = localEvaluation(*policy, space, nb_evaluation_trials, engine);
   double refined_reward = localEvaluation(*refined_policy, space, nb_evaluation_trials, engine);
+  std::cout << "\tinitial reward: " << initial_reward << std::endl;
+  std::cout << "\trefined reward: " << refined_reward << std::endl;
   // Replace current if improvement has been seen
   if (refined_reward > initial_reward) {
     policy_tree = std::move(refined_tree);
