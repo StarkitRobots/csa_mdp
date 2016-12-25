@@ -57,6 +57,10 @@ public:
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
 
+  /// Clone the given tree and use it to build a policy. Also set the action
+  /// limits
+  std::unique_ptr<Policy> buildPolicy(const FATree & tree);
+
 protected:
   /// The list of mutations available
   std::vector<MutationCandidate> mutation_candidates;
