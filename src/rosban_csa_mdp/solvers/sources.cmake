@@ -9,5 +9,6 @@ set(SOURCES
   mre.cpp
   mre_fpf.cpp
   pf_fpf.cpp
+  policy_mutation_learner.cpp
   tree_policy_iteration.cpp
   )

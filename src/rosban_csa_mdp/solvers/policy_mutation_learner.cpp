@@ -2,6 +2,15 @@
 
 #include "rosban_bbo/optimizer_factory.h"
 
+#include "rosban_csa_mdp/core/fa_policy.h"
+#include "rosban_csa_mdp/core/policy_factory.h"
+
+#include "rosban_fa/constant_approximator.h"
+#include "rosban_fa/linear_approximator.h"
+#include "rosban_fa/fake_split.h"
+
+using namespace rosban_fa;
+
 namespace csa_mdp
 {
 
@@ -24,8 +33,10 @@ void PolicyMutationLearner::init(std::default_random_engine * engine) {
     // Default action is the middle of the space
     Eigen::VectorXd action = (action_limits.col(0) + action_limits.col(1)) / 2;
     std::unique_ptr<FunctionApproximator> default_fa(new ConstantApproximator(action));
-    policy_tree = FATree(std::move(split), {std::move(action)});
-    policy = buildPolicy(policy_tree);
+    std::vector<std::unique_ptr<FunctionApproximator>> fas;
+    fas.push_back(std::move(default_fa));
+    policy_tree.reset(new FATree(std::move(split), fas));
+    policy = buildPolicy(*policy_tree);
     // Adding mutation candidate
     MutationCandidate candidate;
     candidate.space = problem->getStateLimits();
@@ -60,7 +71,7 @@ int PolicyMutationLearner::getMutationId(std::default_random_engine * engine) {
   double c_score = std::uniform_real_distribution<double>(0, total_score)(*engine);
 
   double acc = 0;
-  for (size_t id = 0, id < mutation_candidates.size(); id++) {
+  for (size_t id = 0; id < mutation_candidates.size(); id++) {
     acc += mutation_candidates[id].mutation_score;
     if (acc > c_score) {
       return id;
@@ -74,8 +85,8 @@ int PolicyMutationLearner::getMutationId(std::default_random_engine * engine) {
 }
 
 void PolicyMutationLearner::setNbThreads(int nb_threads) {
-  BlackBoxLearner::setNbThreads(nb_threads_);
-  optimizer->setNbThreads(nb_threads);
+  BlackBoxLearner::setNbThreads(nb_threads);
+  //optimizer->setNbThreads(nb_threads);
 }
 
 void PolicyMutationLearner::mutate(int mutation_id,
@@ -100,6 +111,8 @@ void PolicyMutationLearner::mutateLeaf(int mutation_id,
 
 void PolicyMutationLearner::mutatePreLeaf(int mutation_id,
                                           std::default_random_engine * engine) {
+  (void) mutation_id;
+  (void) engine;
   //TODO
 }
 
@@ -110,44 +123,48 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   MutationCandidate * mutation = &(mutation_candidates[mutation_id]);
   // Get space and center
   Eigen::MatrixXd space = mutation->space;
+  Eigen::MatrixXd action_limits = problem->getActionLimits();
   int input_dim = problem->stateDims();
   int output_dim = problem->actionDims();
+  Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
   // Training function
   // TODO: use other models than PWL
   // TODO: something global should be done for guesses and models
   rosban_bbo::Optimizer::RewardFunc reward_func =
-    [this, space, input_dim, output_dim]
+    [this, space, input_dim, output_dim, space_center]
     (const Eigen::VectorXd & parameters,
      std::default_random_engine * engine)
     {
       std::unique_ptr<FunctionApproximator> new_approximator(
-        new LinearApproximator(input_dim, output_dim, parameters));
+        new LinearApproximator(input_dim, output_dim, parameters, space_center));
       std::unique_ptr<FATree> new_tree;
       new_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(new_approximator));
-      FAPolicy policy(new_tree);
-      return localEvaluation(*policy, space, training_evaluations, engine);
+      FAPolicy policy(std::move(new_tree));
+      return localEvaluation(policy, space, training_evaluations, engine);
     };
   // Getting parameters_space
   bool narrow_slope = false;
   // TODO: options for narrow_slope probability
   Eigen::MatrixXd parameters_space;
-  parameters_space = LinearApproximator::getParametersSpace(parameters_limits,
+  parameters_space = LinearApproximator::getParametersSpace(space,
                                                             action_limits,
                                                             narrow_slope);
   // Computing initial parameters
   // TODO: using guesses
   Eigen::VectorXd initial_parameters;
-  initial_params = LinearApproximator::getDefaultParameters(parameters_limits,
-                                                            action_limits);
+  initial_parameters = LinearApproximator::getDefaultParameters(space,
+                                                                action_limits);
   optimizer->setLimits(parameters_space);
   // Creating refined approximator
-  Eigen::VectorXd refined_parameters = optimizer->train(initial_parameters);
+  Eigen::VectorXd refined_parameters = optimizer->train(reward_func,
+                                                        initial_parameters,
+                                                        engine);
   std::unique_ptr<FunctionApproximator> refined_approximator(
-        new LinearApproximator(input_dim, output_dim, parameters));
+    new LinearApproximator(input_dim, output_dim, refined_parameters, space_center));
   // Creating refined policy
   std::unique_ptr<FATree> refined_tree;
   refined_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(refined_approximator));
-  std::unique_ptr<Policy> new_policy = buildPolicy(*refined_tree);
+  std::unique_ptr<Policy> refined_policy = buildPolicy(*refined_tree);
   // Evaluate initial and refined policy with updated parameters (on local space)
   double initial_reward = localEvaluation(*policy, space, nb_evaluation_trials, engine);
   double refined_reward = localEvaluation(*refined_policy, space, nb_evaluation_trials, engine);

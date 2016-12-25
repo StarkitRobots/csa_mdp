@@ -4,6 +4,8 @@
 
 #include "rosban_bbo/optimizer.h"
 
+#include "rosban_fa/fa_tree.h"
+
 namespace csa_mdp
 {
 
@@ -59,7 +61,7 @@ public:
 
   /// Clone the given tree and use it to build a policy. Also set the action
   /// limits
-  std::unique_ptr<Policy> buildPolicy(const FATree & tree);
+  std::unique_ptr<Policy> buildPolicy(const rosban_fa::FATree & tree);
 
 protected:
   /// The list of mutations available
