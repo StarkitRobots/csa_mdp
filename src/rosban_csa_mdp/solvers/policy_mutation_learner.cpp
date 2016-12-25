@@ -139,8 +139,8 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
         new LinearApproximator(input_dim, output_dim, parameters, space_center));
       std::unique_ptr<FATree> new_tree;
       new_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(new_approximator));
-      FAPolicy policy(std::move(new_tree));
-      return localEvaluation(policy, space, training_evaluations, engine);
+      std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
+      return localEvaluation(*policy, space, training_evaluations, engine);
     };
   // Getting parameters_space
   bool narrow_slope = false;
@@ -201,7 +201,9 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
 
 std::unique_ptr<Policy> PolicyMutationLearner::buildPolicy(const FATree & tree) {
   std::unique_ptr<FATree> tree_copy(tree.clone());
-  return std::unique_ptr<Policy>(new FAPolicy(std::move(tree_copy)));
+  std::unique_ptr<Policy> result(new FAPolicy(std::move(tree_copy)));
+  result->setActionLimits(problem->getActionLimits());
+  return std::move(result);
 }
 
 }
