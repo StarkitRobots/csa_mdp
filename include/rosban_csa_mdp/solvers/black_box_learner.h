@@ -20,10 +20,6 @@ namespace csa_mdp
 /// unlike the 'Learner' objects, 'BlackBoxLearners' are not fed with
 /// samples, they interact directly with the blackbox model and can choose
 /// any action from any state.
-///
-/// TODO: currently this class is not an interface, but a fully implemented
-///       learner. Separation should be made in order to avoid useless parts in
-///       child classes
 class BlackBoxLearner : public rosban_utils::Serializable {
 public:
   BlackBoxLearner();
@@ -42,6 +38,13 @@ public:
   /// randomly according to problem
   virtual double evaluatePolicy(const Policy & p,
                                 std::default_random_engine * engine) const;
+
+  /// Evaluate the average reward for policy p, for an uniform distribution in
+  /// space, using nb_evaluations trials.
+  double localEvaluation(const Policy & p,
+                         const Eigen::MatrixXd & space,
+                         int nb_evaluations,
+                         std::default_random_engine * engine) const;
 
   /// Set the maximal number of threads allowed
   virtual void setNbThreads(int nb_threads);
@@ -85,6 +88,9 @@ protected:
 
   /// Number of iterations performed
   int iterations;
+
+  /// Verbosity level of the learner
+  int verbosity;
 
   /// Storing time logs
   std::ofstream time_file;

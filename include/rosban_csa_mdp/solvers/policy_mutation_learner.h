@@ -62,7 +62,7 @@ protected:
   std::vector<MutationCandidate> mutation_candidates;
 
   /// The current version of the tree
-  std::unique_ptr<FATree> policy_tree;
+  std::unique_ptr<rosban_fa::FATree> policy_tree;
 
   /// Current policy
   std::unique_ptr<Policy> policy;
@@ -70,6 +70,11 @@ protected:
   /// Optimizer used to change split position or to train models
   /// TODO: later, several optimizers should be provided
   std::unique_ptr<rosban_bbo::Optimizer> optimizer;
+
+  /// The number of evaluations used inside each space when training samples
+  int training_evaluations;
+
+  
 };
 
 }

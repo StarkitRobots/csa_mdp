@@ -2,6 +2,8 @@
 
 #include "rosban_csa_mdp/core/problem_factory.h"
 
+#include "rosban_random/tools.h"
+
 using rosban_utils::TimeStamp;
 
 namespace csa_mdp
@@ -59,6 +61,32 @@ double BlackBoxLearner::evaluatePolicy(const Policy & p,
   return reward / nb_evaluation_trials;
 }
 
+double BlackBoxLearner::localEvaluation(const Policy & p,
+                                        const Eigen::MatrixXd & space,
+                                        int nb_evaluations,
+                                        std::default_random_engine * engine) const
+{
+  // Sampling starting states
+  std::vector<Eigen::VectorXd> starting_states =
+    rosban_random::getUniformSamples(space, nb_evaluations, engine);
+  // Evaluation of reward
+  double reward = 0;
+  for (const Eigen::VectorXd & starting_state : starting_states) {
+    Eigen::VectorXd state = starting_state;
+    double gain = 1.0;
+    for (int step = 0; step < trial_length; step++) {
+      Eigen::VectorXd action = p.getAction(state, engine);
+      Eigen::VectorXd next_state = problem->getSuccessor(state, action, engine);
+      double step_reward = problem->getReward(state, action, next_state);
+      state = next_state;
+      reward += gain * step_reward;
+      gain = gain * discount;
+      if (problem->isTerminal(state)) break;
+    }
+  }
+  return reward / nb_evaluations;
+}
+
 void BlackBoxLearner::setNbThreads(int nb_threads_)
 {
   nb_threads = nb_threads_;
@@ -77,6 +105,7 @@ void BlackBoxLearner::from_xml(TiXmlNode *node)
   rosban_utils::xml_tools::try_read<int>   (node, "nb_threads"          , nb_threads          );
   rosban_utils::xml_tools::try_read<int>   (node, "trial_length"        , trial_length        );
   rosban_utils::xml_tools::try_read<int>   (node, "nb_evaluation_trials", nb_evaluation_trials);
+  rosban_utils::xml_tools::try_read<int>   (node, "verbosity"           , verbosity           );
   rosban_utils::xml_tools::try_read<double>(node, "time_budget"         , time_budget         );
   rosban_utils::xml_tools::try_read<double>(node, "discount"            , discount            );
 

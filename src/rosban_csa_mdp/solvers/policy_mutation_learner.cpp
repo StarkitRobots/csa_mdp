@@ -93,20 +93,38 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   MutationCandidate * mutation = &(mutation_candidates[mutation_id]);
   // Get space and center
   Eigen::MatrixXd space = mutation->space;
+  int input_dim = problem->stateDims();
+  int output_dim = problem->actionDims();
   // Training function
   // TODO: use other models than PWL
   // TODO: something global should be done for guesses and models
   rosban_bbo::Optimizer::RewardFunc reward_func =
-    [this]
+    [this, space, input_dim, output_dim]
     (const Eigen::VectorXd & parameters,
      std::default_random_engine * engine)
     {
-      //TODO:
-      // - clone tree_policy
-      // - update function_approximator (using params)
-      // - evaluate (using a generated set)
+      std::unique_ptr<FunctionApproximator> new_approximator(
+        new LinearApproximator(input_dim, output_dim, parameters));
+      std::unique_ptr<FATree> new_tree = policy_tree->clone();
+      new_tree.replaceLeaf(space_center, std::move(new_approximator));
+      FAPolicy policy(new_tree);
+      return localEvaluation(*policy, space, training_evaluations, engine);
     };
+  // Getting parameters_space
+  // TODO: options for narrow_slope
+  Eigen::MatrixXd parameters_space;
+  parameters_space = LinearApproximator::getParametersSpace(parameters_limits,
+                                                            action_limits,
+                                                            narrow_slope);
+  // Computing initial parameters
+  // TODO: using guesses
+  Eigen::VectorXd initial_parameters;
+  initial_params = LinearApproximator::getDefaultParameters(parameters_limits,
+                                                            action_limits);
+  optimizer->setLimits(parameters_space);
+  Eigen::VectorXd refined_parameters = optimizer->train(initial_parameters);
   // Evaluate initial and final policy with updated parameters (on local space)
+  double initial_reward = localEvaluation(*policy, space, nb_evaluation_trials, engine);
   // Replace current if improvement has been seen
   // Update mutation properties:
   mutation->last_training = iterations;
@@ -122,6 +140,8 @@ void PolicyMutationLearner::to_xml(std::ostream &out) const {
 void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   // Calling parent implementation
   BlackBoxLearner::from_xml(node);
+  // Reading class variables
+  rosban_utils::xml_tools::try_read<int>(node, "training_evaluations", training_evaluations);
   // Optimizer is mandatory
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
   // Read Policy if provided (optional)
