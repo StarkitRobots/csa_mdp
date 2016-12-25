@@ -6,8 +6,10 @@
 #include "rosban_csa_mdp/core/policy_factory.h"
 
 #include "rosban_fa/constant_approximator.h"
-#include "rosban_fa/linear_approximator.h"
 #include "rosban_fa/fake_split.h"
+#include "rosban_fa/function_approximator_factory.h"
+#include "rosban_fa/linear_approximator.h"
+#include "rosban_fa/orthogonal_split.h"
 
 using namespace rosban_fa;
 
@@ -15,6 +17,8 @@ namespace csa_mdp
 {
 
 PolicyMutationLearner::PolicyMutationLearner()
+  : training_evaluations(50),
+    split_probability(0.1)
 {
 }
 
@@ -105,8 +109,16 @@ std::string PolicyMutationLearner::class_name() const {
 
 void PolicyMutationLearner::mutateLeaf(int mutation_id,
                                        std::default_random_engine * engine) {
-  //TODO random choice between split and refineMutation
-  refineMutation(mutation_id, engine);
+  //TODO introduce two diffrent types of mutations (refining + renewing)
+  double rand_val = std::uniform_real_distribution<double>(0.0,1.0)(*engine);
+  std::cout << "rand val: " << rand_val             << std::endl;
+  std::cout << "split proba: " << split_probability << std::endl;
+  if (rand_val < split_probability) {
+    splitMutation(mutation_id, engine);
+  }
+  else {
+    refineMutation(mutation_id, engine);
+  }
 }
 
 void PolicyMutationLearner::mutatePreLeaf(int mutation_id,
@@ -180,6 +192,49 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   mutation->last_training = iterations;
 }
 
+void PolicyMutationLearner::splitMutation(int mutation_id,
+                                          std::default_random_engine * engine) {
+  std::cout << "-> Applying a split mutation" << std::endl;
+  // TODO: Think if the mutation should test various splits
+  std::string tmp_path("/tmp/pml_fa_copy.data");//TODO replace by a real clone method
+  // Getting mutation properties
+  MutationCandidate mutation = mutation_candidates[mutation_id];
+  Eigen::MatrixXd leaf_space = mutation.space;
+  Eigen::MatrixXd leaf_center = (leaf_space.col(0) + leaf_space.col(1)) / 2;
+  const FunctionApproximator & leaf_fa = policy_tree->getLeafApproximator(leaf_center);
+  leaf_fa.save(tmp_path);
+  // Choosing split randomly
+  int input_dims = problem->stateDims();
+  int split_dim = std::uniform_int_distribution<int>(0, input_dims - 1)(*engine);
+  double split_val = (leaf_space(split_dim, 0) + leaf_space(split_dim,1)) / 2;
+  std::unique_ptr<Split> split(new OrthogonalSplit(split_dim, split_val));
+  // Compute list of mutations and approximators
+  std::vector<Eigen::MatrixXd> spaces = split->splitSpace(leaf_space);
+  std::vector<std::unique_ptr<FunctionApproximator>> approximators;
+  for (int i = 0; i < split->getNbElements(); i++) {
+    std::unique_ptr<FunctionApproximator> fa_copy;
+    FunctionApproximatorFactory().loadFromFile(tmp_path, fa_copy);
+    approximators.push_back(std::move(fa_copy));
+    MutationCandidate new_mutation;
+    new_mutation.space = spaces[i];
+    new_mutation.post_training_score = mutation.post_training_score;
+    new_mutation.mutation_score = mutation.mutation_score;
+    new_mutation.last_training = mutation.last_training;
+    new_mutation.is_leaf = true;
+    if (i == 0) {
+      mutation_candidates[mutation_id] = new_mutation;
+    }
+    else {
+      mutation_candidates.push_back(new_mutation);
+    }
+  }
+  // Replacing current approximator by the splitted version
+  std::unique_ptr<FunctionApproximator> new_approximator(new FATree(std::move(split),
+                                                                    approximators));
+  policy_tree->replaceApproximator(leaf_center, std::move(new_approximator));
+  policy = buildPolicy(*policy_tree);
+}
+
 void PolicyMutationLearner::to_xml(std::ostream &out) const {
   //TODO
   (void) out;
@@ -190,7 +245,8 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   // Calling parent implementation
   BlackBoxLearner::from_xml(node);
   // Reading class variables
-  rosban_utils::xml_tools::try_read<int>(node, "training_evaluations", training_evaluations);
+  rosban_utils::xml_tools::try_read<int>   (node, "training_evaluations", training_evaluations);
+  rosban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
   // Optimizer is mandatory
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
   // Read Policy if provided (optional)

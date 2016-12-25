@@ -66,6 +66,7 @@ double BlackBoxLearner::localEvaluation(const Policy & p,
                                         int nb_evaluations,
                                         std::default_random_engine * engine) const
 {
+  //TODO: multi_threading
   // Sampling starting states
   std::vector<Eigen::VectorXd> starting_states =
     rosban_random::getUniformSamples(space, nb_evaluations, engine);

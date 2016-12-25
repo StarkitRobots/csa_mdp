@@ -55,6 +55,9 @@ public:
   /// Try to refine the function approximator for the given mutation id
   void refineMutation(int mutation_id, std::default_random_engine * engine);
 
+  /// Split the given mutation on a random dimension
+  void splitMutation(int mutation_id, std::default_random_engine * engine);
+
   virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
@@ -80,7 +83,8 @@ protected:
   /// The number of evaluations used inside each space when training samples
   int training_evaluations;
 
-  
+  /// Probability of splitting a leaf when applying a mutation
+  double split_probability;  
 };
 
 }
