@@ -109,10 +109,8 @@ std::string PolicyMutationLearner::class_name() const {
 
 void PolicyMutationLearner::mutateLeaf(int mutation_id,
                                        std::default_random_engine * engine) {
-  //TODO introduce two diffrent types of mutations (refining + renewing)
+  //TODO introduce two different types of mutations (refining + renewing)
   double rand_val = std::uniform_real_distribution<double>(0.0,1.0)(*engine);
-  std::cout << "rand val: " << rand_val             << std::endl;
-  std::cout << "split proba: " << split_probability << std::endl;
   if (rand_val < split_probability) {
     splitMutation(mutation_id, engine);
   }
