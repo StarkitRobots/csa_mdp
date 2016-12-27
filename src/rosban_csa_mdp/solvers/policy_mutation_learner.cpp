@@ -193,14 +193,12 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
 void PolicyMutationLearner::splitMutation(int mutation_id,
                                           std::default_random_engine * engine) {
   std::cout << "-> Applying a split mutation" << std::endl;
-  // TODO: Think if the mutation should test various splits
-  std::string tmp_path("/tmp/pml_fa_copy.data");//TODO replace by a real clone method
+  // TODO: The mutation should test various splits and take the best one
   // Getting mutation properties
   MutationCandidate mutation = mutation_candidates[mutation_id];
   Eigen::MatrixXd leaf_space = mutation.space;
   Eigen::MatrixXd leaf_center = (leaf_space.col(0) + leaf_space.col(1)) / 2;
   const FunctionApproximator & leaf_fa = policy_tree->getLeafApproximator(leaf_center);
-  leaf_fa.save(tmp_path);
   // Choosing split randomly
   int input_dims = problem->stateDims();
   int split_dim = std::uniform_int_distribution<int>(0, input_dims - 1)(*engine);
@@ -210,8 +208,7 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
   std::vector<Eigen::MatrixXd> spaces = split->splitSpace(leaf_space);
   std::vector<std::unique_ptr<FunctionApproximator>> approximators;
   for (int i = 0; i < split->getNbElements(); i++) {
-    std::unique_ptr<FunctionApproximator> fa_copy;
-    FunctionApproximatorFactory().loadFromFile(tmp_path, fa_copy);
+    std::unique_ptr<FunctionApproximator> fa_copy = leaf_fa.clone();
     approximators.push_back(std::move(fa_copy));
     MutationCandidate new_mutation;
     new_mutation.space = spaces[i];
@@ -254,7 +251,7 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
 }
 
 std::unique_ptr<Policy> PolicyMutationLearner::buildPolicy(const FATree & tree) {
-  std::unique_ptr<FATree> tree_copy(tree.clone());
+  std::unique_ptr<FATree> tree_copy(static_cast<FATree *>(tree.clone().release()));
   std::unique_ptr<Policy> result(new FAPolicy(std::move(tree_copy)));
   result->setActionLimits(problem->getActionLimits());
   return std::move(result);
