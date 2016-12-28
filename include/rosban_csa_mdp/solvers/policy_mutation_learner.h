@@ -58,6 +58,13 @@ public:
   /// Split the given mutation on a random dimension
   void splitMutation(int mutation_id, std::default_random_engine * engine);
 
+  /// Try to split along 'split_dim' at the given mutation.
+  /// Return the FATree built to replace current approximator and update score
+  std::unique_ptr<rosban_fa::FATree>
+  trySplit(int mutation_id, int split_dim,
+           std::default_random_engine * engine,
+           double * score);
+
   virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;

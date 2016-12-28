@@ -128,7 +128,6 @@ void PolicyMutationLearner::mutatePreLeaf(int mutation_id,
 
 void PolicyMutationLearner::refineMutation(int mutation_id,
                                            std::default_random_engine * engine) {
-  std::cout << "-> Applying a refine mutation" << std::endl;
   // Get reference to the appropriate mutation
   MutationCandidate * mutation = &(mutation_candidates[mutation_id]);
   // Get space and center
@@ -137,6 +136,9 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   int input_dim = problem->stateDims();
   int output_dim = problem->actionDims();
   Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
+  // Debug:
+  std::cout << "-> Applying a refine mutation on space" << std::endl
+            << space.transpose() << std::endl;
   // Training function
   // TODO: use other models than PWL
   // TODO: something global should be done for guesses and models
@@ -149,6 +151,7 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
         new LinearApproximator(input_dim, output_dim, parameters, space_center));
       std::unique_ptr<FATree> new_tree;
       new_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(new_approximator));
+      //TODO: avoid this second copy of the tree which is not necessary
       std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
       return localEvaluation(*policy, space, training_evaluations, engine);
     };
@@ -169,6 +172,9 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   Eigen::VectorXd refined_parameters = optimizer->train(reward_func,
                                                         initial_parameters,
                                                         engine);
+  std::cout << "\tRefined parameters:" << std::endl
+            << "\t\t" << refined_parameters.transpose() << std::endl;
+
   std::unique_ptr<FunctionApproximator> refined_approximator(
     new LinearApproximator(input_dim, output_dim, refined_parameters, space_center));
   // Creating refined policy
@@ -193,23 +199,29 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
 void PolicyMutationLearner::splitMutation(int mutation_id,
                                           std::default_random_engine * engine) {
   std::cout << "-> Applying a split mutation" << std::endl;
-  // TODO: The mutation should test various splits and take the best one
-  // Getting mutation properties
-  MutationCandidate mutation = mutation_candidates[mutation_id];
-  Eigen::MatrixXd leaf_space = mutation.space;
-  Eigen::MatrixXd leaf_center = (leaf_space.col(0) + leaf_space.col(1)) / 2;
-  const FunctionApproximator & leaf_fa = policy_tree->getLeafApproximator(leaf_center);
-  // Choosing split randomly
-  int input_dims = problem->stateDims();
-  int split_dim = std::uniform_int_distribution<int>(0, input_dims - 1)(*engine);
-  double split_val = (leaf_space(split_dim, 0) + leaf_space(split_dim,1)) / 2;
-  std::unique_ptr<Split> split(new OrthogonalSplit(split_dim, split_val));
-  // Compute list of mutations and approximators
-  std::vector<Eigen::MatrixXd> spaces = split->splitSpace(leaf_space);
+  const MutationCandidate & mutation = mutation_candidates[mutation_id];
+  Eigen::MatrixXd space = mutation.space;
+  Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
+  // Testing all dimensions as split and keeping the best one
+  double best_score = std::numeric_limits<double>::lowest();
+  std::unique_ptr<FATree> best_tree;
+  for (int dim = 0; dim < problem->stateDims(); dim++) {
+    double score;
+    std::unique_ptr<FATree> current_tree = trySplit(mutation_id, dim, engine, &score);
+    if (score > best_score) {
+      best_score = score;
+      best_tree = std::move(current_tree);
+    }
+  }
+  // Avoiding risk of segfault if something wrong happened before
+  if (!best_tree) {
+    throw std::logic_error("PolicyMutationLearner::splitMutation: Failed to find a best tree");
+  }
+  // Updating mutation_candidates
   std::vector<std::unique_ptr<FunctionApproximator>> approximators;
-  for (int i = 0; i < split->getNbElements(); i++) {
-    std::unique_ptr<FunctionApproximator> fa_copy = leaf_fa.clone();
-    approximators.push_back(std::move(fa_copy));
+  const Split & split = best_tree->getPreLeafApproximator(space_center).getSplit();
+  std::vector<Eigen::MatrixXd> spaces = split.splitSpace(space);
+  for (int i = 0; i < split.getNbElements(); i++) {
     MutationCandidate new_mutation;
     new_mutation.space = spaces[i];
     new_mutation.post_training_score = mutation.post_training_score;
@@ -223,12 +235,87 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
       mutation_candidates.push_back(new_mutation);
     }
   }
-  // Replacing current approximator by the splitted version
-  std::unique_ptr<FunctionApproximator> new_approximator(new FATree(std::move(split),
-                                                                    approximators));
-  policy_tree->replaceApproximator(leaf_center, std::move(new_approximator));
+  policy_tree = std::move(best_tree);
   policy = buildPolicy(*policy_tree);
 }
+
+std::unique_ptr<rosban_fa::FATree>
+PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
+                                std::default_random_engine * engine,
+                                double * score) {
+  // Debug message
+  std::cout << "\tTesting split along " << split_dim << std::endl;
+  // Getting mutation properties
+  MutationCandidate mutation = mutation_candidates[mutation_id];
+  Eigen::MatrixXd leaf_space = mutation.space;
+  Eigen::MatrixXd leaf_center = (leaf_space.col(0) + leaf_space.col(1)) / 2;
+  int action_dims = problem->actionDims();
+  // Function to train has the following parameters:
+  // - Position of the split
+  // - Action in each part of the split
+  auto parameters_to_approximator =
+    [action_dims, split_dim]
+    (const Eigen::VectorXd & parameters)
+    {
+      // Importing values from parameters
+      double split_val = parameters[0];
+      std::unique_ptr<FunctionApproximator> action0(
+        new ConstantApproximator(parameters.segment(1, action_dims)));
+      std::unique_ptr<FunctionApproximator> action1(
+        new ConstantApproximator(parameters.segment(1+action_dims, action_dims)));
+      // Define Function approximator which will replace
+      std::unique_ptr<Split> split(new OrthogonalSplit(split_dim, split_val));
+      std::vector<std::unique_ptr<FunctionApproximator>> approximators;
+      approximators.push_back(std::move(action0));
+      approximators.push_back(std::move(action1));
+      return std::unique_ptr<FATree>(new FATree(std::move(split), approximators));
+    };
+  // Defining evaluation function
+  rosban_bbo::Optimizer::RewardFunc reward_func =
+    [this, split_dim, action_dims, leaf_space, leaf_center, parameters_to_approximator]
+    (const Eigen::VectorXd & parameters,
+     std::default_random_engine * engine)
+    {
+      std::unique_ptr<FATree> new_approximator;
+      new_approximator = parameters_to_approximator(parameters);
+      // Replace approximator
+      std::unique_ptr<FATree> new_tree;
+      new_tree = policy_tree->copyAndReplaceLeaf(leaf_center, std::move(new_approximator));
+      // build policy and evaluate
+      // TODO: avoid this second copy of the tree which is not necessary
+      std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
+      return localEvaluation(*policy, leaf_space, training_evaluations, engine);
+    };
+  // Define parameters_space
+  Eigen::MatrixXd parameters_space(1+2*action_dims,2);
+  parameters_space.row(0) = leaf_space.row(split_dim);
+  parameters_space.block(1,0,action_dims,2) = problem->getActionLimits();
+  parameters_space.block(1+action_dims,0,action_dims,2) = problem->getActionLimits();
+  optimizer->setLimits(parameters_space);
+  // Computing initial parameters
+  // TODO: eventually uses guess from current approximator
+  Eigen::VectorXd initial_parameters;
+  initial_parameters = (parameters_space.col(0) + parameters_space.col(1)) / 2;
+  // Optimize
+  Eigen::VectorXd optimized_parameters = optimizer->train(reward_func,
+                                                          initial_parameters,
+                                                          engine);
+  // Make a more approximate evaluation
+  std::unique_ptr<FunctionApproximator> optimized_approximator;
+  optimized_approximator = parameters_to_approximator(optimized_parameters);
+  std::unique_ptr<FATree> splitted_tree;
+  splitted_tree = policy_tree->copyAndReplaceLeaf(leaf_center,
+                                                  std::move(optimized_approximator));
+  std::unique_ptr<Policy> optimized_policy = buildPolicy(*splitted_tree);
+  // Evaluate with a larger set
+  *score = localEvaluation(*optimized_policy, leaf_space, nb_evaluation_trials, engine);
+  // Debug
+  std::cout << "\t->Optimized params: " << optimized_parameters.transpose() << std::endl;
+  std::cout << "\t->Avg reward: " << *score << std::endl;
+  // return optimized approximator
+  return std::move(splitted_tree);
+}
+
 
 void PolicyMutationLearner::to_xml(std::ostream &out) const {
   //TODO
