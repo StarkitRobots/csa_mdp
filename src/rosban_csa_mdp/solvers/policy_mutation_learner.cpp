@@ -18,7 +18,9 @@ namespace csa_mdp
 
 PolicyMutationLearner::PolicyMutationLearner()
   : training_evaluations(50),
-    split_probability(0.1)
+    split_probability(0.1),
+    local_probability(0.2),
+    narrow_probability(0.2)
 {
 }
 
@@ -103,10 +105,6 @@ void PolicyMutationLearner::mutate(int mutation_id,
   }
 }
 
-std::string PolicyMutationLearner::class_name() const {
-  return "PolicyMutationLearner";
-}
-
 void PolicyMutationLearner::mutateLeaf(int mutation_id,
                                        std::default_random_engine * engine) {
   //TODO introduce two different types of mutations (refining + renewing)
@@ -128,16 +126,30 @@ void PolicyMutationLearner::mutatePreLeaf(int mutation_id,
 
 void PolicyMutationLearner::refineMutation(int mutation_id,
                                            std::default_random_engine * engine) {
+  RefinementType type = sampleRefinementType(engine);
   // Get reference to the appropriate mutation
   MutationCandidate * mutation = &(mutation_candidates[mutation_id]);
-  // Get space and center
+  // Get space, center and original FA
   Eigen::MatrixXd space = mutation->space;
   Eigen::MatrixXd action_limits = problem->getActionLimits();
   int input_dim = problem->stateDims();
   int output_dim = problem->actionDims();
   Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
   // Debug:
-  std::cout << "-> Applying a refine mutation on space" << std::endl
+  std::cout << "-> Applying a refine mutation of type ";
+  std::string name;
+  switch(type) {
+    case RefinementType::local:
+      std::cout << "local";
+      break;
+    case RefinementType::narrow:
+      std::cout << "narrow";
+      break;
+    case RefinementType::wide:
+      std::cout << "wide";
+      break;
+  }
+  std::cout << " on space" << std::endl
             << space.transpose() << std::endl;
   // Training function
   // TODO: use other models than PWL
@@ -155,22 +167,16 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
       std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
       return localEvaluation(*policy, space, training_evaluations, engine);
     };
+  // Getting initial guess
+  Eigen::VectorXd parameters_guess = getGuess(*mutation);
   // Getting parameters_space
-  bool narrow_slope = false;
-  // TODO: options for narrow_slope probability
-  Eigen::MatrixXd parameters_space;
-  parameters_space = LinearApproximator::getParametersSpace(space,
-                                                            action_limits,
-                                                            narrow_slope);
-  // Computing initial parameters
-  // TODO: using guesses
-  Eigen::VectorXd initial_parameters;
-  initial_parameters = LinearApproximator::getDefaultParameters(space,
-                                                                action_limits);
+  Eigen::MatrixXd parameters_space = getParametersSpaces(space,
+                                                         parameters_guess,
+                                                         type);
   optimizer->setLimits(parameters_space);
   // Creating refined approximator
   Eigen::VectorXd refined_parameters = optimizer->train(reward_func,
-                                                        initial_parameters,
+                                                        parameters_guess,
                                                         engine);
   std::cout << "\tRefined parameters:" << std::endl
             << "\t\t" << refined_parameters.transpose() << std::endl;
@@ -194,6 +200,16 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   }
   // Update mutation properties:
   mutation->last_training = iterations;
+}
+
+PolicyMutationLearner::RefinementType
+PolicyMutationLearner::sampleRefinementType(std::default_random_engine * engine) const {
+  double val = std::uniform_real_distribution<double>(0,1)(*engine);
+  val -= local_probability;
+  if (val < 0) return RefinementType::local;
+  val -= narrow_probability;
+  if (val < 0) return RefinementType::narrow;
+  return RefinementType::wide;
 }
 
 void PolicyMutationLearner::splitMutation(int mutation_id,
@@ -316,6 +332,61 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
   return std::move(splitted_tree);
 }
 
+Eigen::VectorXd PolicyMutationLearner::getGuess(const MutationCandidate & mutation) const {
+  // Get space, center and original FA
+  Eigen::MatrixXd space = mutation.space;
+  Eigen::MatrixXd action_limits = problem->getActionLimits();
+  Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
+  const FunctionApproximator & fa = policy_tree->getLeafApproximator(space_center);
+  int action_dims = problem->actionDims();
+  // Default parameters
+  Eigen::VectorXd guess = LinearApproximator::getDefaultParameters(space,
+                                                                   action_limits);
+  // Case of Constant Approximator
+  try {
+    const ConstantApproximator & approximation =
+      dynamic_cast<const ConstantApproximator &>(fa);
+    guess.segment(0, action_dims) = approximation.getValue();
+    return guess;
+  } catch (const std::bad_cast & exc) {
+    // Nothing to be done
+  }
+  // Case of Linear Approximator
+  try {
+    const LinearApproximator & approximation =
+      dynamic_cast<const LinearApproximator &>(fa);
+    Eigen::VectorXd bias_at_center = approximation.getBias(space_center);
+    Eigen::VectorXd coeffs = approximation.getCoeffs();
+    guess.segment(0, action_dims) = bias_at_center;
+    guess.segment(action_dims, coeffs.rows()) = coeffs;
+    return guess;
+  } catch (const std::bad_cast & exc) {
+    // Nothing to be done
+  }
+  throw std::logic_error("PolicyMutationLearner::getGuess: type of 'fa' is not handled");
+}
+
+Eigen::MatrixXd PolicyMutationLearner::getParametersSpaces(const Eigen::MatrixXd & space,
+                                                           const Eigen::VectorXd & guess,
+                                                           RefinementType type) const {
+  // Space
+  Eigen::MatrixXd parameters_space;
+  bool narrow_slope = (type != RefinementType::wide);
+  parameters_space = LinearApproximator::getParametersSpace(space,
+                                                            problem->getActionLimits(),
+                                                            narrow_slope);
+  // If type is local, then: search around guess
+  if (type == RefinementType::local) {
+    Eigen::VectorXd parameters_size = parameters_space.col(1) - parameters_space.col(0);
+    parameters_space.col(0) = guess - parameters_size / 2;
+    parameters_space.col(1) = guess + parameters_size / 2;
+  }
+  return parameters_space;
+}
+
+std::string PolicyMutationLearner::class_name() const {
+  return "PolicyMutationLearner";
+}
 
 void PolicyMutationLearner::to_xml(std::ostream &out) const {
   //TODO
@@ -329,6 +400,8 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   // Reading class variables
   rosban_utils::xml_tools::try_read<int>   (node, "training_evaluations", training_evaluations);
   rosban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
+  rosban_utils::xml_tools::try_read<double>(node, "local_probability"   , local_probability   );
+  rosban_utils::xml_tools::try_read<double>(node, "narrow_probability"  , narrow_probability  );
   // Optimizer is mandatory
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
   // Read Policy if provided (optional)

@@ -27,6 +27,12 @@ protected:
     bool is_leaf;
   };
 
+  enum RefinementType {
+    wide,
+    narrow, 
+    local
+  };
+
 public:
   PolicyMutationLearner();
   virtual ~PolicyMutationLearner();
@@ -55,6 +61,8 @@ public:
   /// Try to refine the function approximator for the given mutation id
   void refineMutation(int mutation_id, std::default_random_engine * engine);
 
+  RefinementType sampleRefinementType(std::default_random_engine * engine) const;
+
   /// Split the given mutation on a random dimension
   void splitMutation(int mutation_id, std::default_random_engine * engine);
 
@@ -64,6 +72,17 @@ public:
   trySplit(int mutation_id, int split_dim,
            std::default_random_engine * engine,
            double * score);
+
+  /// Return the defaults parameters for Linear models
+  /// Throws an error if fa is not a LinearModel or constant model
+  Eigen::VectorXd getGuess(const MutationCandidate & mutation) const;
+
+  /// Return the parameters space for training a linear model given the
+  /// refinement type
+  Eigen::MatrixXd getParametersSpaces(const Eigen::MatrixXd & space,
+                                      const Eigen::VectorXd & guess,
+                                      RefinementType type) const;
+
 
   virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;
@@ -91,7 +110,13 @@ protected:
   int training_evaluations;
 
   /// Probability of splitting a leaf when applying a mutation
-  double split_probability;  
+  double split_probability;
+
+  /// Probability of refining locally when refining
+  double local_probability;
+
+  /// Probability of refining with narrow space when refining
+  double narrow_probability;
 };
 
 }
