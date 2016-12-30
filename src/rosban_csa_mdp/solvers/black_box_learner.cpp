@@ -81,15 +81,18 @@ double BlackBoxLearner::localEvaluation(const Policy & p,
                                         std::default_random_engine * engine) const
 {
   // Sampling starting states
-  std::vector<Eigen::VectorXd> starting_states =
-    rosban_random::getUniformSamples(space, nb_evaluations, engine);
   Eigen::VectorXd rewards = Eigen::VectorXd::Zero(nb_evaluations);
   // The task which has to be performed :
   rosban_utils::MultiCore::StochasticTask task =
-    [this, &p, &starting_states, &rewards]
+    [this, &p, &rewards, &space]
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
-      for (int idx = start_idx; idx < end_idx; idx++) {
+      // 1: Generating states
+      int thread_evaluations = end_idx - start_idx;
+      std::vector<Eigen::VectorXd> starting_states;
+      starting_states = rosban_random::getUniformSamples(space, thread_evaluations, engine);
+      // 2: Simulating trajectories
+      for (int idx = 0; idx < thread_evaluations; idx++) {
         Eigen::VectorXd state = starting_states[idx];
         double gain = 1.0;
         for (int step = 0; step < trial_length; step++) {
@@ -97,7 +100,7 @@ double BlackBoxLearner::localEvaluation(const Policy & p,
           Eigen::VectorXd next_state = problem->getSuccessor(state, action, engine);
           double step_reward = problem->getReward(state, action, next_state);
           state = next_state;
-          rewards(idx) += gain * step_reward;
+          rewards(idx + start_idx) += gain * step_reward;
           gain = gain * discount;
           if (problem->isTerminal(state)) break;
         }
