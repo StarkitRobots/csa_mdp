@@ -153,7 +153,6 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
             << space.transpose() << std::endl;
   // Training function
   // TODO: use other models than PWL
-  // TODO: something global should be done for guesses and models
   rosban_bbo::Optimizer::RewardFunc reward_func =
     [this, space, input_dim, output_dim, space_center]
     (const Eigen::VectorXd & parameters,
@@ -167,19 +166,40 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
       std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
       return localEvaluation(*policy, space, training_evaluations, engine);
     };
+  // Debug function
+  auto parameters_to_matrix =
+    [input_dim, output_dim](const Eigen::VectorXd & parameters)
+    {
+      Eigen::MatrixXd result(output_dim, input_dim+1);
+      for (int col = 0; col < input_dim+1; col++) {
+        result.col(col) = parameters.segment(col * output_dim, output_dim);
+      }
+      return result;
+    };
   // Getting initial guess
   Eigen::VectorXd parameters_guess = getGuess(*mutation);
   // Getting parameters_space
   Eigen::MatrixXd parameters_space = getParametersSpaces(space,
                                                          parameters_guess,
                                                          type);
+  for (int dim = 0; dim < parameters_guess.rows(); dim++) {
+    double original = parameters_guess(dim);
+    double min = parameters_space(dim, 0);
+    double max = parameters_space(dim, 1);
+    parameters_guess(dim) = std::min(max,std::max(min,original));
+  }
+  std::cout << "Parameters_space:" << std::endl
+            << parameters_space << std::endl;
+  std::cout << "Guess:" << std::endl
+            << parameters_to_matrix(parameters_guess) << std::endl;
+
   optimizer->setLimits(parameters_space);
   // Creating refined approximator
   Eigen::VectorXd refined_parameters = optimizer->train(reward_func,
                                                         parameters_guess,
                                                         engine);
   std::cout << "\tRefined parameters:" << std::endl
-            << "\t\t" << refined_parameters.transpose() << std::endl;
+            << parameters_to_matrix(refined_parameters) << std::endl;
 
   std::unique_ptr<FunctionApproximator> refined_approximator(
     new LinearApproximator(input_dim, output_dim, refined_parameters, space_center));
