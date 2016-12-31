@@ -95,6 +95,13 @@ void PolicyMutationLearner::setNbThreads(int nb_threads) {
   //optimizer->setNbThreads(nb_threads);
 }
 
+void PolicyMutationLearner::updateMutationsScores() {
+  for (MutationCandidate & c : mutation_candidates) {
+    // TODO: add custom parameter for basis
+    c.mutation_score = pow(1.02, (iterations - c.last_training));
+  }
+}
+
 void PolicyMutationLearner::mutate(int mutation_id,
                                    std::default_random_engine * engine) {
   if (mutation_candidates[mutation_id].is_leaf) {
@@ -262,7 +269,7 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
     new_mutation.space = spaces[i];
     new_mutation.post_training_score = mutation.post_training_score;
     new_mutation.mutation_score = mutation.mutation_score;
-    new_mutation.last_training = mutation.last_training;
+    new_mutation.last_training = 0;
     new_mutation.is_leaf = true;
     if (i == 0) {
       mutation_candidates[mutation_id] = new_mutation;

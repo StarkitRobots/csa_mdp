@@ -45,6 +45,9 @@ public:
   /// Choose a mutation among the available candidates according to their scores
   int getMutationId(std::default_random_engine * engine);
 
+  /// Update mutation scores according to their properties
+  void updateMutationsScores();
+
   /// Root of the mutation process
   void mutate(int mutation_id, std::default_random_engine * engine);
 
