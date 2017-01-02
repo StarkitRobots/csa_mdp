@@ -20,7 +20,8 @@ PolicyMutationLearner::PolicyMutationLearner()
   : training_evaluations(50),
     split_probability(0.1),
     local_probability(0.2),
-    narrow_probability(0.2)
+    narrow_probability(0.2),
+    split_margin(0.2)
 {
 }
 
@@ -114,7 +115,6 @@ void PolicyMutationLearner::mutate(int mutation_id,
 
 void PolicyMutationLearner::mutateLeaf(int mutation_id,
                                        std::default_random_engine * engine) {
-  //TODO introduce two different types of mutations (refining + renewing)
   double rand_val = std::uniform_real_distribution<double>(0.0,1.0)(*engine);
   if (rand_val < split_probability) {
     splitMutation(mutation_id, engine);
@@ -241,10 +241,12 @@ PolicyMutationLearner::sampleRefinementType(std::default_random_engine * engine)
 
 void PolicyMutationLearner::splitMutation(int mutation_id,
                                           std::default_random_engine * engine) {
-  std::cout << "-> Applying a split mutation" << std::endl;
   const MutationCandidate & mutation = mutation_candidates[mutation_id];
   Eigen::MatrixXd space = mutation.space;
   Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
+  // Debug message
+  std::cout << "-> Applying a split mutation on space" << std::endl
+            << space.transpose() << std::endl;
   // Testing all dimensions as split and keeping the best one
   double best_score = std::numeric_limits<double>::lowest();
   std::unique_ptr<FATree> best_tree;
@@ -329,9 +331,18 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
       std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
       return localEvaluation(*policy, leaf_space, training_evaluations, engine);
     };
+  // Computing boundaries for split
+  double dim_min = leaf_space(split_dim,0);
+  double dim_max = leaf_space(split_dim,1);
+  double delta = (dim_max - dim_min) * split_margin;
+  double split_min = dim_min + delta;
+  double split_max = dim_max - delta;
+  std::cout << "\t->Split value range:  [" << split_min << ", " << split_max << "]"
+            << std::endl;
   // Define parameters_space
   Eigen::MatrixXd parameters_space(1+2*action_dims,2);
-  parameters_space.row(0) = leaf_space.row(split_dim);
+  parameters_space(0,0) = split_min;
+  parameters_space(0,1) = split_max;
   parameters_space.block(1,0,action_dims,2) = problem->getActionLimits();
   parameters_space.block(1+action_dims,0,action_dims,2) = problem->getActionLimits();
   optimizer->setLimits(parameters_space);
@@ -429,10 +440,16 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   rosban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
   rosban_utils::xml_tools::try_read<double>(node, "local_probability"   , local_probability   );
   rosban_utils::xml_tools::try_read<double>(node, "narrow_probability"  , narrow_probability  );
+  rosban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
   // Optimizer is mandatory
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
   // Read Policy if provided (optional)
   PolicyFactory().tryRead(node, "policy", policy);
+  // Performing some checks
+  if (split_margin < 0 || split_margin >= 0.5) {
+    throw std::logic_error("PolicyMutationLearner::from_xml: invalid value for split_margin");
+  }
+  //TODO: add checks on probability
   // Synchronize number of threads
   setNbThreads(nb_threads);
 }

@@ -120,6 +120,12 @@ protected:
 
   /// Probability of refining with narrow space when refining
   double narrow_probability;
+
+  /// When operating a split on a dimension, this parameters ensures that the
+  /// split value is inside [min + delta, max - delta], with:
+  /// - delta: (max-min)*split_margin
+  /// split_margin has to be in [0, 0.5[ (otherwise, split space is empty)
+  double split_margin;
 };
 
 }
