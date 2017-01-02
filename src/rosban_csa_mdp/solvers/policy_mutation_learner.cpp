@@ -244,6 +244,7 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
   const MutationCandidate & mutation = mutation_candidates[mutation_id];
   Eigen::MatrixXd space = mutation.space;
   Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
+  const FunctionApproximator & leaf_fa = policy_tree->getLeafApproximator(space_center);
   // Debug message
   std::cout << "-> Applying a split mutation on space" << std::endl
             << space.transpose() << std::endl;
@@ -262,9 +263,10 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
   if (!best_tree) {
     throw std::logic_error("PolicyMutationLearner::splitMutation: Failed to find a best tree");
   }
+  // Getting ref to the chosen Split
+  const Split & split = best_tree->getPreLeafApproximator(space_center).getSplit();
   // Updating mutation_candidates
   std::vector<std::unique_ptr<FunctionApproximator>> approximators;
-  const Split & split = best_tree->getPreLeafApproximator(space_center).getSplit();
   std::vector<Eigen::MatrixXd> spaces = split.splitSpace(space);
   for (int i = 0; i < split.getNbElements(); i++) {
     MutationCandidate new_mutation;
@@ -280,8 +282,33 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
       mutation_candidates.push_back(new_mutation);
     }
   }
-  policy_tree = std::move(best_tree);
-  policy = buildPolicy(*policy_tree);
+  // Evaluating policy with respect to previous solution
+  std::unique_ptr<Policy> proposed_policy = buildPolicy(*best_tree);
+  double current_reward = localEvaluation(*policy, space,
+                                          nb_evaluation_trials, engine);
+  double proposed_reward = localEvaluation(*proposed_policy, space,
+                                          nb_evaluation_trials, engine);
+  std::cout << "\tCurrent reward: " << current_reward << std::endl;
+  std::cout << "\tProposed reward: " << proposed_reward << std::endl;
+  // If split improved reward, keep the new tree, otherwise, use previous
+  // approximators
+  if (proposed_reward > current_reward) {
+    policy_tree = std::move(best_tree);
+    policy = buildPolicy(*policy_tree);
+  }
+  else {
+    // Create a new FATree with cloned approximators
+    std::unique_ptr<Split> split_copy = split.clone();
+    std::vector<std::unique_ptr<FunctionApproximator>> approximators;
+    for (int elem = 0; elem < split.getNbElements(); elem++) {
+      approximators.push_back(leaf_fa.clone());
+    }
+    std::unique_ptr<FATree> new_leaf_fa(new FATree(std::move(split_copy),
+                                                   approximators));
+    // Replace it in policy tree and update policy
+    policy_tree->replaceApproximator(space_center, std::move(new_leaf_fa));
+    policy = buildPolicy(*policy_tree);
+  }
 }
 
 std::unique_ptr<rosban_fa::FATree>
