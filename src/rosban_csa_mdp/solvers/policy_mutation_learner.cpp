@@ -65,7 +65,8 @@ void PolicyMutationLearner::update(std::default_random_engine * engine) {
   mutate(mutation_id, engine);
   double new_reward = evaluatePolicy(*policy, engine);
   std::cout << "New reward: " << new_reward << std::endl;
-  // TODO update weights
+  policy_tree->save("policy_tree.bin");
+  updateMutationsScores();
 }
 
 int PolicyMutationLearner::getMutationId(std::default_random_engine * engine) {
