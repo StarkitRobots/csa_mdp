@@ -33,10 +33,18 @@ PolicyMutationLearner::~PolicyMutationLearner() {}
 void PolicyMutationLearner::init(std::default_random_engine * engine) {
   const Eigen::MatrixXd & action_limits = problem->getActionLimits();
   if (policy) {
-    // TODO:
-    // evaluate and print score from expert policy
-    // Approximate policy
-    throw std::logic_error("PolicyMutationLearner::init: import from policy not implemented");
+    policy_tree = policy->extractFATree();
+    policy = buildPolicy(*policy_tree);
+    std::vector<Eigen::MatrixXd> leaf_spaces;
+    policy_tree->addSpaces(problem->getStateLimits(), &leaf_spaces);
+    for (const Eigen::MatrixXd & leaf_space : leaf_spaces) {
+      MutationCandidate candidate;
+      candidate.space = leaf_space;
+      candidate.mutation_score = 1.0;
+      candidate.last_training = 0;
+      candidate.is_leaf = true;
+      mutation_candidates.push_back(candidate);
+    }
   }
   else {
     std::unique_ptr<Split> split(new FakeSplit());

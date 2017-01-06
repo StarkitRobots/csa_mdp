@@ -44,5 +44,9 @@ Eigen::VectorXd Policy::getAction(const Eigen::VectorXd &state,
   return boundAction(getRawAction(state, external_engine));
 }
 
+std::unique_ptr<rosban_fa::FATree> Policy::extractFATree() const {
+  // TODO: approximate current policy (raw actions) by a FATree
+  throw std::logic_error("Policy::extractFATree: unimplemented");
+}
 
 }

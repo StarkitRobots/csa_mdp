@@ -1,10 +1,13 @@
 #pragma once
 
+#include "rosban_fa/fa_tree.h"
+
 #include "rosban_utils/serializable.h"
 #include "rosban_utils/stream_serializable.h"
 
 #include <Eigen/Core>
 
+#include <memory>
 #include <random>
 
 namespace csa_mdp
@@ -36,6 +39,9 @@ public:
   /// Retrieve the raw action correspoding to the given state
   virtual Eigen::VectorXd getRawAction(const Eigen::VectorXd &state,
                                        std::default_random_engine * engine) const = 0;
+
+  /// Return an approximation of the current policy as a FATree
+  virtual std::unique_ptr<rosban_fa::FATree> extractFATree() const;
 
 protected:
   Eigen::MatrixXd action_limits;
