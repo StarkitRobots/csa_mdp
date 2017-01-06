@@ -11,7 +11,10 @@
 #include "rosban_fa/linear_approximator.h"
 #include "rosban_fa/orthogonal_split.h"
 
+#include "rosban_utils/time_stamp.h"
+
 using namespace rosban_fa;
+using rosban_utils::TimeStamp;
 
 namespace csa_mdp
 {
@@ -61,12 +64,21 @@ void PolicyMutationLearner::init(std::default_random_engine * engine) {
 }
 
 void PolicyMutationLearner::update(std::default_random_engine * engine) {
+  TimeStamp start = TimeStamp::now();
   int mutation_id = getMutationId(engine);
   mutate(mutation_id, engine);
+  TimeStamp post_mutation = TimeStamp::now();
   double new_reward = evaluatePolicy(*policy, engine);
+  TimeStamp post_evaluation = TimeStamp::now();
   std::cout << "New reward: " << new_reward << std::endl;
   policy_tree->save("policy_tree.bin");
   updateMutationsScores();
+  TimeStamp post_misc = TimeStamp::now();
+  // Writing data
+  writeTime("mutation"  , diffSec(start          , post_mutation  ));
+  writeTime("evaluation", diffSec(post_mutation  , post_evaluation));
+  writeTime("misc"      , diffSec(post_evaluation, post_misc      ));
+  writeScore(new_reward);
 }
 
 int PolicyMutationLearner::getMutationId(std::default_random_engine * engine) {
