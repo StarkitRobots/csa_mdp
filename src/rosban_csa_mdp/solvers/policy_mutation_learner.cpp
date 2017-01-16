@@ -24,11 +24,23 @@ PolicyMutationLearner::PolicyMutationLearner()
     split_probability(0.1),
     local_probability(0.2),
     narrow_probability(0.2),
-    split_margin(0.2)
+    split_margin(0.2),
+    evaluations_ratio(-1),
+    evaluations_growth(0)
 {
 }
 
 PolicyMutationLearner::~PolicyMutationLearner() {}
+
+int PolicyMutationLearner::getNbEvaluationTrials() const {
+  return nb_evaluation_trials + (int)(evaluations_growth * iterations);
+}
+
+int PolicyMutationLearner::getOptimizerMaxCall() const {
+  int evaluations_allowed = evaluations_ratio * getNbEvaluationTrials();
+  return (int)(evaluations_allowed / training_evaluations);
+}
+
 
 void PolicyMutationLearner::init(std::default_random_engine * engine) {
   const Eigen::MatrixXd & action_limits = problem->getActionLimits();
@@ -60,14 +72,14 @@ void PolicyMutationLearner::init(std::default_random_engine * engine) {
     candidate.space = problem->getStateLimits();
     candidate.post_training_score = localEvaluation(*policy,
                                                     candidate.space,
-                                                    training_evaluations,
+                                                    getNbEvaluationTrials(),
                                                     engine);
     candidate.mutation_score = 1.0;
     candidate.last_training = 0;
     candidate.is_leaf = true;
     mutation_candidates.push_back(candidate);
   }
-  double avg_reward = evaluatePolicy(*policy, engine);
+  double avg_reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine);
   std::cout << "Initial Reward: " << avg_reward << std::endl;
 }
 
@@ -76,7 +88,7 @@ void PolicyMutationLearner::update(std::default_random_engine * engine) {
   int mutation_id = getMutationId(engine);
   mutate(mutation_id, engine);
   TimeStamp post_mutation = TimeStamp::now();
-  double new_reward = evaluatePolicy(*policy, engine);
+  double new_reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine);
   TimeStamp post_evaluation = TimeStamp::now();
   std::cout << "New reward: " << new_reward << std::endl;
   policy_tree->save("policy_tree.bin");
@@ -88,6 +100,19 @@ void PolicyMutationLearner::update(std::default_random_engine * engine) {
   writeTime("misc"      , diffSec(post_evaluation, post_misc      ));
   writeScore(new_reward);
 }
+
+Eigen::VectorXd PolicyMutationLearner::optimize(rosban_bbo::Optimizer::RewardFunc rf,
+                                                const Eigen::MatrixXd & space,
+                                                const Eigen::VectorXd & guess,
+                                                std::default_random_engine * engine) {
+  // If activated, set the maximal number of calls to the reward function to optimizer
+  if (evaluations_ratio > 0) {
+    optimizer->setMaxCalls(getOptimizerMaxCall());
+  }
+  optimizer->setLimits(space);
+  return optimizer->train(rf, guess, engine);
+}
+
 
 int PolicyMutationLearner::getMutationId(std::default_random_engine * engine) {
   // Getting max_score
@@ -221,11 +246,11 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   std::cout << "Guess:" << std::endl
             << parameters_to_matrix(parameters_guess) << std::endl;
 
-  optimizer->setLimits(parameters_space);
   // Creating refined approximator
-  Eigen::VectorXd refined_parameters = optimizer->train(reward_func,
-                                                        parameters_guess,
-                                                        engine);
+  Eigen::VectorXd refined_parameters = optimize(reward_func,
+                                                parameters_space,
+                                                parameters_guess,
+                                                engine);
   std::cout << "\tRefined parameters:" << std::endl
             << parameters_to_matrix(refined_parameters) << std::endl;
 
@@ -236,8 +261,8 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   refined_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(refined_approximator));
   std::unique_ptr<Policy> refined_policy = buildPolicy(*refined_tree);
   // Evaluate initial and refined policy with updated parameters (on local space)
-  double initial_reward = localEvaluation(*policy, space, nb_evaluation_trials, engine);
-  double refined_reward = localEvaluation(*refined_policy, space, nb_evaluation_trials, engine);
+  double initial_reward = localEvaluation(*policy, space, getNbEvaluationTrials(), engine);
+  double refined_reward = localEvaluation(*refined_policy, space, getNbEvaluationTrials(), engine);
   std::cout << "\tinitial reward: " << initial_reward << std::endl;
   std::cout << "\trefined reward: " << refined_reward << std::endl;
   // Replace current if improvement has been seen
@@ -306,9 +331,9 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
   // Evaluating policy with respect to previous solution
   std::unique_ptr<Policy> proposed_policy = buildPolicy(*best_tree);
   double current_reward = localEvaluation(*policy, space,
-                                          nb_evaluation_trials, engine);
+                                          getNbEvaluationTrials(), engine);
   double proposed_reward = localEvaluation(*proposed_policy, space,
-                                          nb_evaluation_trials, engine);
+                                          getNbEvaluationTrials(), engine);
   std::cout << "\tCurrent reward: " << current_reward << std::endl;
   std::cout << "\tProposed reward: " << proposed_reward << std::endl;
   // If split improved reward, keep the new tree, otherwise, use previous
@@ -393,15 +418,15 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
   parameters_space(0,1) = split_max;
   parameters_space.block(1,0,action_dims,2) = problem->getActionLimits();
   parameters_space.block(1+action_dims,0,action_dims,2) = problem->getActionLimits();
-  optimizer->setLimits(parameters_space);
   // Computing initial parameters
   // TODO: eventually uses guess from current approximator
   Eigen::VectorXd initial_parameters;
   initial_parameters = (parameters_space.col(0) + parameters_space.col(1)) / 2;
   // Optimize
-  Eigen::VectorXd optimized_parameters = optimizer->train(reward_func,
-                                                          initial_parameters,
-                                                          engine);
+  Eigen::VectorXd optimized_parameters = optimize(reward_func,
+                                                  parameters_space,
+                                                  initial_parameters,
+                                                  engine);
   // Make a more approximate evaluation
   std::unique_ptr<FunctionApproximator> optimized_approximator;
   optimized_approximator = parameters_to_approximator(optimized_parameters);
@@ -410,7 +435,7 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
                                                   std::move(optimized_approximator));
   std::unique_ptr<Policy> optimized_policy = buildPolicy(*splitted_tree);
   // Evaluate with a larger set
-  *score = localEvaluation(*optimized_policy, leaf_space, nb_evaluation_trials, engine);
+  *score = localEvaluation(*optimized_policy, leaf_space, getNbEvaluationTrials(), engine);
   // Debug
   std::cout << "\t->Optimized params: " << optimized_parameters.transpose() << std::endl;
   std::cout << "\t->Avg reward: " << *score << std::endl;
@@ -489,6 +514,8 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   rosban_utils::xml_tools::try_read<double>(node, "local_probability"   , local_probability   );
   rosban_utils::xml_tools::try_read<double>(node, "narrow_probability"  , narrow_probability  );
   rosban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
+  rosban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
+  rosban_utils::xml_tools::try_read<double>(node, "evaluations_growth"  , evaluations_growth  );
   // Optimizer is mandatory
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
   // Read Policy if provided (optional)

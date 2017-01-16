@@ -34,9 +34,13 @@ public:
   /// Perform a single step of update of an iterative learner
   virtual void update(std::default_random_engine * engine) = 0;
 
-  /// Return the average score of the given policy, using a state chosen
-  /// randomly according to problem
+  /// Use nb_evaluation_trials evaluations
   virtual double evaluatePolicy(const Policy & p,
+                                std::default_random_engine * engine) const;
+
+  /// Return the average score of the given policy using 'nb_evaluations' trajectories
+  virtual double evaluatePolicy(const Policy & p,
+                                int nb_evaluations,
                                 std::default_random_engine * engine) const;
 
   /// Evaluate the average reward for policy p, for an uniform distribution in

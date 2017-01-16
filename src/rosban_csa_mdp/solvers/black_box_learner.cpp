@@ -41,12 +41,16 @@ void BlackBoxLearner::run(std::default_random_engine * engine)
   }
 }
 
+double BlackBoxLearner::evaluatePolicy(const Policy & p,
+                                       std::default_random_engine * engine) const {
+  return evaluatePolicy(p, nb_evaluation_trials, engine);
+}
 
 double BlackBoxLearner::evaluatePolicy(const Policy & p,
-                                       std::default_random_engine * engine) const
-{
+                                       int nb_evaluations,
+                                       std::default_random_engine * engine) const {
   // Rewards are computed by different threads and stored in the same vector
-  Eigen::VectorXd rewards = Eigen::VectorXd::Zero(nb_evaluation_trials);
+  Eigen::VectorXd rewards = Eigen::VectorXd::Zero(nb_evaluations);
   // The task which has to be performed :
   rosban_utils::MultiCore::StochasticTask task =
     [this, &p, &rewards]
@@ -68,9 +72,9 @@ double BlackBoxLearner::evaluatePolicy(const Policy & p,
     };
   // Preparing random_engines
   std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_evaluation_trials), engine);
+  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
   // Running computation
-  rosban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluation_trials, &engines);
+  rosban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
   // Result
   return rewards.mean();
 }

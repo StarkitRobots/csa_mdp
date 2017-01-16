@@ -37,6 +37,12 @@ public:
   PolicyMutationLearner();
   virtual ~PolicyMutationLearner();
 
+  /// Return the number of trials which should be used for evaluation
+  int getNbEvaluationTrials() const;
+
+  /// Return the number of calls to the reward function allowed for the optimizer
+  int getOptimizerMaxCall() const;
+
   virtual void init(std::default_random_engine * engine) override;
   virtual void update(std::default_random_engine * engine) override;
 
@@ -91,6 +97,11 @@ public:
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
 
+  Eigen::VectorXd optimize(rosban_bbo::Optimizer::RewardFunc rf,
+                           const Eigen::MatrixXd & space,
+                           const Eigen::VectorXd & guess,
+                           std::default_random_engine * engine);
+
   /// Clone the given tree and use it to build a policy. Also set the action
   /// limits
   std::unique_ptr<Policy> buildPolicy(const rosban_fa::FATree & tree);
@@ -126,6 +137,15 @@ protected:
   /// - delta: (max-min)*split_margin
   /// split_margin has to be in [0, 0.5[ (otherwise, split space is empty)
   double split_margin;
+
+  /// When > 0, the number of trajectories evaluated at each step by optimizer
+  /// is equal to 'evaluations_ratio' times the number of trajectories used to
+  /// compute the average reward over the whole space
+  /// TODO: implement it in pml
+  double evaluations_ratio;
+
+  /// Growth of the number of evaluation trials at each step
+  double evaluations_growth;
 };
 
 }
