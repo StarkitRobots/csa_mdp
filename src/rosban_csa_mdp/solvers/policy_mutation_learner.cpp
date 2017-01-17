@@ -27,7 +27,8 @@ PolicyMutationLearner::PolicyMutationLearner()
     narrow_probability(0.2),
     split_margin(0.2),
     evaluations_ratio(-1),
-    evaluations_growth(0)
+    evaluations_growth(0),
+    avoid_growing_slopes(true)
 {
 }
 
@@ -109,10 +110,11 @@ void PolicyMutationLearner::update(std::default_random_engine * engine) {
 Eigen::VectorXd PolicyMutationLearner::optimize(rosban_bbo::Optimizer::RewardFunc rf,
                                                 const Eigen::MatrixXd & space,
                                                 const Eigen::VectorXd & guess,
-                                                std::default_random_engine * engine) {
+                                                std::default_random_engine * engine,
+                                                double evaluation_mult) {
   // If activated, set the maximal number of calls to the reward function to optimizer
   if (evaluations_ratio > 0) {
-    optimizer->setMaxCalls(getOptimizerMaxCall());
+    optimizer->setMaxCalls(getOptimizerMaxCall() * evaluation_mult);
   }
   optimizer->setLimits(space);
   return optimizer->train(rf, guess, engine);
@@ -436,10 +438,12 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
     initial_parameters.segment(start, action_dims) = policy_tree->predict(center);
   }
   // Optimize
+  double evaluation_ratio = 1.0 / problem->getStateLimits().rows();
   Eigen::VectorXd optimized_parameters = optimize(reward_func,
                                                   parameters_space,
                                                   initial_parameters,
-                                                  engine);
+                                                  engine,
+                                                  evaluation_ratio);
   // Make a more approximate evaluation
   std::unique_ptr<FunctionApproximator> optimized_approximator;
   optimized_approximator = parameters_to_approximator(optimized_parameters);
@@ -448,7 +452,8 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
                                                   std::move(optimized_approximator));
   std::unique_ptr<Policy> optimized_policy = buildPolicy(*splitted_tree);
   // Evaluate with a larger set
-  *score = localEvaluation(*optimized_policy, leaf_space, getNbEvaluationTrials(), engine);
+  *score = localEvaluation(*optimized_policy, leaf_space,
+                           evaluation_ratio * getNbEvaluationTrials(), engine);
   // Debug
   std::cout << "\t->Optimized params: " << optimized_parameters.transpose() << std::endl;
   std::cout << "\t->Avg reward: " << *score << std::endl;
@@ -496,7 +501,11 @@ Eigen::MatrixXd PolicyMutationLearner::getParametersSpaces(const Eigen::MatrixXd
   // Space
   Eigen::MatrixXd parameters_space;
   bool narrow_slope = (type != RefinementType::wide);
-  parameters_space = LinearApproximator::getParametersSpace(space,
+  Eigen::MatrixXd space_for_parameters = space;
+  if (avoid_growing_slopes) {
+    space_for_parameters = problem->getStateLimits();
+  }
+  parameters_space = LinearApproximator::getParametersSpace(space_for_parameters,
                                                             problem->getActionLimits(),
                                                             narrow_slope);
   // If type is local, then: search around guess
@@ -522,6 +531,7 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   // Calling parent implementation
   BlackBoxLearner::from_xml(node);
   // Reading class variables
+  rosban_utils::xml_tools::try_read<bool>  (node, "avoid_growing_slopes", avoid_growing_slopes);
   rosban_utils::xml_tools::try_read<int>   (node, "training_evaluations", training_evaluations);
   rosban_utils::xml_tools::try_read<double>(node, "training_evaluations_growth",
                                             training_evaluations_growth);

@@ -101,10 +101,17 @@ public:
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
 
+  /// Return the best candidate found
+  /// rf: the reward function
+  /// space: The space allowed for parameters
+  /// guess: The initial candidate
+  /// engine: Used to draw random numbers
+  /// evaluation_gain: Multiplies the usual number of evaluations allowed to the optimizer
   Eigen::VectorXd optimize(rosban_bbo::Optimizer::RewardFunc rf,
                            const Eigen::MatrixXd & space,
                            const Eigen::VectorXd & guess,
-                           std::default_random_engine * engine);
+                           std::default_random_engine * engine,
+                           double evaluation_mult = 1);
 
   /// Clone the given tree and use it to build a policy. Also set the action
   /// limits
@@ -153,6 +160,10 @@ protected:
 
   /// Growth of the number of evaluation trials at each step
   double evaluations_growth;
+
+  /// If enabled, then maximal coefficients are always determined according to
+  /// the whole problem space
+  bool avoid_growing_slopes;
 };
 
 }
