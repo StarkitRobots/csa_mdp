@@ -418,10 +418,18 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
   parameters_space(0,1) = split_max;
   parameters_space.block(1,0,action_dims,2) = problem->getActionLimits();
   parameters_space.block(1+action_dims,0,action_dims,2) = problem->getActionLimits();
-  // Computing initial parameters
-  // TODO: eventually uses guess from current approximator
-  Eigen::VectorXd initial_parameters;
-  initial_parameters = (parameters_space.col(0) + parameters_space.col(1)) / 2;
+  // Computing initial parameters using current approximator
+  double split_default_val = (split_min + split_max) / 2;
+  std::unique_ptr<Split> initial_split(new OrthogonalSplit(split_dim, split_default_val));
+  std::vector<Eigen::MatrixXd> split_spaces = initial_split->splitSpace(leaf_space);
+  Eigen::VectorXd initial_parameters(1+2*action_dims);
+  initial_parameters(0) = split_default_val;
+  for (size_t leaf_id = 0; leaf_id < split_spaces.size(); leaf_id++) {
+    int start = 1 + action_dims * leaf_id;
+    const Eigen::MatrixXd & curr_space = split_spaces[leaf_id];
+    Eigen::VectorXd center = (curr_space.col(0) + curr_space.col(1)) / 2;
+    initial_parameters.segment(start, action_dims) = policy_tree->predict(center);
+  }
   // Optimize
   Eigen::VectorXd optimized_parameters = optimize(reward_func,
                                                   parameters_space,
