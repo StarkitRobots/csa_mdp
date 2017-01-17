@@ -40,6 +40,10 @@ public:
   /// Return the number of trials which should be used for evaluation
   int getNbEvaluationTrials() const;
 
+  /// How many evaluations are required inside a single space for evaluation of
+  /// the reward during the training phase
+  int getTrainingEvaluations() const;
+
   /// Return the number of calls to the reward function allowed for the optimizer
   int getOptimizerMaxCall() const;
 
@@ -122,6 +126,9 @@ protected:
 
   /// The number of evaluations used inside each space when training samples
   int training_evaluations;
+
+  /// The increase per iteration of number of evaluations used inside each space
+  double training_evaluations_growth;
 
   /// Probability of splitting a leaf when applying a mutation
   double split_probability;

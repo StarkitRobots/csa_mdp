@@ -21,6 +21,7 @@ namespace csa_mdp
 
 PolicyMutationLearner::PolicyMutationLearner()
   : training_evaluations(50),
+    training_evaluations_growth(0),
     split_probability(0.1),
     local_probability(0.2),
     narrow_probability(0.2),
@@ -36,9 +37,13 @@ int PolicyMutationLearner::getNbEvaluationTrials() const {
   return nb_evaluation_trials + (int)(evaluations_growth * iterations);
 }
 
+int PolicyMutationLearner::getTrainingEvaluations() const {
+  return training_evaluations + (int)(training_evaluations_growth * iterations);
+}
+
 int PolicyMutationLearner::getOptimizerMaxCall() const {
   int evaluations_allowed = evaluations_ratio * getNbEvaluationTrials();
-  return (int)(evaluations_allowed / training_evaluations);
+  return (int)(evaluations_allowed / getTrainingEvaluations());
 }
 
 
@@ -217,7 +222,7 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
       new_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(new_approximator));
       //TODO: avoid this second copy of the tree which is not necessary
       std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
-      return localEvaluation(*policy, space, training_evaluations, engine);
+      return localEvaluation(*policy, space, getTrainingEvaluations(), engine);
     };
   // Debug function
   auto parameters_to_matrix =
@@ -402,7 +407,7 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
       // build policy and evaluate
       // TODO: avoid this second copy of the tree which is not necessary
       std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
-      return localEvaluation(*policy, leaf_space, training_evaluations, engine);
+      return localEvaluation(*policy, leaf_space, getTrainingEvaluations(), engine);
     };
   // Computing boundaries for split
   double dim_min = leaf_space(split_dim,0);
@@ -518,6 +523,8 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   BlackBoxLearner::from_xml(node);
   // Reading class variables
   rosban_utils::xml_tools::try_read<int>   (node, "training_evaluations", training_evaluations);
+  rosban_utils::xml_tools::try_read<double>(node, "training_evaluations_growth",
+                                            training_evaluations_growth);
   rosban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
   rosban_utils::xml_tools::try_read<double>(node, "local_probability"   , local_probability   );
   rosban_utils::xml_tools::try_read<double>(node, "narrow_probability"  , narrow_probability  );
