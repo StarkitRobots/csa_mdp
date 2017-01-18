@@ -193,7 +193,7 @@ void BlackBoxLearner::openLogs()
   results_file.open("results.csv");
   // Writing headers
   time_file << "iteration,part,time" << std::endl;
-  results_file << "iteration,score" << std::endl;
+  results_file << "iteration,score,elapsed" << std::endl;
 }
 
 
@@ -211,7 +211,8 @@ void BlackBoxLearner::writeTime(const std::string & name, double time)
 }
 
 void BlackBoxLearner::writeScore(double score) {
-  results_file << iterations << "," << score << std::endl;
+  double elapsed = diffSec(learning_start, rosban_utils::TimeStamp::now());
+  results_file << iterations << "," << score << "," << elapsed << std::endl;
 }
 
 
