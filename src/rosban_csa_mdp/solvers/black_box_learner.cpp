@@ -119,6 +119,42 @@ double BlackBoxLearner::localEvaluation(const Policy & p,
   return rewards.mean();
 }
 
+double BlackBoxLearner::evaluation(const Policy & p,
+                                   const std::vector<Eigen::VectorXd> & initial_states,
+                                   std::default_random_engine * engine) const
+{
+  // Initializing reward list
+  int nb_evaluations = initial_states.size();
+  Eigen::VectorXd rewards = Eigen::VectorXd::Zero(nb_evaluations);
+  // The task which has to be performed :
+  rosban_utils::MultiCore::StochasticTask task =
+    [this, &p, &rewards, &initial_states]
+    (int start_idx, int end_idx, std::default_random_engine * engine)
+    {
+      // Simulating trajectories
+      for (int idx = start_idx; idx < end_idx; idx++) {
+        Eigen::VectorXd state = initial_states[idx];
+        double gain = 1.0;
+        for (int step = 0; step < trial_length; step++) {
+          Eigen::VectorXd action = p.getAction(state, engine);
+          Eigen::VectorXd next_state = problem->getSuccessor(state, action, engine);
+          double step_reward = problem->getReward(state, action, next_state);
+          state = next_state;
+          rewards(idx) += gain * step_reward;
+          gain = gain * discount;
+          if (problem->isTerminal(state)) break;
+        }
+      }
+    };
+  // Preparing random_engines
+  std::vector<std::default_random_engine> engines;
+  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
+  // Running computation
+  rosban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
+  // Result
+  return rewards.mean();
+}
+
 void BlackBoxLearner::setNbThreads(int nb_threads_)
 {
   nb_threads = nb_threads_;

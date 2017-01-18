@@ -50,6 +50,11 @@ public:
                          int nb_evaluations,
                          std::default_random_engine * engine) const;
 
+  /// Evaluate the policy for a set of given initial states
+  double evaluation(const Policy & p,
+                    const std::vector<Eigen::VectorXd> & initial_states,
+                    std::default_random_engine * engine) const;
+
   /// Set the maximal number of threads allowed
   virtual void setNbThreads(int nb_threads);
 

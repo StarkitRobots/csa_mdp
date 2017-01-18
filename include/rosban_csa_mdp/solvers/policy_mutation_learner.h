@@ -164,6 +164,9 @@ protected:
   /// If enabled, then maximal coefficients are always determined according to
   /// the whole problem space
   bool avoid_growing_slopes;
+
+  /// If enabled, initial_states are generated once by mutation
+  bool shared_initial_states;
 };
 
 }

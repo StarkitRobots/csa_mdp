@@ -10,7 +10,7 @@
 #include "rosban_fa/function_approximator_factory.h"
 #include "rosban_fa/linear_approximator.h"
 #include "rosban_fa/orthogonal_split.h"
-
+#include "rosban_random/tools.h"
 #include "rosban_utils/time_stamp.h"
 
 using namespace rosban_fa;
@@ -28,7 +28,8 @@ PolicyMutationLearner::PolicyMutationLearner()
     split_margin(0.2),
     evaluations_ratio(-1),
     evaluations_growth(0),
-    avoid_growing_slopes(true)
+    avoid_growing_slopes(true),
+    shared_initial_states(true)
 {
 }
 
@@ -211,10 +212,16 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   }
   std::cout << " on space" << std::endl
             << space.transpose() << std::endl;
+  // Are we using a single set of initial_states per mutation?
+  std::vector<Eigen::VectorXd> initial_states;
+  int nb_evaluations_allowed = getTrainingEvaluations();
+  if (shared_initial_states) {
+    initial_states = rosban_random::getUniformSamples(space, nb_evaluations_allowed, engine);
+  }
   // Training function
   // TODO: use other models than PWL
   rosban_bbo::Optimizer::RewardFunc reward_func =
-    [this, space, input_dim, output_dim, space_center]
+    [this, &space, input_dim, output_dim, &space_center, &initial_states, nb_evaluations_allowed]
     (const Eigen::VectorXd & parameters,
      std::default_random_engine * engine)
     {
@@ -224,7 +231,11 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
       new_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(new_approximator));
       //TODO: avoid this second copy of the tree which is not necessary
       std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
-      return localEvaluation(*policy, space, getTrainingEvaluations(), engine);
+      // Type of evaluation depends on the fact that initial_states have been created
+      if (initial_states.size() > 0) {
+        return evaluation(*policy, initial_states, engine);
+      }
+      return localEvaluation(*policy, space, nb_evaluations_allowed, engine);
     };
   // Debug function
   auto parameters_to_matrix =
@@ -531,8 +542,9 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   // Calling parent implementation
   BlackBoxLearner::from_xml(node);
   // Reading class variables
-  rosban_utils::xml_tools::try_read<bool>  (node, "avoid_growing_slopes", avoid_growing_slopes);
-  rosban_utils::xml_tools::try_read<int>   (node, "training_evaluations", training_evaluations);
+  rosban_utils::xml_tools::try_read<bool>  (node, "avoid_growing_slopes" , avoid_growing_slopes );
+  rosban_utils::xml_tools::try_read<bool>  (node, "shared_initial_states", shared_initial_states);
+  rosban_utils::xml_tools::try_read<int>   (node, "training_evaluations" , training_evaluations );
   rosban_utils::xml_tools::try_read<double>(node, "training_evaluations_growth",
                                             training_evaluations_growth);
   rosban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
