@@ -22,7 +22,7 @@ public:
   virtual void init();
 
   /// Define the minimal and maximal limits for the policy along each dimensions
-  virtual void setActionLimits(const Eigen::MatrixXd &limits);
+  virtual void setActionLimits(const std::vector<Eigen::MatrixXd> & limits);
 
   Eigen::VectorXd boundAction(const Eigen::VectorXd &raw_action) const;
   
@@ -44,7 +44,7 @@ public:
   virtual std::unique_ptr<rosban_fa::FATree> extractFATree() const;
 
 protected:
-  Eigen::MatrixXd action_limits;
+  std::vector<Eigen::MatrixXd> action_limits;
 
 };
 

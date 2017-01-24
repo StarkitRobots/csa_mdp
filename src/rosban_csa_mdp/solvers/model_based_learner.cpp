@@ -90,10 +90,10 @@ void ModelBasedLearner::internalUpdate()
   updatePolicy();
 }
 
-Problem::RewardFunction ModelBasedLearner::getRewardFunction()
-{
-  return this->model->getRewardFunction();
-}
+//Problem::RewardFunction ModelBasedLearner::getRewardFunction()
+//{
+//  return this->model->getRewardFunction();
+//}
 
 Problem::ValueFunction ModelBasedLearner::getValueFunction()
 {
@@ -130,9 +130,9 @@ void ModelBasedLearner::updateValue()
         Eigen::VectorXd state = this->samples[sample].state;
         double mean, var;
         reward_predictor->predict(state, *(this->getPolicy()),
-                                  this->model->getTransitionFunction(),
-                                  getRewardFunction(), getValueFunction(),
-                                  terminal_function, this->discount,
+                                  this->model->getResultFunction(),
+                                  getValueFunction(),
+                                  this->discount,
                                   &mean, &var, thread_engine);
         inputs.col(sample) = state;
         observations(sample) = mean;
@@ -167,30 +167,33 @@ void ModelBasedLearner::updatePolicy()
 {
   if (!action_optimizer)
   {
-    throw std::logic_error("ModelBasedLearner::updateValue: action optimizer is not initialized");
+    throw std::logic_error("ModelBasedLearner::updatePolicy: action optimizer is not initialized");
   }
   if (!policy_trainer)
   {
-    throw std::logic_error("ModelBasedLearner::updateValue: policy trainer is not initialized");
+    throw std::logic_error("ModelBasedLearner::updatePolicy: policy trainer is not initialized");
+  }
+  if (model->getNbActions() != 1)
+  {
+    throw std::logic_error("ModelBasedLearner::updatePolicy: multi_actions problems are not accepted");
   }
   int nb_samples = samples.size();
+  const Eigen::MatrixXd & action_limits = model->getActionLimits(0);
   Eigen::MatrixXd inputs(getStateLimits().rows(), nb_samples);
-  Eigen::MatrixXd observations(nb_samples, model->actionDims());
+  Eigen::MatrixXd observations(nb_samples, action_limits.rows());
   TimeStamp start_action_optimizer = TimeStamp::now();
   MultiCore::StochasticTask ao_task;
-  ao_task = [this, &inputs, &observations]
+  ao_task = [this, &inputs, &observations, &action_limits]
     (int start_idx, int end_idx, std::default_random_engine * thread_engine)
     {
       for (int sample = start_idx; sample < end_idx; sample++)
       {
         Eigen::VectorXd state = this->samples[sample].state;
         Eigen::VectorXd best_action;
-        best_action = this->action_optimizer->optimize(state, this->model->getActionLimits(),
+        best_action = this->action_optimizer->optimize(state, action_limits,
                                                        this->getPolicy(), 
-                                                       this->model->getTransitionFunction(),
-                                                       getRewardFunction(),
+                                                       this->model->getResultFunction(),
                                                        getValueFunction(),
-                                                       terminal_function,
                                                        this->discount,
                                                        thread_engine);
         inputs.col(sample) = state;

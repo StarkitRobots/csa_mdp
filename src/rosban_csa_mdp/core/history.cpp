@@ -90,14 +90,17 @@ std::vector<Sample> History::getBatch(const std::vector<History> &histories)
 
 std::vector<History> History::readCSV(const History::Config & conf)
 {
-  if (conf.log_path == "")
-  {
+  if (conf.log_path == "") {
     throw std::runtime_error("History::readCSV: Trying to read from a conf with log_path=\"\"");
   }
+  int nb_actions = conf.problem->getNbActions();
+  if (nb_actions > 1) {
+    throw std::logic_error("History::readCSV: not implemented for multi-action-spaces problems");
+  }
   // TODO start by validating config and accept other format
-  int nb_states = conf.problem->getStateLimits().rows();
-  int nb_actions = conf.problem->getActionLimits().rows();
-  return readCSV(conf.log_path, nb_states, nb_actions);
+  int nb_states_dims = conf.problem->getStateLimits().rows();
+  int nb_actions_dims = conf.problem->actionDims(0);
+  return readCSV(conf.log_path, nb_states_dims, nb_actions_dims);
 }
 
 std::vector<History> History::readCSV(const std::string &path,

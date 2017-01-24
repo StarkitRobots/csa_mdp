@@ -29,10 +29,8 @@ BasicOptimizer::BasicOptimizer()
 Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
                                          const Eigen::MatrixXd & action_limits,
                                          std::shared_ptr<const Policy> current_policy,
-                                         Problem::TransitionFunction transition_function,
-                                         Problem::RewardFunction reward_function,
+                                         Problem::ResultFunction result_function,
                                          Problem::ValueFunction value_function,
-                                         Problem::TerminalFunction terminal_function,
                                          double discount,
                                          std::default_random_engine * engine) const
 {
@@ -51,8 +49,8 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
   std::vector<std::default_random_engine> engines;
   engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_actions), engine);
   // Preparing function:
-  AOTask task = getTask(input, actions, current_policy, transition_function, reward_function,
-                        value_function, terminal_function, discount, results);
+  AOTask task = getTask(input, actions, current_policy, result_function,
+                        value_function, discount, results);
   // Now filling reward in parallel
   MultiCore::runParallelStochasticTask(task, nb_actions, &engines);
   // Train a function approximator
@@ -80,16 +78,13 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
 BasicOptimizer::AOTask BasicOptimizer::getTask(const Eigen::VectorXd & input,
                                                const Eigen::MatrixXd & actions,
                                                std::shared_ptr<const Policy> policy,
-                                               Problem::TransitionFunction transition_function,
-                                               Problem::RewardFunction reward_function,
+                                               Problem::ResultFunction result_function,
                                                Problem::ValueFunction value_function,
-                                               Problem::TerminalFunction terminal_function,
                                                double discount,
                                                Eigen::VectorXd & results) const
 {
-  return [this, input, actions, policy, transition_function,
-          reward_function, value_function, terminal_function,
-          discount, &results]
+  return [this, input, actions, policy, result_function,
+          value_function, discount, &results]
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
       for (int action = start_idx; action < end_idx; action++)
@@ -100,24 +95,23 @@ BasicOptimizer::AOTask BasicOptimizer::getTask(const Eigen::VectorXd & input,
         // Compute several simulations
         for (int sim = 0; sim < nb_simulations; sim++) {
           // 1. Using chosen action
-          Eigen::VectorXd state = transition_function(input, initial_action, engine);
-          total_reward += reward_function(input, initial_action, state);
+          Problem::Result result = result_function(input, initial_action, engine);
+          total_reward += result.reward;
           double coeff = discount;
           // 2. Using policy for a few steps
           for (int i = 0; i < this->nb_additional_steps; i++)
           {
             // Stop predicting steps if a terminal state has been reached
-            if (terminal_function(state)) break;
+            if (result.terminal) break;
 
-            Eigen::VectorXd action = policy->getAction(state, engine);
-            Eigen::VectorXd next_state = transition_function(state, action, engine);
-            total_reward += coeff * reward_function(state, action, next_state);
-            state = next_state;
+            Eigen::VectorXd action = policy->getAction(result.successor, engine);
+            result = result_function(result.successor, action, engine);
+            total_reward += coeff * result.reward;
             coeff *= discount;
           }
           // 3. Using value at final state if provided
-          if (value_function && !terminal_function(state)) {
-            total_reward += coeff * value_function(state);
+          if (value_function && !result.terminal) {
+            total_reward += coeff * value_function(result.successor);
           }
         }
         results(action) = total_reward / nb_simulations;

@@ -49,7 +49,7 @@ public:
   void saveStatus(const std::string &prefix) override;
 
   void setStateLimits(const Eigen::MatrixXd & limits) override;
-  void setActionLimits(const Eigen::MatrixXd & limits) override;
+  void setActionLimits(const std::vector<Eigen::MatrixXd> & limits) override;
   void updateQSpaceLimits();
 
   std::string class_name() const override;

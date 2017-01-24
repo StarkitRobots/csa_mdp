@@ -14,10 +14,8 @@ public:
 
   void predict(const Eigen::VectorXd & input,
                const Policy & policy,
-               Problem::TransitionFunction transition_function,
-               Problem::RewardFunction reward_function,
+               Problem::ResultFunction result_function,
                Problem::ValueFunction value_function,
-               Problem::TerminalFunction terminal_function,
                double discount,
                double * mean,
                double * var,
@@ -27,10 +25,8 @@ public:
 
   virtual RPTask getTask(const Eigen::VectorXd & input,
                          const Policy & policy,
-                         Problem::TransitionFunction transition_function,
-                         Problem::RewardFunction reward_function,
+                         Problem::ResultFunction result_function,
                          Problem::ValueFunction value_function,
-                         Problem::TerminalFunction terminal_function,
                          double discount,
                          std::vector<double> & rewards);
 
@@ -44,9 +40,6 @@ private:
 
   /// Number of steps before using ValueFunction
   int nb_steps;
-
-  //TODO add number of threads
-  std::default_random_engine engine;
 };
 
 }

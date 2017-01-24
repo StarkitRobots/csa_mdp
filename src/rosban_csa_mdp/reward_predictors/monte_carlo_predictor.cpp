@@ -17,10 +17,8 @@ MonteCarloPredictor::MonteCarloPredictor()
 
 void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
                                   const Policy & policy,
-                                  Problem::TransitionFunction transition_function,
-                                  Problem::RewardFunction reward_function,
+                                  Problem::ResultFunction result_function,
                                   Problem::ValueFunction value_function,
-                                  Problem::TerminalFunction terminal_function,
                                   double discount,
                                   double * mean,
                                   double * var,
@@ -29,8 +27,8 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
   std::vector<double> rewards(nb_predictions);
   // Preparing function:
   MonteCarloPredictor::RPTask prediction_task;
-  prediction_task = getTask(input, policy, transition_function, reward_function, value_function,
-                            terminal_function, discount, rewards);
+  prediction_task = getTask(input, policy, result_function, value_function,
+                            discount, rewards);
   // Preparing random_engines
   std::vector<std::default_random_engine> engines;
   engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_predictions), engine);
@@ -44,15 +42,12 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
 MonteCarloPredictor::RPTask
 MonteCarloPredictor::getTask(const Eigen::VectorXd & input,
                              const Policy & policy,
-                             Problem::TransitionFunction transition_function,
-                             Problem::RewardFunction reward_function,
+                             Problem::ResultFunction result_function,
                              Problem::ValueFunction value_function,
-                             Problem::TerminalFunction terminal_function,
                              double discount,
                              std::vector<double> & rewards)
 {
-  return [this, &input, &policy, transition_function,
-          reward_function, value_function, terminal_function,
+  return [this, &input, &policy, result_function, value_function,
           discount, &rewards]
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
@@ -61,20 +56,20 @@ MonteCarloPredictor::getTask(const Eigen::VectorXd & input,
         double coeff = 1;
         double reward = 0;
         Eigen::VectorXd state = input;
+        bool is_terminated = false;
         // Compute the reward over the next 'nb_steps'
-        for (int i = 0; i < nb_steps; i++)
-        {
-          // Stop predicting steps if a terminal state has been reached
-          if (terminal_function(state)) break;
-
+        for (int i = 0; i < nb_steps; i++) {
           Eigen::VectorXd action = policy.getAction(state, engine);
-          Eigen::VectorXd next_state = transition_function(state, action, engine);
-          reward += coeff * reward_function(state, action, next_state);
-          state = next_state;
+          Problem::Result result = result_function(state, action, engine);
+          reward += coeff * result.reward;
+          state = result.successor;
           coeff *= discount;
+          is_terminated = result.terminal;
+          // Stop predicting steps if a terminal state has been reached
+          if (is_terminated) break;
         }
-        // Use the value function to estimate long time reward
-        if (!terminal_function(state)) reward += coeff * value_function(state);
+        // Use the value function to estimate long time reward (if not terminated)
+        if (!is_terminated) reward += coeff * value_function(state);
         rewards[prediction] = reward;
       }
     };

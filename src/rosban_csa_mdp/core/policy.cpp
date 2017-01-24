@@ -10,25 +10,32 @@ Policy::Policy()
 
 void Policy::init(){}
 
-void Policy::setActionLimits(const Eigen::MatrixXd &limits)
+void Policy::setActionLimits(const std::vector<Eigen::MatrixXd> &limits)
 {
   action_limits = limits;
 }
 
 Eigen::VectorXd Policy::boundAction(const Eigen::VectorXd & raw_action) const
 {
-  if (raw_action.rows() != action_limits.rows())
-  {
+  int action_id = (int)raw_action(0);
+  int max_action = action_limits.size() -1;
+  if (action_id < 0 || action_id >= max_action) {
     std::ostringstream oss;
-    oss << "Policy::boundAction: Number of rows does not match" << std::endl
-        << "\traw_action   : " << raw_action.rows()    << std::endl
-        << "\taction_limits: " << action_limits.rows() << std::endl;
+    oss << "Policy::boundAction: action_id is invalid: "
+        << action_id << " is not in [0," << max_action << "]";
     throw std::runtime_error(oss.str());
   }
-  Eigen::VectorXd action(raw_action.rows());
-  for (int dim = 0; dim < raw_action.rows(); dim++)
-  {
-    action(dim) = std::min(action_limits(dim,1), std::max(action_limits(dim,0), raw_action(dim)));
+  const Eigen::MatrixXd & limits = action_limits[action_id];
+  int nb_action_dims = raw_action.rows() - 1; 
+  if (nb_action_dims != limits.rows()) {
+    std::ostringstream oss;
+    oss << "Policy::boundAction: Number of rows does not match"
+        << nb_action_dims << " while " << limits.rows() << " were expected";
+    throw std::runtime_error(oss.str());
+  }
+  Eigen::VectorXd action = raw_action;
+  for (int dim = 1; dim < raw_action.rows(); dim++) {
+    action(dim) = std::min(limits(dim,1), std::max(limits(dim,0), action(dim)));
   }
   return action;
 }

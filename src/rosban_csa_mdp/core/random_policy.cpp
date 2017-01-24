@@ -21,19 +21,23 @@ Eigen::VectorXd RandomPolicy::getRawAction(const Eigen::VectorXd &state,
 {
   (void)state;
   bool delete_engine = false;
-  if (external_engine == nullptr)
-  {
+  if (external_engine == nullptr) {
     delete_engine = true;
     external_engine = rosban_random::newRandomEngine();
   }
-  Eigen::VectorXd cmd(action_limits.rows());
-  for (int dim = 0; dim < cmd.rows(); dim++)
-  {
-    std::uniform_real_distribution<double> distrib(action_limits(dim,0), action_limits(dim,1));
-    cmd(dim) = distrib(*external_engine);
+  // Choosing action_id randomly
+  std::uniform_int_distribution<int> action_distrib(0, action_limits.size() - 1);
+  int action_id = action_distrib(*external_engine);
+  // Choosing randomly among continuous dimensions
+  const Eigen::MatrixXd & limits = action_limits[action_id];
+  Eigen::VectorXd raw_action(limits.rows() + 1);
+  raw_action(0) = action_id;
+  for (int dim = 0; dim < limits.rows(); dim++) {
+    std::uniform_real_distribution<double> distrib(limits(dim,0), limits(dim,1));
+    raw_action(dim + 1) = distrib(*external_engine);
   }
   if (delete_engine) { delete(external_engine); }
-  return cmd;
+  return raw_action;
 }
 
 void RandomPolicy::to_xml(std::ostream & out) const

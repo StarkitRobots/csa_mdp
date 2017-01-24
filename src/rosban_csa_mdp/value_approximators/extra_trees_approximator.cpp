@@ -46,10 +46,8 @@ ExtraTreesApproximator::train(const Policy & policy,
         Eigen::VectorXd state = inputs.col(sample);
         double mean, var;
         predictor->predict(state, policy,
-                           problem.getTransitionFunction(),
-                           problem.getRewardFunction(),
+                           problem.getResultFunction(),
                            current_value_function,
-                           problem.getTerminalFunction(),
                            discount,
                            &mean, &var,
                            thread_engine);

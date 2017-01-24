@@ -26,7 +26,7 @@ void Learner::setStateLimits(const Eigen::MatrixXd & new_state_limits)
   state_limits = new_state_limits;
 }
 
-void Learner::setActionLimits(const Eigen::MatrixXd & new_action_limits)
+void Learner::setActionLimits(const std::vector<Eigen::MatrixXd> & new_action_limits)
 {
   action_limits = new_action_limits;
 }
@@ -46,7 +46,7 @@ Eigen::MatrixXd Learner::getStateLimits() const
   return state_limits;
 }
 
-Eigen::MatrixXd Learner::getActionLimits() const
+std::vector<Eigen::MatrixXd> Learner::getActionLimits() const
 {
   return action_limits;
 }

@@ -43,9 +43,12 @@ void MRE::feed(const Sample &s)
   if (!knownness_forest) {
     throw std::logic_error("MRE::feed: knownness_forest has not been initialized");
   }
+  if (getActionLimits().size() !=1) {
+    throw std::runtime_error("MRE::feed: not implemented for multiple actions problems");
+  }
 
   int s_dim = getStateLimits().rows();
-  int a_dim = getActionLimits().rows();
+  int a_dim = getActionLimits()[0].rows();
   // Add the new 4 tuple
   samples.push_back(s);
   // Adding last_point to knownness tree
@@ -62,30 +65,40 @@ void MRE::feed(const Sample &s)
 
 Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
 {
+  if (getActionLimits().size() !=1) {
+    throw std::runtime_error("MRE::getAction: not implemented for multiple actions problems");
+  }
+  const Eigen::MatrixXd & limits = getActionLimits()[0];
   if (hasAvailablePolicy()) {
+
     Eigen::VectorXd action(policies.size());
     for (size_t i = 0; i < policies.size(); i++)
     {
       action(i) = policies[i]->getRandomizedValue(state, random_engine);
-      double min = getActionLimits()(i,0);
-      double max = getActionLimits()(i,1);
+      double min = limits(i,0);
+      double max = limits(i,1);
       // Ensuring that action is in the given bounds
       if (action(i) < min) action(i) = min;
       if (action(i) > max) action(i) = max;
     }
     return action;
   }
-  return rosban_random::getUniformSamples(getActionLimits(), 1, &random_engine)[0];
+  return rosban_random::getUniformSamples(limits, 1, &random_engine)[0];
 }
 
 void MRE::internalUpdate()
 {
+  if (getActionLimits().size() !=1) {
+    throw std::runtime_error("MRE::getAction: not implemented for multiple actions problems");
+  }
+  const Eigen::MatrixXd & limits = getActionLimits()[0];
+
   // Updating the policy
   Benchmark::open("solver.solve");
   solver.solve(samples, terminal_function, mrefpf_conf);
   Benchmark::close();//true, -1);
   policies.clear();
-  for (int dim = 0; dim < getActionLimits().rows(); dim++)
+  for (int dim = 0; dim < limits.rows(); dim++)
   {
     //TODO software design should really be improved
     policies.push_back(solver.stealPolicyForest(dim));
@@ -109,8 +122,13 @@ const regression_forests::Forest & MRE::getPolicy(int dim)
 
 void MRE::savePolicy(const std::string &prefix)
 {
+  if (getActionLimits().size() !=1) {
+    throw std::runtime_error("MRE::getAction: not implemented for multiple actions problems");
+  }
+  const Eigen::MatrixXd & limits = getActionLimits()[0];
+
   std::unique_ptr<ForestApproximator::Forests> forests(new ForestApproximator::Forests);
-  for (int dim = 0; dim < getActionLimits().rows(); dim++)
+  for (int dim = 0; dim < limits.rows(); dim++)
   {
     forests->push_back(std::unique_ptr<Forest>(policies[dim]->clone()));
   }
@@ -148,10 +166,14 @@ void MRE::setStateLimits(const Eigen::MatrixXd & limits)
   updateQSpaceLimits();
 }
 
-void MRE::setActionLimits(const Eigen::MatrixXd & limits)
+void MRE::setActionLimits(const std::vector<Eigen::MatrixXd> & limits)
 {
+  if (limits.size() != 1) {
+    throw std::runtime_error("MRE::setActionLimits: not implemented for multiple actions problems");
+  }
+
   Learner::setActionLimits(limits);
-  mrefpf_conf.setActionLimits(limits);
+  mrefpf_conf.setActionLimits(limits[0]);
   updateQSpaceLimits();
 }
 

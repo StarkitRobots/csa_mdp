@@ -29,7 +29,7 @@ void TreePolicyIteration::init(std::default_random_engine * engine)
   }
   // Reset policy if necessary
   policy->init();
-  policy->setActionLimits(problem->getActionLimits());
+  policy->setActionLimits(problem->getActionsLimits());
   best_score = evaluatePolicy(*policy, engine);
   writeScore(best_score);
 }
@@ -95,41 +95,45 @@ TreePolicyIteration::updatePolicy(std::default_random_engine * engine) {
     {
       // Computing first step reward and successor
       Eigen::VectorXd state = parameters;
-      Eigen::VectorXd next_state = problem->getSuccessor(state, actions, engine);
-      double reward = problem->getReward(state, actions, next_state);
-      double value, value_var;
+      Problem::Result result = problem->getSuccessor(state, actions, engine);
       // If a value approximator is used, only one step is required
       if (this->use_value_approximator) {
-        this->value->predict(next_state, value, value_var);
-        return reward + this->discount * value;
+        double value, value_var;
+        this->value->predict(result.successor, value, value_var);
+        return result.reward + this->discount * value;
       }
       // Otherwise, do multiple steps
-      state = next_state;
+      double reward = result.reward;
+      state = result.successor;
       double gain = this->discount;
       for (int step = 1; step < this->trial_length; step++) {
+        // Stop iterations if we reached a terminal state
+        if (result.terminal) break;
         // Computing step
         Eigen::VectorXd action = policy->getAction(state, engine);
-        next_state = problem->getSuccessor(state, action, engine);
-        double step_reward = problem->getReward(state, actions, next_state);
+        result = problem->getSuccessor(state, action, engine);
         // Accumulating reward
-        reward += step_reward * gain;
+        reward += result.reward * gain;
         // Updating values
-        state = next_state;
+        state = result.successor;
         gain *= discount;
-        // Stop iterations if we reached a terminal state
-        if (problem->isTerminal(state)) break;
       }
       return reward;
     };
   if (memoryless_policy_trainer) {
     policy_trainer->reset();
   }
+
+  if (problem->getNbActions() != 1) {
+    throw std::runtime_error("TreePolicyIteration::updatePolicy: not able to handle multiple actions");
+  }
+
   policy_trainer->setParametersLimits(problem->getStateLimits());
-  policy_trainer->setActionsLimits(problem->getActionLimits());
+  policy_trainer->setActionsLimits(problem->getActionLimits(0));
   std::unique_ptr<rosban_fa::FunctionApproximator> fa;
   fa = policy_trainer->train(reward_func, engine);
   std::unique_ptr<Policy> new_policy(new FAPolicy(std::move(fa)));
-  new_policy->setActionLimits(problem->getActionLimits());
+  new_policy->setActionLimits(problem->getActionsLimits());
   return std::move(new_policy);
 }
 

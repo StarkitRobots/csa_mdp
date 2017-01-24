@@ -61,12 +61,12 @@ double BlackBoxLearner::evaluatePolicy(const Policy & p,
         double gain = 1.0;
         for (int step = 0; step < trial_length; step++) {
           Eigen::VectorXd action = p.getAction(state, engine);
-          Eigen::VectorXd next_state = problem->getSuccessor(state, action, engine);
-          double step_reward = problem->getReward(state, action, next_state);
-          state = next_state;
+          Problem::Result result = problem->getSuccessor(state, action, engine);
+          double step_reward = result.reward;
+          state = result.successor;
           rewards(idx) += gain * step_reward;
           gain = gain * discount;
-          if (problem->isTerminal(state)) break;
+          if (result.terminal) break;
         }
       }
     };
@@ -101,12 +101,11 @@ double BlackBoxLearner::localEvaluation(const Policy & p,
         double gain = 1.0;
         for (int step = 0; step < trial_length; step++) {
           Eigen::VectorXd action = p.getAction(state, engine);
-          Eigen::VectorXd next_state = problem->getSuccessor(state, action, engine);
-          double step_reward = problem->getReward(state, action, next_state);
-          state = next_state;
-          rewards(idx + start_idx) += gain * step_reward;
+          Problem::Result result = problem->getSuccessor(state, action, engine);
+          state = result.successor;
+          rewards(idx + start_idx) += gain * result.reward;
           gain = gain * discount;
-          if (problem->isTerminal(state)) break;
+          if (result.terminal) break;
         }
       }
     };
@@ -137,12 +136,11 @@ double BlackBoxLearner::evaluation(const Policy & p,
         double gain = 1.0;
         for (int step = 0; step < trial_length; step++) {
           Eigen::VectorXd action = p.getAction(state, engine);
-          Eigen::VectorXd next_state = problem->getSuccessor(state, action, engine);
-          double step_reward = problem->getReward(state, action, next_state);
-          state = next_state;
-          rewards(idx) += gain * step_reward;
+          Problem::Result result = problem->getSuccessor(state, action, engine);
+          state = result.successor;
+          rewards(idx) += gain * result.reward;
           gain = gain * discount;
-          if (problem->isTerminal(state)) break;
+          if (result.terminal) break;
         }
       }
     };

@@ -50,7 +50,7 @@ int PolicyMutationLearner::getOptimizerMaxCall() const {
 
 
 void PolicyMutationLearner::init(std::default_random_engine * engine) {
-  const Eigen::MatrixXd & action_limits = problem->getActionLimits();
+  // If a policy has been specified, try to extract a FATree from policy
   if (policy) {
     policy_tree = policy->extractFATree();
     policy = buildPolicy(*policy_tree);
@@ -67,8 +67,13 @@ void PolicyMutationLearner::init(std::default_random_engine * engine) {
   }
   else {
     std::unique_ptr<Split> split(new FakeSplit());
+    // Default action choice is 0
+    int action_id = 0;
+    const Eigen::MatrixXd & action_limits = problem->getActionLimits(action_id);
     // Default action is the middle of the space
-    Eigen::VectorXd action = (action_limits.col(0) + action_limits.col(1)) / 2;
+    Eigen::VectorXd action(action_limits.rows() + 1);
+    action(0) = action_id;
+    action.segment(1, action_limits.rows()) = (action_limits.col(0) + action_limits.col(1)) / 2;
     std::unique_ptr<FunctionApproximator> default_fa(new ConstantApproximator(action));
     std::vector<std::unique_ptr<FunctionApproximator>> fas;
     fas.push_back(std::move(default_fa));
@@ -190,12 +195,15 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   RefinementType type = sampleRefinementType(engine);
   // Get reference to the appropriate mutation
   MutationCandidate * mutation = &(mutation_candidates[mutation_id]);
-  // Get space, center and original FA
+  // Get space, and space center
   Eigen::MatrixXd space = mutation->space;
-  Eigen::MatrixXd action_limits = problem->getActionLimits();
   int input_dim = problem->stateDims();
-  int output_dim = problem->actionDims();
   Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
+  // Getting current action_id
+  Eigen::VectorXd current_action = policy_tree->predict(space_center);
+  int action_id = (int)current_action(0);
+  int output_dim = problem->actionDims(action_id);
+  Eigen::MatrixXd action_limits = problem->getActionLimits(action_id);
   // Debug:
   std::cout << "-> Applying a refine mutation of type ";
   std::string name;
@@ -385,7 +393,11 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
   MutationCandidate mutation = mutation_candidates[mutation_id];
   Eigen::MatrixXd leaf_space = mutation.space;
   Eigen::MatrixXd leaf_center = (leaf_space.col(0) + leaf_space.col(1)) / 2;
-  int action_dims = problem->actionDims();
+  // Getting current action_id
+  Eigen::VectorXd current_action = policy_tree->predict(leaf_center);
+  int action_id = (int)current_action(0);
+  Eigen::MatrixXd action_limits = problem->getActionLimits(action_id);
+  int action_dims = problem->actionDims(action_id);
   // Function to train has the following parameters:
   // - Position of the split
   // - Action in each part of the split
@@ -434,8 +446,8 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
   Eigen::MatrixXd parameters_space(1+2*action_dims,2);
   parameters_space(0,0) = split_min;
   parameters_space(0,1) = split_max;
-  parameters_space.block(1,0,action_dims,2) = problem->getActionLimits();
-  parameters_space.block(1+action_dims,0,action_dims,2) = problem->getActionLimits();
+  parameters_space.block(1,0,action_dims,2) = action_limits;
+  parameters_space.block(1+action_dims,0,action_dims,2) = action_limits;
   // Computing initial parameters using current approximator
   double split_default_val = (split_min + split_max) / 2;
   std::unique_ptr<Split> initial_split(new OrthogonalSplit(split_dim, split_default_val));
@@ -475,10 +487,11 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
 Eigen::VectorXd PolicyMutationLearner::getGuess(const MutationCandidate & mutation) const {
   // Get space, center and original FA
   Eigen::MatrixXd space = mutation.space;
-  Eigen::MatrixXd action_limits = problem->getActionLimits();
   Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
   const FunctionApproximator & fa = policy_tree->getLeafApproximator(space_center);
-  int action_dims = problem->actionDims();
+  int action_id = fa.predict(space_center)(0);
+  Eigen::MatrixXd action_limits = problem->getActionLimits(action_id);
+  int action_dims = problem->actionDims(action_id);
   // Default parameters
   Eigen::VectorXd guess = LinearApproximator::getDefaultParameters(space,
                                                                    action_limits);
