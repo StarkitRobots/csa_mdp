@@ -226,15 +226,32 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   if (shared_initial_states) {
     initial_states = rosban_random::getUniformSamples(space, nb_evaluations_allowed, engine);
   }
+  // Add the parameters to provide an action_id
+  auto parameters_to_full =
+    [input_dim, output_dim, action_id]
+    (const Eigen::VectorXd & raw_params)
+    {
+      Eigen::VectorXd full_params((input_dim+1) * (output_dim+1));
+      for (int col = 0; col < input_dim+1; col++) {
+        int start = col * (output_dim+1);
+        full_params(start) = col == 0 ? action_id : 0;
+        full_params.segment(start+1, output_dim) = raw_params.segment(col*output_dim, output_dim);
+      }
+      return full_params;
+    };
   // Training function
   // TODO: use other models than PWL
   rosban_bbo::Optimizer::RewardFunc reward_func =
-    [this, &space, input_dim, output_dim, &space_center, &initial_states, nb_evaluations_allowed]
+    [this, &space, input_dim, output_dim, &space_center, &initial_states,
+     nb_evaluations_allowed, action_id, &parameters_to_full]
     (const Eigen::VectorXd & parameters,
      std::default_random_engine * engine)
     {
+      // Add the parameters to choose action id
+      Eigen::VectorXd full_params = parameters_to_full(parameters);
+      // Build the tree
       std::unique_ptr<FunctionApproximator> new_approximator(
-        new LinearApproximator(input_dim, output_dim, parameters, space_center));
+        new LinearApproximator(input_dim, output_dim + 1, full_params, space_center));
       std::unique_ptr<FATree> new_tree;
       new_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(new_approximator));
       //TODO: avoid this second copy of the tree which is not necessary
@@ -249,7 +266,7 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   auto parameters_to_matrix =
     [input_dim, output_dim](const Eigen::VectorXd & parameters)
     {
-      Eigen::MatrixXd result(output_dim, input_dim+1);
+      Eigen::MatrixXd result(output_dim + 1, input_dim+1);
       for (int col = 0; col < input_dim+1; col++) {
         result.col(col) = parameters.segment(col * output_dim, output_dim);
       }
@@ -260,7 +277,8 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   // Getting parameters_space
   Eigen::MatrixXd parameters_space = getParametersSpaces(space,
                                                          parameters_guess,
-                                                         type);
+                                                         type,
+                                                         action_id);
   for (int dim = 0; dim < parameters_guess.rows(); dim++) {
     double original = parameters_guess(dim);
     double min = parameters_space(dim, 0);
@@ -277,11 +295,12 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
                                                 parameters_space,
                                                 parameters_guess,
                                                 engine);
+  refined_parameters = parameters_to_full(refined_parameters);
   std::cout << "\tRefined parameters:" << std::endl
             << parameters_to_matrix(refined_parameters) << std::endl;
 
   std::unique_ptr<FunctionApproximator> refined_approximator(
-    new LinearApproximator(input_dim, output_dim, refined_parameters, space_center));
+    new LinearApproximator(input_dim, output_dim + 1, refined_parameters, space_center));
   // Creating refined policy
   std::unique_ptr<FATree> refined_tree;
   refined_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(refined_approximator));
@@ -402,15 +421,21 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
   // - Position of the split
   // - Action in each part of the split
   auto parameters_to_approximator =
-    [action_dims, split_dim]
+    [action_dims, split_dim, action_id]
     (const Eigen::VectorXd & parameters)
     {
       // Importing values from parameters
       double split_val = parameters[0];
-      std::unique_ptr<FunctionApproximator> action0(
-        new ConstantApproximator(parameters.segment(1, action_dims)));
-      std::unique_ptr<FunctionApproximator> action1(
-        new ConstantApproximator(parameters.segment(1+action_dims, action_dims)));
+      // Adding action_id
+      Eigen::VectorXd params0 = Eigen::VectorXd::Zero(action_dims+1);
+      params0(0) = action_id;
+      params0.segment(1,action_dims) = parameters.segment(1, action_dims);
+      Eigen::VectorXd params1 = Eigen::VectorXd::Zero(action_dims+1);
+      params1(0) = action_id;
+      params1.segment(1,action_dims) = parameters.segment(1 + action_dims, action_dims);
+      // Building FunctionApproximator
+      std::unique_ptr<FunctionApproximator> action0(new ConstantApproximator(params0));
+      std::unique_ptr<FunctionApproximator> action1(new ConstantApproximator(params1));
       // Define Function approximator which will replace
       std::unique_ptr<Split> split(new OrthogonalSplit(split_dim, split_val));
       std::vector<std::unique_ptr<FunctionApproximator>> approximators;
@@ -521,8 +546,9 @@ Eigen::VectorXd PolicyMutationLearner::getGuess(const MutationCandidate & mutati
 
 Eigen::MatrixXd PolicyMutationLearner::getParametersSpaces(const Eigen::MatrixXd & space,
                                                            const Eigen::VectorXd & guess,
-                                                           RefinementType type) const {
-  // Space
+                                                           RefinementType type,
+                                                           int action_id) const {
+  // Which space is used for parameters
   Eigen::MatrixXd parameters_space;
   bool narrow_slope = (type != RefinementType::wide);
   Eigen::MatrixXd space_for_parameters = space;
@@ -530,7 +556,7 @@ Eigen::MatrixXd PolicyMutationLearner::getParametersSpaces(const Eigen::MatrixXd
     space_for_parameters = problem->getStateLimits();
   }
   parameters_space = LinearApproximator::getParametersSpace(space_for_parameters,
-                                                            problem->getActionLimits(),
+                                                            problem->getActionLimits(action_id),
                                                             narrow_slope);
   // If type is local, then: search around guess
   if (type == RefinementType::local) {
@@ -582,7 +608,7 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
 std::unique_ptr<Policy> PolicyMutationLearner::buildPolicy(const FATree & tree) {
   std::unique_ptr<FATree> tree_copy(static_cast<FATree *>(tree.clone().release()));
   std::unique_ptr<Policy> result(new FAPolicy(std::move(tree_copy)));
-  result->setActionLimits(problem->getActionLimits());
+  result->setActionLimits(problem->getActionsLimits());
   return std::move(result);
 }
 

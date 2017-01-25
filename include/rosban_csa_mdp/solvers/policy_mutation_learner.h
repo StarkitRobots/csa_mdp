@@ -94,7 +94,8 @@ public:
   /// refinement type
   Eigen::MatrixXd getParametersSpaces(const Eigen::MatrixXd & space,
                                       const Eigen::VectorXd & guess,
-                                      RefinementType type) const;
+                                      RefinementType type,
+                                      int action_id) const;
 
 
   virtual std::string class_name() const override;
