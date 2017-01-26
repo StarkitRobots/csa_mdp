@@ -19,7 +19,7 @@ Eigen::VectorXd Policy::boundAction(const Eigen::VectorXd & raw_action) const
 {
   int action_id = (int)raw_action(0);
   int max_action = action_limits.size() -1;
-  if (action_id < 0 || action_id >= max_action) {
+  if (action_id < 0 || action_id > max_action) {
     std::ostringstream oss;
     oss << "Policy::boundAction: action_id is invalid: "
         << action_id << " is not in [0," << max_action << "]";
@@ -35,7 +35,7 @@ Eigen::VectorXd Policy::boundAction(const Eigen::VectorXd & raw_action) const
   }
   Eigen::VectorXd action = raw_action;
   for (int dim = 1; dim < raw_action.rows(); dim++) {
-    action(dim) = std::min(limits(dim,1), std::max(limits(dim,0), action(dim)));
+    action(dim) = std::min(limits(dim-1,1), std::max(limits(dim-1,0), action(dim)));
   }
   return action;
 }

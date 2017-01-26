@@ -28,8 +28,6 @@ public:
   virtual void setStateLimits(const Eigen::MatrixXd & state_limits);
   /// Inform the learner of the action space
   virtual void setActionLimits(const std::vector<Eigen::MatrixXd> & action_limits);
-  /// Inform the learner of the terminal function used
-  virtual void setTerminalFunction(std::function<bool(const Eigen::VectorXd &)> is_terminal);
   /// Update the discount factor used for the learner
   virtual void setDiscount(double discount);
 
