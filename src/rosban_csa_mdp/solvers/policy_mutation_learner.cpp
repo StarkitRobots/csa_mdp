@@ -268,7 +268,7 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
     {
       Eigen::MatrixXd result(output_dim + 1, input_dim+1);
       for (int col = 0; col < input_dim+1; col++) {
-        result.col(col) = parameters.segment(col * output_dim, output_dim);
+        result.col(col) = parameters.segment(col * (output_dim+1), output_dim + 1);
       }
       return result;
     };
@@ -288,7 +288,7 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   std::cout << "Parameters_space:" << std::endl
             << parameters_space << std::endl;
   std::cout << "Guess:" << std::endl
-            << parameters_to_matrix(parameters_guess) << std::endl;
+            << parameters_to_matrix(parameters_to_full(parameters_guess)) << std::endl;
 
   // Creating refined approximator
   Eigen::VectorXd refined_parameters = optimize(reward_func,
@@ -524,7 +524,7 @@ Eigen::VectorXd PolicyMutationLearner::getGuess(const MutationCandidate & mutati
   try {
     const ConstantApproximator & approximation =
       dynamic_cast<const ConstantApproximator &>(fa);
-    guess.segment(0, action_dims) = approximation.getValue();
+    guess.segment(0, action_dims) = approximation.getValue().segment(0, action_dims);
     return guess;
   } catch (const std::bad_cast & exc) {
     // Nothing to be done
@@ -533,10 +533,16 @@ Eigen::VectorXd PolicyMutationLearner::getGuess(const MutationCandidate & mutati
   try {
     const LinearApproximator & approximation =
       dynamic_cast<const LinearApproximator &>(fa);
-    Eigen::VectorXd bias_at_center = approximation.getBias(space_center);
-    Eigen::VectorXd coeffs = approximation.getCoeffs();
+    Eigen::VectorXd bias_at_center = approximation.getBias(space_center).segment(1,action_dims);
+    const Eigen::MatrixXd & coeffs = approximation.getCoeffs();
+    int state_dims = problem->stateDims();
+    Eigen::VectorXd filtered_coeffs(action_dims * state_dims);
+    for (int state = 0; state < state_dims; state++) {
+      int start = state * action_dims;
+      filtered_coeffs.segment(start, action_dims) = coeffs.col(state).segment(1,action_dims);
+    }
     guess.segment(0, action_dims) = bias_at_center;
-    guess.segment(action_dims, coeffs.rows()) = coeffs;
+    guess.segment(action_dims, filtered_coeffs.rows()) = filtered_coeffs;
     return guess;
   } catch (const std::bad_cast & exc) {
     // Nothing to be done
