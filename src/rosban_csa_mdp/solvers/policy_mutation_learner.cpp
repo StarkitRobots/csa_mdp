@@ -23,6 +23,7 @@ PolicyMutationLearner::PolicyMutationLearner()
   : training_evaluations(50),
     training_evaluations_growth(0),
     split_probability(0.1),
+    change_action_probability(0.2),
     local_probability(0.2),
     narrow_probability(0.2),
     split_margin(0.2),
@@ -179,7 +180,10 @@ void PolicyMutationLearner::mutateLeaf(int mutation_id,
     splitMutation(mutation_id, engine);
   }
   else {
-    refineMutation(mutation_id, engine);
+    // If several actions are available and result of rand_value force to newAction
+    bool change_action =
+      problem->getNbActions() > 1 && rand_val < split_probability + change_action_probability;
+    refineMutation(mutation_id, change_action, engine);
   }
 }
 
@@ -191,8 +195,12 @@ void PolicyMutationLearner::mutatePreLeaf(int mutation_id,
 }
 
 void PolicyMutationLearner::refineMutation(int mutation_id,
+                                           bool change_action,
                                            std::default_random_engine * engine) {
-  RefinementType type = sampleRefinementType(engine);
+  RefinementType type = RefinementType::wide;
+  if (!change_action) {
+    type = sampleRefinementType(engine);
+  }
   // Get reference to the appropriate mutation
   MutationCandidate * mutation = &(mutation_candidates[mutation_id]);
   // Get space, and space center
@@ -202,6 +210,15 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   // Getting current action_id
   Eigen::VectorXd current_action = policy_tree->predict(space_center);
   int action_id = (int)current_action(0);
+  // If changing action, choose replacing action randomly
+  if  (change_action) {
+    // Generate a random number in [0, nb_actions-2]: offset is applied later
+    std::uniform_int_distribution<int> action_id_distrib(0,problem->getNbActions()-2);
+    int old_action_id = action_id;
+    action_id = action_id_distrib(*engine);
+    if (action_id >= old_action_id) action_id++;
+    std::cout << "Changing action to " << action_id << std::endl;
+  }
   int output_dim = problem->actionDims(action_id);
   Eigen::MatrixXd action_limits = problem->getActionLimits(action_id);
   // Debug:
@@ -273,7 +290,7 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
       return result;
     };
   // Getting initial guess
-  Eigen::VectorXd parameters_guess = getGuess(*mutation);
+  Eigen::VectorXd parameters_guess = getGuess(*mutation, action_id);
   // Getting parameters_space
   Eigen::MatrixXd parameters_space = getParametersSpaces(space,
                                                          parameters_guess,
@@ -509,18 +526,22 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
   return std::move(splitted_tree);
 }
 
-Eigen::VectorXd PolicyMutationLearner::getGuess(const MutationCandidate & mutation) const {
+Eigen::VectorXd PolicyMutationLearner::getGuess(const MutationCandidate & mutation,
+                                                int action_id) const {
   // Get space, center and original FA
   Eigen::MatrixXd space = mutation.space;
   Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
-  const FunctionApproximator & fa = policy_tree->getLeafApproximator(space_center);
-  int action_id = fa.predict(space_center)(0);
   Eigen::MatrixXd action_limits = problem->getActionLimits(action_id);
   int action_dims = problem->actionDims(action_id);
   // Default parameters
   Eigen::VectorXd guess = LinearApproximator::getDefaultParameters(space,
                                                                    action_limits);
-  // Case of Constant Approximator
+  // If action does not match, return default guess
+  const FunctionApproximator & fa = policy_tree->getLeafApproximator(space_center);
+  int current_action_id = fa.predict(space_center)(0);
+  if (current_action_id != action_id) { return guess; }
+
+  // Case of Constant Approximator in tree
   try {
     const ConstantApproximator & approximation =
       dynamic_cast<const ConstantApproximator &>(fa);
@@ -529,7 +550,7 @@ Eigen::VectorXd PolicyMutationLearner::getGuess(const MutationCandidate & mutati
   } catch (const std::bad_cast & exc) {
     // Nothing to be done
   }
-  // Case of Linear Approximator
+  // Case of Linear Approximator in tree
   try {
     const LinearApproximator & approximation =
       dynamic_cast<const LinearApproximator &>(fa);
@@ -598,6 +619,9 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   rosban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
   rosban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
   rosban_utils::xml_tools::try_read<double>(node, "evaluations_growth"  , evaluations_growth  );
+  rosban_utils::xml_tools::try_read<double>(node,
+                                            "change_action_probability",
+                                            change_action_probability);
   // Optimizer is mandatory
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
   // Read Policy if provided (optional)

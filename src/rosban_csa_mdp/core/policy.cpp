@@ -29,8 +29,8 @@ Eigen::VectorXd Policy::boundAction(const Eigen::VectorXd & raw_action) const
   int nb_action_dims = raw_action.rows() - 1; 
   if (nb_action_dims != limits.rows()) {
     std::ostringstream oss;
-    oss << "Policy::boundAction: Number of rows does not match"
-        << nb_action_dims << " while " << limits.rows() << " were expected";
+    oss << "Policy::boundAction: Number of rows does not match ("
+        << nb_action_dims << " while " << limits.rows() << " were expected)";
     throw std::runtime_error(oss.str());
   }
   Eigen::VectorXd action = raw_action;

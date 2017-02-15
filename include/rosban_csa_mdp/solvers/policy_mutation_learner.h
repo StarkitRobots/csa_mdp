@@ -72,7 +72,9 @@ public:
   void mutatePreLeaf(int mutation_id, std::default_random_engine * engine);
 
   /// Try to refine the function approximator for the given mutation id
-  void refineMutation(int mutation_id, std::default_random_engine * engine);
+  void refineMutation(int mutation_id,
+                      bool change_action,
+                      std::default_random_engine * engine);
 
   RefinementType sampleRefinementType(std::default_random_engine * engine) const;
 
@@ -88,7 +90,8 @@ public:
 
   /// Return the defaults parameters for Linear models
   /// Throws an error if fa is not a LinearModel or constant model
-  Eigen::VectorXd getGuess(const MutationCandidate & mutation) const;
+  Eigen::VectorXd getGuess(const MutationCandidate & mutation,
+                           int action_id) const;
 
   /// Return the parameters space for training a linear model given the
   /// refinement type
@@ -140,6 +143,9 @@ protected:
 
   /// Probability of splitting a leaf when applying a mutation
   double split_probability;
+
+  /// Probability of testing another action when applying a mutation
+  double change_action_probability;
 
   /// Probability of refining locally when refining
   double local_probability;
