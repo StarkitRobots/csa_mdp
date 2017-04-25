@@ -92,6 +92,7 @@ void PolicyMutationLearner::init(std::default_random_engine * engine) {
     candidate.is_leaf = true;
     mutation_candidates.push_back(candidate);
   }
+  policy_tree->save("policy_tree.bin");
   double avg_reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine);
   std::cout << "Initial Reward: " << avg_reward << std::endl;
 }
