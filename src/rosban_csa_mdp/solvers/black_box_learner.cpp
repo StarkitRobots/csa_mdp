@@ -96,17 +96,25 @@ double BlackBoxLearner::localEvaluation(const Policy & p,
       std::vector<Eigen::VectorXd> starting_states;
       starting_states = rosban_random::getUniformSamples(space, thread_evaluations, engine);
       // 2: Simulating trajectories
-      for (int idx = 0; idx < thread_evaluations; idx++) {
-        Eigen::VectorXd state = starting_states[idx];
-        double gain = 1.0;
-        for (int step = 0; step < trial_length; step++) {
-          Eigen::VectorXd action = p.getAction(state, engine);
-          Problem::Result result = problem->getSuccessor(state, action, engine);
-          state = result.successor;
-          rewards(idx + start_idx) += gain * result.reward;
-          gain = gain * discount;
-          if (result.terminal) break;
+      try {
+        for (int idx = 0; idx < thread_evaluations; idx++) {
+          Eigen::VectorXd state = starting_states[idx];
+          double gain = 1.0;
+          for (int step = 0; step < trial_length; step++) {
+            Eigen::VectorXd action = p.getAction(state, engine);
+            Problem::Result result = problem->getSuccessor(state, action, engine);
+            state = result.successor;
+            rewards(idx + start_idx) += gain * result.reward;
+            gain = gain * discount;
+            if (result.terminal) break;
+          }
         }
+      }
+      catch (const std::runtime_error & exc) {
+        std::ostringstream oss;
+        oss << "BlackBoxLearner::localEvaluation:task: " << exc.what() << std::endl;
+        std::cerr << oss.str();
+        throw exc;
       }
     };
   // Preparing random_engines
