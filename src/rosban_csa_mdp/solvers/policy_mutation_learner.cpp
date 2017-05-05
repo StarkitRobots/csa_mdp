@@ -198,7 +198,7 @@ void PolicyMutationLearner::mutatePreLeaf(int mutation_id,
 void PolicyMutationLearner::refineMutation(int mutation_id,
                                            bool change_action,
                                            std::default_random_engine * engine) {
-  RefinementType type = RefinementType::wide;
+  RefinementType type = RefinementType::local;
   if (!change_action) {
     type = sampleRefinementType(engine);
   }
