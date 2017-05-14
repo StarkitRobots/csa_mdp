@@ -1,6 +1,7 @@
 set(SOURCES
   fa_policy.cpp
   forests_policy.cpp
+  monte_carlo_policy.cpp
   random_policy.cpp
   policy_factory.cpp
   history.cpp

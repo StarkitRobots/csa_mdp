@@ -1,11 +1,12 @@
 #pragma once
 
 #include "rosban_csa_mdp/core/policy.h"
+#include "rosban_csa_mdp/core/problem.h"
+
+#include "rosban_bbo/optimizer.h"
 
 namespace csa_mdp
 {
-
-class Problem;
 
 /// In the MonteCarloPolicy, an optimization is performed on the first step
 /// to be taken, then several other steps are performed using the 
@@ -18,6 +19,26 @@ class MonteCarloPolicy : public Policy
 {
 public:
   virtual void init() override;
+
+  Eigen::VectorXd getRawAction(const Eigen::VectorXd &state) override;
+  Eigen::VectorXd getRawAction(const Eigen::VectorXd &state,
+                               std::default_random_engine * engine) const override;
+
+  // Use the provided parameters for first action and then perform a rollout
+  double sampleReward(const Eigen::VectorXd & initial_state,
+                      int action_id,
+                      const Eigen::VectorXd & params,
+                      std::default_random_engine * engine) const;
+
+  /// Uses several rollouts to estimate 
+  double averageReward(const Eigen::VectorXd & initial_state,
+                       int action_id,
+                       const Eigen::VectorXd & params,
+                       std::default_random_engine * engine) const;
+
+  void to_xml(std::ostream & out) const override;
+  void from_xml(TiXmlNode * node) override;
+  std::string class_name() const override;
 
 private:
   /// Engine used when none is provided
@@ -37,6 +58,6 @@ private:
 
   /// The optimizer used for local search
   std::unique_ptr<rosban_bbo::Optimizer> optimizer;
-}
+};
 
 }

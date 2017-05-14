@@ -2,11 +2,8 @@
 
 #include "rosban_csa_mdp/core/fa_policy.h"
 #include "rosban_csa_mdp/core/forests_policy.h"
+#include "rosban_csa_mdp/core/monte_carlo_policy.h"
 #include "rosban_csa_mdp/core/random_policy.h"
-
-using csa_mdp::Policy;
-using csa_mdp::ForestsPolicy;
-using csa_mdp::RandomPolicy;
 
 namespace csa_mdp
 {
@@ -17,6 +14,8 @@ PolicyFactory::PolicyFactory()
 {
   registerBuilder("fa_policy",[](){return std::unique_ptr<Policy>(new FAPolicy);});
   registerBuilder("forests_policy",[](){return std::unique_ptr<Policy>(new ForestsPolicy);});
+  registerBuilder("monte_carlo_policy",
+                  [](){return std::unique_ptr<Policy>(new MonteCarloPolicy );});
   registerBuilder("random"        ,[](){return std::unique_ptr<Policy>(new RandomPolicy );});
   for (const auto & entry : extra_builders)
   {
