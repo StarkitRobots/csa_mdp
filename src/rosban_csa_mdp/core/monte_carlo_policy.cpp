@@ -8,6 +8,12 @@
 namespace csa_mdp
 {
 
+MonteCarloPolicy::MonteCarloPolicy()
+  : nb_rollouts(1), validation_rollouts(10),
+    simulation_depth(1), debug_level(0)
+{
+}
+
 void MonteCarloPolicy::init()
 {
   std::random_device rd;
@@ -32,48 +38,71 @@ Eigen::VectorXd MonteCarloPolicy::getRawAction(const Eigen::VectorXd &state,
       [&](const Eigen::VectorXd & parameters,
           std::default_random_engine * engine)
       {
-        return this->averageReward(state, action_id, parameters, engine);
+        Eigen::VectorXd action(parameters.rows() + 1);
+        action(0) = action_id;
+        action.segment(1,parameters.rows()) = parameters;
+        return this->averageReward(state, action, nb_rollouts, engine);
       };
-    Eigen::VectorXd param_space =problem->getActionLimits(action_id);
+    Eigen::MatrixXd param_space = problem->getActionLimits(action_id);
     optimizer->setLimits(param_space);
-    Eigen::VectorXd best_params = optimizer->train(eval_func, engine);
-    double value = averageReward(state, action_id, best_params, engine);
-    Eigen::VectorXd action(param_space.rows() + 1);
+    Eigen::VectorXd params = optimizer->train(eval_func, engine);
+    Eigen::VectorXd action(params.rows()+1);
     action(0) = action_id;
-    action.segment(1,param_space.rows()) = best_params;
+    action.segment(1,params.rows()) = params;
+    double value = averageReward(state, action, validation_rollouts, engine);
+
+    actions.push_back(action);
+    action_rewards.push_back(value);
+
+    if (debug_level >= 2) {
+      std::cout << "Choice: " << action_id << ": " << action.transpose()
+                << " -> " << value << std::endl;
+    }
 
     if (value > best_value) {
       best_value = value;
       best_action_id = action_id;
     }
   }
+
+  Eigen::VectorXd original_action = default_policy->getAction(state, engine);
+  double original_value = averageReward(state, original_action,
+                                        validation_rollouts,
+                                        engine);
+  if (debug_level >= 2) {
+    std::cout << "Default: " << original_action.transpose()
+              << " -> " << original_value << std::endl;
+  }
+  if (debug_level >= 1) {
+    std::cout << "MCOptimize gain: " << (best_value - original_value) << std::endl;
+  }
+  if (original_value > best_value) {
+    return original_action;
+  }
+
   return actions[best_action_id];
 }
 
 double MonteCarloPolicy::averageReward(const Eigen::VectorXd & initial_state,
-                                       int action_id,
-                                       const Eigen::VectorXd & params,
+                                       const Eigen::VectorXd & first_action,
+                                       int rollouts,
                                        std::default_random_engine * engine) const
 {
   double total_reward = 0;
-  for (int rollout = 0; rollout < nb_rollouts; rollout++) {
-    total_reward += sampleReward(initial_state, action_id, params, engine);
+  for (int rollout = 0; rollout < rollouts; rollout++) {
+    total_reward += sampleReward(initial_state, first_action, engine);
   }
-  return total_reward / nb_rollouts;
+  return total_reward / rollouts;
 }
 
 
 double MonteCarloPolicy::sampleReward(const Eigen::VectorXd & initial_state,
-                                      int action_id,
-                                      const Eigen::VectorXd & params,
+                                      const Eigen::VectorXd & first_action,
                                       std::default_random_engine * engine) const
 {
   double cumulated_reward = 0;
   Problem::Result result;
   // Perform the first step
-  Eigen::VectorXd first_action(params.rows() + 1);
-  first_action(0) = action_id;
-  first_action.segment(1,params.rows()) = params;
   result = problem->getSuccessor(initial_state,
                                  first_action,
                                  engine);
@@ -106,6 +135,16 @@ void MonteCarloPolicy::from_xml(TiXmlNode * node)
   problem = ProblemFactory().read(node, "problem");
   default_policy = PolicyFactory().read(node, "default_policy");
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
+  nb_rollouts = rosban_utils::xml_tools::read<int>(node, "nb_rollouts");
+  validation_rollouts = rosban_utils::xml_tools::read<int>(node, "validation_rollouts");
+  simulation_depth = rosban_utils::xml_tools::read<int>(node, "simulation_depth");
+  debug_level = rosban_utils::xml_tools::read<int>(node, "debug_level");
+
+  if (!default_policy || !optimizer || !problem) {
+    throw std::runtime_error("MonteCarloPolicy::from_xml: incomplete initialization");
+  }
+
+  default_policy->setActionLimits(problem->getActionsLimits());
 }
 
 }

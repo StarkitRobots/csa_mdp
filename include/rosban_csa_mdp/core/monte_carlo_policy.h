@@ -18,6 +18,8 @@ namespace csa_mdp
 class MonteCarloPolicy : public Policy
 {
 public:
+  MonteCarloPolicy();
+
   virtual void init() override;
 
   Eigen::VectorXd getRawAction(const Eigen::VectorXd &state) override;
@@ -26,14 +28,13 @@ public:
 
   // Use the provided parameters for first action and then perform a rollout
   double sampleReward(const Eigen::VectorXd & initial_state,
-                      int action_id,
-                      const Eigen::VectorXd & params,
+                      const Eigen::VectorXd & action,
                       std::default_random_engine * engine) const;
 
   /// Uses several rollouts to estimate 
   double averageReward(const Eigen::VectorXd & initial_state,
-                       int action_id,
-                       const Eigen::VectorXd & params,
+                       const Eigen::VectorXd & action,
+                       int rollouts,
                        std::default_random_engine * engine) const;
 
   void to_xml(std::ostream & out) const override;
@@ -53,8 +54,17 @@ private:
   /// Number of rollouts used to average the reward function
   int nb_rollouts;
 
+  /// Number of rollouts used when the function needs to be validated
+  int validation_rollouts;
+
   /// How many steps are taken in total
   int simulation_depth;
+
+  /// Verbosity level
+  /// 0 -> no output
+  /// 1 -> Display estimated gain for using MCP
+  /// 2 -> Display estimated value and action for each discrete action
+  int debug_level;
 
   /// The optimizer used for local search
   std::unique_ptr<rosban_bbo::Optimizer> optimizer;
