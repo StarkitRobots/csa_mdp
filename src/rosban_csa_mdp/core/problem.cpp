@@ -144,4 +144,28 @@ std::vector<int> Problem::getLearningDimensions() const
   return result;
 }
 
+double Problem::sampleRolloutReward(const Eigen::VectorXd & initial_state,
+                                    const csa_mdp::Policy & policy,
+                                    int max_horizon,
+                                    double discount,
+                                    std::default_random_engine * engine) const
+{
+  double coeff = 1;
+  double reward = 0;
+  Eigen::VectorXd state = initial_state;
+  bool is_terminated = false;
+  // Compute the reward over the next 'nb_steps'
+  for (int i = 0; i < max_horizon; i++) {
+    Eigen::VectorXd action = policy.getAction(state, engine);
+    Problem::Result result = getSuccessor(state, action, engine);
+    reward += coeff * result.reward;
+    state = result.successor;
+    coeff *= discount;
+    is_terminated = result.terminal;
+    // Stop predicting steps if a terminal state has been reached
+    if (is_terminated) break;
+  }
+  return reward;
+}
+
 }

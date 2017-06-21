@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rosban_csa_mdp/core/policy.h"
 #include "rosban_csa_mdp/core/sample.h"
 
 #include "rosban_utils/serializable.h"
@@ -104,6 +105,12 @@ public:
   virtual Result getSuccessor(const Eigen::VectorXd & state,
                               const Eigen::VectorXd & action,
                               std::default_random_engine * engine)  const = 0;
+
+  double sampleRolloutReward(const Eigen::VectorXd & initial_state,
+                             const csa_mdp::Policy & policy,
+                             int max_horizon,
+                             double discount,
+                             std::default_random_engine * engine) const;
 };
 
 }
