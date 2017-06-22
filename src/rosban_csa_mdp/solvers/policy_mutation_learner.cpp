@@ -324,15 +324,20 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   refined_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(refined_approximator));
   std::unique_ptr<Policy> refined_policy = buildPolicy(*refined_tree);
   // Evaluate initial and refined policy with updated parameters (on local space)
-  double initial_reward = localEvaluation(*policy, space, getNbEvaluationTrials(), engine);
-  double refined_reward = localEvaluation(*refined_policy, space, getNbEvaluationTrials(), engine);
-  std::cout << "\tinitial reward: " << initial_reward << std::endl;
-  std::cout << "\trefined reward: " << refined_reward << std::endl;
-  // Replace current if improvement has been seen
-  if (refined_reward > initial_reward) {
+  double initial_local_reward = localEvaluation(*policy, space, getNbEvaluationTrials(), engine);
+  double refined_local_reward = localEvaluation(*refined_policy, space, getNbEvaluationTrials(), engine);
+  double initial_global_reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine);
+  double refined_global_reward = evaluatePolicy(*refined_policy, getNbEvaluationTrials(), engine);
+  std::cout << "\tinitial local reward: " << initial_local_reward << std::endl;
+  std::cout << "\trefined local reward: " << refined_local_reward << std::endl;
+  std::cout << "\tinitial global reward: " << initial_global_reward << std::endl;
+  std::cout << "\trefined global reward: " << refined_global_reward << std::endl;
+  // Replace current if improvement has been seen both locally and globally
+  if (refined_local_reward > initial_local_reward &&
+      refined_global_reward > initial_global_reward) {
     policy_tree = std::move(refined_tree);
     policy = std::move(refined_policy);
-    mutation->post_training_score = refined_reward;
+    mutation->post_training_score = refined_local_reward;
   }
   // Update mutation properties:
   mutation->last_training = iterations;
