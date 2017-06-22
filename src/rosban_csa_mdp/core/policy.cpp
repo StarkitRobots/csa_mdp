@@ -4,6 +4,7 @@ namespace csa_mdp
 {
 
 Policy::Policy()
+  : internal_random_engine(std::random_device()())
 {
   init();
 }
@@ -49,6 +50,12 @@ Eigen::VectorXd Policy::getAction(const Eigen::VectorXd &state,
                                   std::default_random_engine * external_engine) const
 {
   return boundAction(getRawAction(state, external_engine));
+}
+
+
+Eigen::VectorXd Policy::getRawAction(const Eigen::VectorXd &state)
+{
+  return getRawAction(state, &internal_random_engine);
 }
 
 std::unique_ptr<rosban_fa::FATree> Policy::extractFATree() const {

@@ -5,6 +5,7 @@ set(SOURCES
   random_policy.cpp
   policy_factory.cpp
   history.cpp
+  opportunist_policy.cpp
   policy.cpp
   problem.cpp
   problem_factory.cpp

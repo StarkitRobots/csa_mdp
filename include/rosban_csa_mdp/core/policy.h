@@ -33,10 +33,10 @@ public:
   Eigen::VectorXd getAction(const Eigen::VectorXd &state,
                             std::default_random_engine * engine) const;
 
-  /// Retrieve the raw action correspoding to the given state
-  virtual Eigen::VectorXd getRawAction(const Eigen::VectorXd &state) = 0;
+  /// Retrieve the raw action corresponding to the given state
+  virtual Eigen::VectorXd getRawAction(const Eigen::VectorXd &state);
 
-  /// Retrieve the raw action correspoding to the given state
+  /// Retrieve the raw action corresponding to the given state
   virtual Eigen::VectorXd getRawAction(const Eigen::VectorXd &state,
                                        std::default_random_engine * engine) const = 0;
 
@@ -46,6 +46,8 @@ public:
 protected:
   std::vector<Eigen::MatrixXd> action_limits;
 
+  /// Required when getRawAction doest not provide a random engine
+  std::default_random_engine internal_random_engine;
 };
 
 }
