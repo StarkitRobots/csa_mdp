@@ -39,9 +39,12 @@ public:
                                 std::default_random_engine * engine) const;
 
   /// Return the average score of the given policy using 'nb_evaluations' trajectories
+  /// If nb_evaluations is not a nullptr, then add all the visited states to the provided
+  /// vector
   virtual double evaluatePolicy(const Policy & p,
                                 int nb_evaluations,
-                                std::default_random_engine * engine) const;
+                                std::default_random_engine * engine,
+                                std::vector<Eigen::VectorXd> * visited_states = nullptr) const;
 
   /// Evaluate the average reward for policy p, for an uniform distribution in
   /// space, using nb_evaluations trials.

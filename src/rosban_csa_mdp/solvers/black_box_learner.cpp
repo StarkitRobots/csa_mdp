@@ -48,18 +48,27 @@ double BlackBoxLearner::evaluatePolicy(const Policy & p,
 
 double BlackBoxLearner::evaluatePolicy(const Policy & p,
                                        int nb_evaluations,
-                                       std::default_random_engine * engine) const {
-  // Rewards are computed by different threads and stored in the same vector
+                                       std::default_random_engine * engine,
+                                       std::vector<Eigen::VectorXd> * visited_states) const {
+  // Preparing random_engines
+  std::vector<std::default_random_engine> engines;
+  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
+  // Rewards + visited_states are computed by different threads and stored in the same vector
   Eigen::VectorXd rewards = Eigen::VectorXd::Zero(nb_evaluations);
+  std::vector<std::vector<Eigen::VectorXd>> visited_states_per_thread(nb_evaluations);
+  bool store_visited_states = visited_states != nullptr;
   // The task which has to be performed :
   rosban_utils::MultiCore::StochasticTask task =
-    [this, &p, &rewards]
+    [this, &p, &rewards, &visited_states_per_thread, store_visited_states]
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
       for (int idx = start_idx; idx < end_idx; idx++) {
         Eigen::VectorXd state = problem->getStartingState(engine);
         double gain = 1.0;
         for (int step = 0; step < trial_length; step++) {
+          if (store_visited_states) {
+            visited_states_per_thread[idx].push_back(state);
+          }
           Eigen::VectorXd action = p.getAction(state, engine);
           Problem::Result result = problem->getSuccessor(state, action, engine);
           double step_reward = result.reward;
@@ -70,11 +79,16 @@ double BlackBoxLearner::evaluatePolicy(const Policy & p,
         }
       }
     };
-  // Preparing random_engines
-  std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
   // Running computation
   rosban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
+  // Fill visited states if required
+  if (store_visited_states) {
+    for (const std::vector<Eigen::VectorXd> & eval_visited_states : visited_states_per_thread) {
+      for (const Eigen::VectorXd & state : eval_visited_states) {
+        visited_states->push_back(state);
+      }
+    }
+  }
   // Result
   return rewards.mean();
 }

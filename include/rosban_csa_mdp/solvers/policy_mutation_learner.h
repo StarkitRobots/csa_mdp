@@ -25,6 +25,8 @@ protected:
     int last_training;
     /// Is the candidate a leaf or a pre_leaf?
     bool is_leaf;
+    /// States met in the current leaf
+    std::vector<Eigen::VectorXd> visited_states;
   };
 
   enum RefinementType {
@@ -54,6 +56,11 @@ public:
 
   /// Choose a mutation among the available candidates according to their scores
   int getMutationId(std::default_random_engine * engine);
+
+  /// Evaluate policy and save visited states to according mutations
+  /// Return average reward
+  /// TODO: complexity should be improved
+  double evalAndGetStates(std::default_random_engine * engine);
 
   /// Update mutation scores according to their properties
   void updateMutationsScores();
