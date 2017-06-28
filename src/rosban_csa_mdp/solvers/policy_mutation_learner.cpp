@@ -30,7 +30,8 @@ PolicyMutationLearner::PolicyMutationLearner()
     evaluations_ratio(-1),
     evaluations_growth(0),
     avoid_growing_slopes(true),
-    shared_initial_states(true)
+    use_visited_states(true),
+    use_density_score(true)
 {
 }
 
@@ -84,10 +85,9 @@ void PolicyMutationLearner::init(std::default_random_engine * engine) {
     // Adding mutation candidate
     MutationCandidate candidate;
     candidate.space = problem->getStateLimits();
-    candidate.post_training_score = localEvaluation(*policy,
-                                                    candidate.space,
-                                                    getNbEvaluationTrials(),
-                                                    engine);
+    candidate.post_training_score = evaluatePolicy(*policy,
+                                                   getNbEvaluationTrials(),
+                                                   engine);
     candidate.mutation_score = 1.0;
     candidate.last_training = 0;
     candidate.is_leaf = true;
@@ -164,26 +164,32 @@ void PolicyMutationLearner::setNbThreads(int nb_threads) {
 double PolicyMutationLearner::evalAndGetStates(std::default_random_engine * engine)
 {
   std::vector<Eigen::VectorXd> global_visited_states;
-  double reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine,
-                                 &global_visited_states);
-  std::cout << "Nb visited states: " << global_visited_states.size() << std::endl;
-  // Clear all visited states between two iterations
-  for (MutationCandidate & c : mutation_candidates) {
-    c.visited_states.clear();
+  std::vector<Eigen::VectorXd> * visited_states_ptr = nullptr;
+  if (use_density_score) {
+    visited_states_ptr = &global_visited_states;
   }
-  // TODO: should really be optimized using the tree like structure, but require
-  //       to store the mutations using a tree
-  for (const Eigen::VectorXd & state : global_visited_states) {
+  double reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine,
+                                 visited_states_ptr);
+  // Updating visited states if required
+  if (visited_states_ptr != nullptr) {
+    // Clear all visited states between two iterations
     for (MutationCandidate & c : mutation_candidates) {
-      bool valid = true;
-      for (int dim = 0; dim < problem->stateDims(); dim++) {
-        if (state(dim) < c.space(dim,0) || state(dim) >= c.space(dim,1)) {
-          valid = false;
-          break;
+      c.visited_states.clear();
+    }
+    // TODO: should really be optimized using the tree like structure, but require
+    //       to store the mutations using a tree
+    for (const Eigen::VectorXd & state : global_visited_states) {
+      for (MutationCandidate & c : mutation_candidates) {
+        bool valid = true;
+        for (int dim = 0; dim < problem->stateDims(); dim++) {
+          if (state(dim) < c.space(dim,0) || state(dim) >= c.space(dim,1)) {
+            valid = false;
+            break;
+          }
         }
-      }
-      if (valid) {
-        c.visited_states.push_back(state);
+        if (valid) {
+          c.visited_states.push_back(state);
+        }
       }
     }
   }
@@ -193,10 +199,13 @@ double PolicyMutationLearner::evalAndGetStates(std::default_random_engine * engi
 void PolicyMutationLearner::updateMutationsScores() {
   for (MutationCandidate & c : mutation_candidates) {
     // TODO: add custom parameter for basis (1.02)
-    int nb_states = c.visited_states.size();
-    double density_score = 1 + nb_states;// avoid 0 score
     double age_score = pow(1.02, (iterations - c.last_training));
-    c.mutation_score = density_score * age_score;
+    c.mutation_score = age_score;
+    if (use_density_score) {
+      int nb_states = c.visited_states.size();
+      double density_score = 1 + nb_states;// avoid 0 score
+      c.mutation_score *= density_score;
+    }
     std::cout << "Mutation score update:" << std::endl
               << c.space.transpose() << std::endl
               << "score -> " << c.mutation_score << std::endl;
@@ -277,12 +286,8 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   }
   std::cout << " on space" << std::endl
             << space.transpose() << std::endl;
-  // Are we using a single set of initial_states per mutation?
-  std::vector<Eigen::VectorXd> initial_states;
-  int nb_evaluations_allowed = getTrainingEvaluations();
-  if (shared_initial_states) {
-    initial_states = rosban_random::getUniformSamples(space, nb_evaluations_allowed, engine);
-  }
+
+  std::vector<Eigen::VectorXd> initial_states = getInitialStates(*mutation, engine);
   // Add the parameters to provide an action_id
   auto parameters_to_full =
     [input_dim, output_dim, action_id]
@@ -300,7 +305,7 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   // TODO: use other models than PWL
   rosban_bbo::Optimizer::RewardFunc reward_func =
     [this, &space, input_dim, output_dim, &space_center, &initial_states,
-     nb_evaluations_allowed, action_id, &parameters_to_full]
+     action_id, &parameters_to_full]
     (const Eigen::VectorXd & parameters,
      std::default_random_engine * engine)
     {
@@ -314,10 +319,7 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
       //TODO: avoid this second copy of the tree which is not necessary
       std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
       // Type of evaluation depends on the fact that initial_states have been created
-      if (initial_states.size() > 0) {
-        return evaluation(*policy, initial_states, engine);
-      }
-      return localEvaluation(*policy, space, nb_evaluations_allowed, engine);
+      return evaluation(*policy, initial_states, engine);
     };
   // Debug function
   auto parameters_to_matrix =
@@ -361,23 +363,8 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   // Creating refined policy
   std::unique_ptr<FATree> refined_tree;
   refined_tree = policy_tree->copyAndReplaceLeaf(space_center, std::move(refined_approximator));
-  std::unique_ptr<Policy> refined_policy = buildPolicy(*refined_tree);
-  // Evaluate initial and refined policy with updated parameters (on local space)
-  double initial_local_reward = localEvaluation(*policy, space, getNbEvaluationTrials(), engine);
-  double refined_local_reward = localEvaluation(*refined_policy, space, getNbEvaluationTrials(), engine);
-  double initial_global_reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine);
-  double refined_global_reward = evaluatePolicy(*refined_policy, getNbEvaluationTrials(), engine);
-  std::cout << "\tinitial local reward: " << initial_local_reward << std::endl;
-  std::cout << "\trefined local reward: " << refined_local_reward << std::endl;
-  std::cout << "\tinitial global reward: " << initial_global_reward << std::endl;
-  std::cout << "\trefined global reward: " << refined_global_reward << std::endl;
-  // Replace current if improvement has been seen both locally and globally
-  if (refined_local_reward > initial_local_reward &&
-      refined_global_reward > initial_global_reward) {
-    policy_tree = std::move(refined_tree);
-    policy = std::move(refined_policy);
-    mutation->post_training_score = refined_local_reward;
-  }
+  // Submit the new tree
+  submitTree(std::move(refined_tree), initial_states, engine);
   // Update mutation properties:
   mutation->last_training = iterations;
 }
@@ -416,14 +403,31 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
   if (!best_tree) {
     throw std::logic_error("PolicyMutationLearner::splitMutation: Failed to find a best tree");
   }
-  // Getting ref to the chosen Split
+  // Getting ref to the chosen Split and backing it up in case it is needed after
   const Split & split = best_tree->getPreLeafApproximator(space_center).getSplit();
+  std::unique_ptr<Split> split_copy = split.clone();
+  std::vector<Eigen::MatrixXd> split_spaces = split.splitSpace(space);
+  // Evaluating policy with respect to previous solution
+  std::vector<Eigen::VectorXd> initial_states = getInitialStates(mutation, engine);
+  bool replaced_policy = submitTree(std::move(best_tree), initial_states, engine);
+  // If the new approximation does not replace current one, reuse current model
+  if (!replaced_policy) {
+    // Create a new FATree with cloned approximators
+    std::vector<std::unique_ptr<FunctionApproximator>> approximators;
+    for (size_t elem = 0; elem < split_spaces.size(); elem++) {
+      approximators.push_back(leaf_fa.clone());
+    }
+    std::unique_ptr<FATree> new_leaf_fa(new FATree(std::move(split_copy),
+                                                   approximators));
+    // Replace it in policy tree and update policy
+    policy_tree->replaceApproximator(space_center, std::move(new_leaf_fa));
+    policy = buildPolicy(*policy_tree);
+  }
   // Updating mutation_candidates
   std::vector<std::unique_ptr<FunctionApproximator>> approximators;
-  std::vector<Eigen::MatrixXd> spaces = split.splitSpace(space);
-  for (int i = 0; i < split.getNbElements(); i++) {
+  for (size_t i = 0; i < split_spaces.size(); i++) {
     MutationCandidate new_mutation;
-    new_mutation.space = spaces[i];
+    new_mutation.space = split_spaces[i];
     new_mutation.post_training_score = mutation.post_training_score;
     new_mutation.mutation_score = mutation.mutation_score;
     new_mutation.last_training = 0;
@@ -434,35 +438,6 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
     else {
       mutation_candidates.push_back(new_mutation);
     }
-  }
-  // Evaluating policy with respect to previous solution
-  std::unique_ptr<Policy> proposed_policy = buildPolicy(*best_tree);
-  double initial_local_reward = localEvaluation(*policy, space, getNbEvaluationTrials(), engine);
-  double refined_local_reward = localEvaluation(*proposed_policy, space, getNbEvaluationTrials(), engine);
-  double initial_global_reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine);
-  double refined_global_reward = evaluatePolicy(*proposed_policy, getNbEvaluationTrials(), engine);
-  std::cout << "\tinitial local reward: " << initial_local_reward << std::endl;
-  std::cout << "\trefined local reward: " << refined_local_reward << std::endl;
-  std::cout << "\tinitial global reward: " << initial_global_reward << std::endl;
-  std::cout << "\trefined global reward: " << refined_global_reward << std::endl;
-  // Replace current if improvement has been seen both locally and globally
-  if (refined_local_reward > initial_local_reward &&
-      refined_global_reward > initial_global_reward) {
-    policy_tree = std::move(best_tree);
-    policy = buildPolicy(*policy_tree);
-  }
-  else {
-    // Create a new FATree with cloned approximators
-    std::unique_ptr<Split> split_copy = split.clone();
-    std::vector<std::unique_ptr<FunctionApproximator>> approximators;
-    for (int elem = 0; elem < split.getNbElements(); elem++) {
-      approximators.push_back(leaf_fa.clone());
-    }
-    std::unique_ptr<FATree> new_leaf_fa(new FATree(std::move(split_copy),
-                                                   approximators));
-    // Replace it in policy tree and update policy
-    policy_tree->replaceApproximator(space_center, std::move(new_leaf_fa));
-    policy = buildPolicy(*policy_tree);
   }
 }
 
@@ -547,7 +522,8 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
     int start = 1 + action_dims * leaf_id;
     const Eigen::MatrixXd & curr_space = split_spaces[leaf_id];
     Eigen::VectorXd center = (curr_space.col(0) + curr_space.col(1)) / 2;
-    initial_parameters.segment(start, action_dims) = policy_tree->predict(center);
+    Eigen::VectorXd action = policy_tree->predict(center);
+    initial_parameters.segment(start, action_dims) = action.segment(1,action_dims);
   }
   // Optimize
   double evaluation_ratio = 1.0 / problem->getStateLimits().rows();
@@ -656,7 +632,7 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   BlackBoxLearner::from_xml(node);
   // Reading class variables
   rosban_utils::xml_tools::try_read<bool>  (node, "avoid_growing_slopes" , avoid_growing_slopes );
-  rosban_utils::xml_tools::try_read<bool>  (node, "shared_initial_states", shared_initial_states);
+  rosban_utils::xml_tools::try_read<bool>  (node, "use_visited_states"   , use_visited_states   );
   rosban_utils::xml_tools::try_read<int>   (node, "training_evaluations" , training_evaluations );
   rosban_utils::xml_tools::try_read<double>(node, "training_evaluations_growth",
                                             training_evaluations_growth);
@@ -687,6 +663,57 @@ std::unique_ptr<Policy> PolicyMutationLearner::buildPolicy(const FATree & tree) 
   std::unique_ptr<Policy> result(new FAPolicy(std::move(tree_copy)));
   result->setActionLimits(problem->getActionsLimits());
   return std::move(result);
+}
+
+
+std::vector<Eigen::VectorXd>
+PolicyMutationLearner::getInitialStates(const MutationCandidate & mc,
+                                        std::default_random_engine * engine)
+{
+  size_t nb_evaluations_allowed = getTrainingEvaluations();
+  if (!use_visited_states) {
+    return rosban_random::getUniformSamples(mc.space, nb_evaluations_allowed, engine);
+  }
+  // If we are lacking samples return them all
+  if (nb_evaluations_allowed >= mc.visited_states.size()) {
+    return mc.visited_states;
+  }
+  // Filter most important samples
+  std::vector<Eigen::VectorXd> initial_states;
+  std::vector<size_t> indices =
+    rosban_random::getKDistinctFromN(nb_evaluations_allowed, 
+                                     mc.visited_states.size(),
+                                     engine);
+  for (size_t idx : indices) {
+    initial_states.push_back(mc.visited_states[idx]);
+  }
+  return initial_states;
+}
+
+bool PolicyMutationLearner::submitTree(std::unique_ptr<rosban_fa::FATree> new_tree,
+                                       const std::vector<Eigen::VectorXd> & initial_states,
+                                       std::default_random_engine * engine)
+{
+  std::unique_ptr<Policy> new_policy = buildPolicy(*new_tree);
+  // Evaluate old and new policy with updated parameters (on local space)
+  double old_local_reward  = evaluation(*policy    , initial_states, engine);
+  double new_local_reward  = evaluation(*new_policy, initial_states, engine);
+  double old_global_reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine);
+  double new_global_reward = evaluatePolicy(*new_policy, getNbEvaluationTrials(), engine);
+  std::cout << "\told local reward: " << old_local_reward << std::endl;
+  std::cout << "\tnew local reward: " << new_local_reward << std::endl;
+  std::cout << "\told global reward: " << old_global_reward << std::endl;
+  std::cout << "\tnew global reward: " << new_global_reward << std::endl;
+  // Replace current if improvement has been seen both locally and globally
+  if (new_local_reward > old_local_reward &&
+      new_global_reward > old_global_reward) {
+    policy_tree = std::move(new_tree);
+    policy = std::move(new_policy);
+    //TODO: mutation should be provided as a parameter if we want to improve that
+    //mutation->post_training_score = new_local_reward;
+    return true;
+  }
+  return false;
 }
 
 }

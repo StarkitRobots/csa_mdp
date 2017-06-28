@@ -57,8 +57,9 @@ public:
   /// Choose a mutation among the available candidates according to their scores
   int getMutationId(std::default_random_engine * engine);
 
-  /// Evaluate policy and save visited states to according mutations
-  /// Return average reward
+  /// Evaluate policy and return average reward
+  /// If required by internal coniguration, save visited states in
+  /// mutation candidates
   /// TODO: complexity should be improved
   double evalAndGetStates(std::default_random_engine * engine);
 
@@ -107,7 +108,6 @@ public:
                                       RefinementType type,
                                       int action_id) const;
 
-
   virtual std::string class_name() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
@@ -127,6 +127,20 @@ public:
   /// Clone the given tree and use it to build a policy. Also set the action
   /// limits
   std::unique_ptr<Policy> buildPolicy(const rosban_fa::FATree & tree);
+
+  /// If 'use_visited_states':
+  /// - use states from mutation
+  /// Else
+  /// - Generate random states
+  std::vector<Eigen::VectorXd> getInitialStates(const MutationCandidate & mc,
+                                                std::default_random_engine * engine);
+
+  /// Compare the new_tree with current tree. Replace the current tree if the
+  /// new tree is better
+  /// Return true if the tree has been replaced, false otherwise
+  bool submitTree(std::unique_ptr<rosban_fa::FATree> new_tree,
+                  const std::vector<Eigen::VectorXd> & initial_states,
+                  std::default_random_engine * engine);
 
 protected:
   /// The list of mutations available
@@ -179,8 +193,12 @@ protected:
   /// the whole problem space
   bool avoid_growing_slopes;
 
-  /// If enabled, initial_states are generated once by mutation
-  bool shared_initial_states;
+  /// If true, then only visited states can be used for optimization
+  /// If false, states are sampled randomly inside the hyper-rectangle
+  bool use_visited_states;
+
+  /// Is density of visited states used to score mutation candidates?
+  bool use_density_score;
 };
 
 }
