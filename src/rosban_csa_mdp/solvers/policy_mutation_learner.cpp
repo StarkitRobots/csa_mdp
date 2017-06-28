@@ -29,6 +29,7 @@ PolicyMutationLearner::PolicyMutationLearner()
     split_margin(0.2),
     evaluations_ratio(-1),
     evaluations_growth(0),
+    age_basis(1.02),
     avoid_growing_slopes(true),
     use_visited_states(true),
     use_density_score(true)
@@ -165,7 +166,7 @@ double PolicyMutationLearner::evalAndGetStates(std::default_random_engine * engi
 {
   std::vector<Eigen::VectorXd> global_visited_states;
   std::vector<Eigen::VectorXd> * visited_states_ptr = nullptr;
-  if (use_density_score) {
+  if (use_density_score || use_visited_states) {
     visited_states_ptr = &global_visited_states;
   }
   double reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine,
@@ -198,8 +199,7 @@ double PolicyMutationLearner::evalAndGetStates(std::default_random_engine * engi
 
 void PolicyMutationLearner::updateMutationsScores() {
   for (MutationCandidate & c : mutation_candidates) {
-    // TODO: add custom parameter for basis (1.02)
-    double age_score = pow(1.02, (iterations - c.last_training));
+    double age_score = pow(age_basis, (iterations - c.last_training));
     c.mutation_score = age_score;
     if (use_density_score) {
       int nb_states = c.visited_states.size();
@@ -642,6 +642,7 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   rosban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
   rosban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
   rosban_utils::xml_tools::try_read<double>(node, "evaluations_growth"  , evaluations_growth  );
+  rosban_utils::xml_tools::try_read<double>(node, "age_basis"           , age_basis           );
   rosban_utils::xml_tools::try_read<double>(node,
                                             "change_action_probability",
                                             change_action_probability);

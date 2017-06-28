@@ -189,6 +189,9 @@ protected:
   /// Growth of the number of evaluation trials at each step
   double evaluations_growth;
 
+  /// age_score = age_basis ^ (time_since_update)
+  double age_basis;
+
   /// If enabled, then maximal coefficients are always determined according to
   /// the whole problem space
   bool avoid_growing_slopes;
