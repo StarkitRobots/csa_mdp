@@ -199,23 +199,31 @@ double PolicyMutationLearner::evalAndGetStates(std::default_random_engine * engi
 
 void PolicyMutationLearner::updateMutationsScores() {
   for (MutationCandidate & c : mutation_candidates) {
+    std::cout << "Mutation score update:" << std::endl
+              << c.space.transpose() << std::endl;
     double age_score = pow(age_basis, (iterations - c.last_training));
+    std::cout << "\tAge score: " << age_score << std::endl;
     c.mutation_score = age_score;
     if (use_density_score) {
       int nb_states = c.visited_states.size();
       double density_score = 1 + nb_states;// avoid 0 score
       c.mutation_score *= density_score;
+      std::cout << "\tMutation score: " << age_score << std::endl;
     }
-    std::cout << "Mutation score update:" << std::endl
-              << c.space.transpose() << std::endl
-              << "score -> " << c.mutation_score << std::endl;
+    std::cout << "score -> " << c.mutation_score << std::endl;
   }
 }
 
 void PolicyMutationLearner::mutate(int mutation_id,
                                    std::default_random_engine * engine) {
   if (mutation_candidates[mutation_id].is_leaf) {
-    mutateLeaf(mutation_id, engine);
+    if (isMutationAllowed(mutation_candidates[mutation_id])) {
+      mutateLeaf(mutation_id, engine);
+    }
+    else {
+      std::cout << "-> Skipping mutation (forbidden)" << std::endl;
+      mutation_candidates[mutation_id].last_training = iterations;
+    }
   }
   else {
     mutatePreLeaf(mutation_id, engine);
@@ -288,6 +296,7 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
             << space.transpose() << std::endl;
 
   std::vector<Eigen::VectorXd> initial_states = getInitialStates(*mutation, engine);
+  std::cout << "-> Nb Initial states: " << initial_states.size() << std::endl;
   // Add the parameters to provide an action_id
   auto parameters_to_full =
     [input_dim, output_dim, action_id]
@@ -385,15 +394,18 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
   Eigen::MatrixXd space = mutation.space;
   Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
   const FunctionApproximator & leaf_fa = policy_tree->getLeafApproximator(space_center);
+  std::vector<Eigen::VectorXd> initial_states = getInitialStates(mutation, engine);
   // Debug message
   std::cout << "-> Applying a split mutation on space" << std::endl
             << space.transpose() << std::endl;
+  std::cout << "-> Nb initial states: " << initial_states.size() << std::endl;
   // Testing all dimensions as split and keeping the best one
   double best_score = std::numeric_limits<double>::lowest();
   std::unique_ptr<FATree> best_tree;
   for (int dim = 0; dim < problem->stateDims(); dim++) {
     double score;
-    std::unique_ptr<FATree> current_tree = trySplit(mutation_id, dim, engine, &score);
+    std::unique_ptr<FATree> current_tree = trySplit(mutation_id, dim, initial_states,
+                                                    engine, &score);
     if (score > best_score) {
       best_score = score;
       best_tree = std::move(current_tree);
@@ -408,7 +420,6 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
   std::unique_ptr<Split> split_copy = split.clone();
   std::vector<Eigen::MatrixXd> split_spaces = split.splitSpace(space);
   // Evaluating policy with respect to previous solution
-  std::vector<Eigen::VectorXd> initial_states = getInitialStates(mutation, engine);
   bool replaced_policy = submitTree(std::move(best_tree), initial_states, engine);
   // If the new approximation does not replace current one, reuse current model
   if (!replaced_policy) {
@@ -443,6 +454,7 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
 
 std::unique_ptr<rosban_fa::FATree>
 PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
+                                const std::vector<Eigen::VectorXd> & initial_states,
                                 std::default_random_engine * engine,
                                 double * score) {
   // Debug message
@@ -484,7 +496,8 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
     };
   // Defining evaluation function
   rosban_bbo::Optimizer::RewardFunc reward_func =
-    [this, split_dim, action_dims, leaf_space, leaf_center, parameters_to_approximator]
+    [this, split_dim, action_dims, leaf_space, leaf_center, parameters_to_approximator,
+      &initial_states]
     (const Eigen::VectorXd & parameters,
      std::default_random_engine * engine)
     {
@@ -496,7 +509,7 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
       // build policy and evaluate
       // TODO: avoid this second copy of the tree which is not necessary
       std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
-      return localEvaluation(*policy, leaf_space, getTrainingEvaluations(), engine);
+      return evaluation(*policy, initial_states, engine);
     };
   // Computing boundaries for split
   double dim_min = leaf_space(split_dim,0);
@@ -689,6 +702,11 @@ PolicyMutationLearner::getInitialStates(const MutationCandidate & mc,
     initial_states.push_back(mc.visited_states[idx]);
   }
   return initial_states;
+}
+
+bool PolicyMutationLearner::isMutationAllowed(const MutationCandidate & mc) const
+{
+  return !use_visited_states || mc.visited_states.size() > 10;
 }
 
 bool PolicyMutationLearner::submitTree(std::unique_ptr<rosban_fa::FATree> new_tree,

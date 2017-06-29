@@ -93,6 +93,7 @@ public:
   /// Return the FATree built to replace current approximator and update score
   std::unique_ptr<rosban_fa::FATree>
   trySplit(int mutation_id, int split_dim,
+           const std::vector<Eigen::VectorXd> & initial_states,
            std::default_random_engine * engine,
            double * score);
 
@@ -134,6 +135,8 @@ public:
   /// - Generate random states
   std::vector<Eigen::VectorXd> getInitialStates(const MutationCandidate & mc,
                                                 std::default_random_engine * engine);
+
+  bool isMutationAllowed(const MutationCandidate & mc) const;
 
   /// Compare the new_tree with current tree. Replace the current tree if the
   /// new tree is better
