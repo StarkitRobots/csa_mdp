@@ -57,7 +57,7 @@ void OpportunistPolicy::from_xml(TiXmlNode * node)
   policies = PolicyFactory().readVector(node,"policies");
   rosban_utils::xml_tools::try_read<int>(node, "nb_rollouts" , nb_rollouts);
   rosban_utils::xml_tools::try_read<int>(node, "horizon" , horizon);
-  setActionLimits(action_limits);
+  setActionLimits(problem->getActionsLimits());
 }
 std::string OpportunistPolicy::class_name() const
 {
