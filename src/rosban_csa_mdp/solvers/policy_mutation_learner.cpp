@@ -137,16 +137,25 @@ Eigen::VectorXd PolicyMutationLearner::optimize(rosban_bbo::Optimizer::RewardFun
 int PolicyMutationLearner::getMutationId(std::default_random_engine * engine) {
   // Getting max_score
   double total_score = 0;
+  double highest_score = std::numeric_limits<double>::lowest();
   for (const MutationCandidate & c : mutation_candidates) {
     total_score += c.mutation_score;
+    if (c.mutation_score > highest_score) {
+      highest_score = c.mutation_score;
+    }
   }
   // Getting corresponding element
   double c_score = std::uniform_real_distribution<double>(0, total_score)(*engine);
+
+  std::cout << "getMutationId: (max,total) = (" << highest_score << ", "
+            << total_score << ")" << std::endl;
 
   double acc = 0;
   for (size_t id = 0; id < mutation_candidates.size(); id++) {
     acc += mutation_candidates[id].mutation_score;
     if (acc > c_score) {
+      std::cout << "<- Mutation candidate has score: "
+                << mutation_candidates[id].mutation_score << std::endl;
       return id;
     }
   }
@@ -199,18 +208,15 @@ double PolicyMutationLearner::evalAndGetStates(std::default_random_engine * engi
 
 void PolicyMutationLearner::updateMutationsScores() {
   for (MutationCandidate & c : mutation_candidates) {
-    std::cout << "Mutation score update:" << std::endl
-              << c.space.transpose() << std::endl;
-    double age_score = pow(age_basis, (iterations - c.last_training));
-    std::cout << "\tAge score: " << age_score << std::endl;
+    double age = iterations - c.last_training;
+    double relative_age = age / mutation_candidates.size();
+    double age_score = pow(age_basis, relative_age);
     c.mutation_score = age_score;
     if (use_density_score) {
       int nb_states = c.visited_states.size();
       double density_score = 1 + nb_states;// avoid 0 score
       c.mutation_score *= density_score;
-      std::cout << "\tMutation score: " << age_score << std::endl;
     }
-    std::cout << "score -> " << c.mutation_score << std::endl;
   }
 }
 
@@ -353,10 +359,10 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
     double max = parameters_space(dim, 1);
     parameters_guess(dim) = std::min(max,std::max(min,original));
   }
-  std::cout << "Parameters_space:" << std::endl
-            << parameters_space << std::endl;
-  std::cout << "Guess:" << std::endl
-            << parameters_to_matrix(parameters_to_full(parameters_guess)) << std::endl;
+  //std::cout << "Parameters_space:" << std::endl
+  //          << parameters_space << std::endl;
+  //std::cout << "Guess:" << std::endl
+  //          << parameters_to_matrix(parameters_to_full(parameters_guess)) << std::endl;
 
   // Creating refined approximator
   Eigen::VectorXd refined_parameters = optimize(reward_func,
@@ -364,8 +370,8 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
                                                 parameters_guess,
                                                 engine);
   refined_parameters = parameters_to_full(refined_parameters);
-  std::cout << "\tRefined parameters:" << std::endl
-            << parameters_to_matrix(refined_parameters) << std::endl;
+  //std::cout << "\tRefined parameters:" << std::endl
+  //          << parameters_to_matrix(refined_parameters) << std::endl;
 
   std::unique_ptr<FunctionApproximator> refined_approximator(
     new LinearApproximator(input_dim, output_dim + 1, refined_parameters, space_center));
@@ -441,7 +447,9 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
     new_mutation.space = split_spaces[i];
     new_mutation.post_training_score = mutation.post_training_score;
     new_mutation.mutation_score = mutation.mutation_score;
-    new_mutation.last_training = 0;
+    // We consider as training only refinement which are likely to lead to
+    // real improvements
+    new_mutation.last_training = mutation.last_training;
     new_mutation.is_leaf = true;
     if (i == 0) {
       mutation_candidates[mutation_id] = new_mutation;
