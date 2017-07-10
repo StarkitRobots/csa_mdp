@@ -336,16 +336,6 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
       // Type of evaluation depends on the fact that initial_states have been created
       return evaluation(*policy, initial_states, engine);
     };
-  // Debug function
-  auto parameters_to_matrix =
-    [input_dim, output_dim](const Eigen::VectorXd & parameters)
-    {
-      Eigen::MatrixXd result(output_dim + 1, input_dim+1);
-      for (int col = 0; col < input_dim+1; col++) {
-        result.col(col) = parameters.segment(col * (output_dim+1), output_dim + 1);
-      }
-      return result;
-    };
   // Getting initial guess
   Eigen::VectorXd parameters_guess = getGuess(*mutation, action_id);
   // Getting parameters_space
@@ -359,6 +349,16 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
     double max = parameters_space(dim, 1);
     parameters_guess(dim) = std::min(max,std::max(min,original));
   }
+  // Debug function
+  //auto parameters_to_matrix =
+  //  [input_dim, output_dim](const Eigen::VectorXd & parameters)
+  //  {
+  //    Eigen::MatrixXd result(output_dim + 1, input_dim+1);
+  //    for (int col = 0; col < input_dim+1; col++) {
+  //      result.col(col) = parameters.segment(col * (output_dim+1), output_dim + 1);
+  //    }
+  //    return result;
+  //  };
   //std::cout << "Parameters_space:" << std::endl
   //          << parameters_space << std::endl;
   //std::cout << "Guess:" << std::endl
