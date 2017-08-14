@@ -15,7 +15,7 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <build_depend>rosban_fa</build_depend> <!-- git@bitbucket.org:rhoban/rosban_fa.git -->
+  <build_depend>rosban_fa</build_depend> <!-- rhoban/rosban_fa.git -->
 
   <run_depend>rosban_fa</run_depend>
 
