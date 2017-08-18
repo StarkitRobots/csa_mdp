@@ -6,7 +6,7 @@
 #include "rosban_random/tools.h"
 
 using rosban_fa::FunctionApproximatorFactory;
-using rosban_random::MultiVariateGaussian;
+using rosban_random::MultivariateGaussian;
 
 namespace csa_mdp
 {
@@ -47,7 +47,7 @@ Eigen::VectorXd FAPolicy::getRawAction(const Eigen::VectorXd &state,
 
   Eigen::VectorXd cmd;
   if (apply_noise) {
-    cmd = MultiVariateGaussian(mean, covar).getSample(*external_engine);
+    cmd = MultivariateGaussian(mean, covar).getSample(external_engine);
   }
   else {
     cmd = mean;
