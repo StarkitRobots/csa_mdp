@@ -199,7 +199,13 @@ void BlackBoxLearner::from_xml(TiXmlNode *node)
 
   // Getting problem
   std::shared_ptr<const Problem> tmp_problem;
-  tmp_problem = ProblemFactory().read(node, "problem");
+  std::string problem_path;
+  rosban_utils::xml_tools::try_read<std::string>(node, "problem_path", problem_path);
+  if (problem_path != "") {
+    tmp_problem = ProblemFactory().buildFromXmlFile(problem_path, "Problem");
+  } else {
+    tmp_problem = ProblemFactory().read(node, "problem");
+  }
   problem = std::dynamic_pointer_cast<const BlackBoxProblem>(tmp_problem);
   if (!problem) {
     throw std::runtime_error("BlackBoxLearner::from_xml: problem is not a BlackBoxProblem");
