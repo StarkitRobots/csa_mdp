@@ -9,7 +9,7 @@ namespace csa_mdp
 {
 
 MonteCarloPolicy::MonteCarloPolicy()
-  : nb_rollouts(1), validation_rollouts(10),
+  : nb_rollouts(1), max_evals(1000), validation_rollouts(10),
     simulation_depth(1), debug_level(0)
 {
 }
@@ -33,6 +33,7 @@ Eigen::VectorXd MonteCarloPolicy::getRawAction(const Eigen::VectorXd &state,
   std::vector<Eigen::VectorXd> actions;
   int best_action_id = -1;
   double best_value = std::numeric_limits<double>::lowest();
+  optimizer->setMaxCalls(max_evals / problem->getNbActions());
   for(int action_id = 0; action_id < problem->getNbActions(); action_id++) {
     rosban_bbo::Optimizer::RewardFunc eval_func =
       [&](const Eigen::VectorXd & parameters,
@@ -132,13 +133,22 @@ void MonteCarloPolicy::to_xml(std::ostream & out) const
 
 void MonteCarloPolicy::from_xml(TiXmlNode * node)
 {
-  problem = ProblemFactory().read(node, "problem");
+  // Read problem directly from node or from another file
+  std::string problem_path;
+  rosban_utils::xml_tools::try_read<std::string>(node, "problem_path", problem_path);
+  if (problem_path != "") {
+    problem = ProblemFactory().buildFromXmlFile(problem_path, "Problem");
+  } else {
+    problem = ProblemFactory().read(node, "problem");
+  }
   default_policy = PolicyFactory().read(node, "default_policy");
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
   nb_rollouts = rosban_utils::xml_tools::read<int>(node, "nb_rollouts");
   validation_rollouts = rosban_utils::xml_tools::read<int>(node, "validation_rollouts");
   simulation_depth = rosban_utils::xml_tools::read<int>(node, "simulation_depth");
-  debug_level = rosban_utils::xml_tools::read<int>(node, "debug_level");
+  rosban_utils::xml_tools::try_read<int>(node, "max_evals"  , max_evals  );
+  rosban_utils::xml_tools::try_read<int>(node, "debug_level", debug_level);
+
 
   if (!default_policy || !optimizer || !problem) {
     throw std::runtime_error("MonteCarloPolicy::from_xml: incomplete initialization");

@@ -51,8 +51,12 @@ private:
   /// The policy which will be used once the optimization step has been performed
   std::unique_ptr<Policy> default_policy;
 
-  /// Number of rollouts used to average the reward function
+  /// Number of rollouts used to average the reward function inside the eval function
   int nb_rollouts;
+
+  /// Maximal number of calls to the eval function
+  /// Total number of simulations is: nb_rollouts * max_eval
+  int max_evals;
 
   /// Number of rollouts used when the function needs to be validated
   int validation_rollouts;
