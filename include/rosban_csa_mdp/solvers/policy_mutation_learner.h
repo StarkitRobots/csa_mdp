@@ -9,6 +9,36 @@
 namespace csa_mdp
 {
 
+
+/// An algorithm learning policies using mutation of the current policy, the
+/// policy is always a tree of linear approximators.
+///
+/// There is currently two type of mutation:
+/// - Refine: There are 4 differents types of refinement mutation
+///   - Change action: test another action
+///   - Local refinement: optimize parameters of action near current parameters
+///   - Narrow refinement: strong limitations for slopes
+///   - Global refinement: loose limitations for slopes
+/// - Split: separate current leaf into several spaces (most often 2)
+///
+/// The key parameters for optimization are the following:
+/// - nb_evaluation_trials (see BlackBoxLearner)
+/// - training_evaluations
+/// - evaluations_ratio
+///
+/// Type of mutation is sampled at each step according to the following parameters.
+/// - split_probability
+/// - change_action_probability
+/// - local_probability
+/// - narrow_probability
+/// Note: avoid_growing_slopes has an effect on the range available for parameters
+///
+/// Choice of the leaf to mutate is based on following parameters:
+/// - age_basis
+/// - use_density_score
+///
+/// Sampling of initial states is controled by:
+/// - use_visited_states
 class PolicyMutationLearner : public BlackBoxLearner {
 protected:
 
@@ -159,7 +189,8 @@ protected:
   /// TODO: later, several optimizers should be provided
   std::unique_ptr<rosban_bbo::Optimizer> optimizer;
 
-  /// The number of evaluations used inside each space when training samples
+  /// The number of rollouts used to obtain the reward associated to the local
+  /// parameters of the policy while optimizing them.
   int training_evaluations;
 
   /// The increase per iteration of number of evaluations used inside each space
@@ -168,7 +199,7 @@ protected:
   /// Probability of splitting a leaf when applying a mutation
   double split_probability;
 
-  /// Probability of testing another action when applying a mutation
+  /// Probability of testing another action when applying a refine mutation
   double change_action_probability;
 
   /// Probability of refining locally when refining
@@ -183,16 +214,15 @@ protected:
   /// split_margin has to be in [0, 0.5[ (otherwise, split space is empty)
   double split_margin;
 
-  /// When > 0, the number of trajectories evaluated at each step by optimizer
-  /// is equal to 'evaluations_ratio' times the number of trajectories used to
-  /// compute the average reward over the whole space
-  /// TODO: implement it in pml
+  /// The total number of rollouts evaluated at each step by the optimizer is
+  /// equal to 'evaluations_ratio' times the number of trajectories used to
+  /// compute the average reward over the entire space
   double evaluations_ratio;
 
   /// Growth of the number of evaluation trials at each step
   double evaluations_growth;
 
-  /// age_score = age_basis ^ (time_since_update)
+  /// age_score = age_basis ^ (nb_update_since_update / nb_leafs)
   double age_basis;
 
   /// If enabled, then maximal coefficients are always determined according to
