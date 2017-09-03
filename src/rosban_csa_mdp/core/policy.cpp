@@ -4,7 +4,8 @@ namespace csa_mdp
 {
 
 Policy::Policy()
-  : internal_random_engine(std::random_device()())
+  : internal_random_engine(std::random_device()()),
+    nb_threads(1)
 {
   init();
 }
@@ -61,6 +62,21 @@ Eigen::VectorXd Policy::getRawAction(const Eigen::VectorXd &state)
 std::unique_ptr<rosban_fa::FATree> Policy::extractFATree() const {
   // TODO: approximate current policy (raw actions) by a FATree
   throw std::logic_error("Policy::extractFATree: unimplemented");
+}
+
+void Policy::to_xml(std::ostream & out) const
+{
+  rosban_utils::xml_tools::write<int>("nb_threads", nb_threads, out);
+}
+
+void Policy::from_xml(TiXmlNode * node)
+{
+  rosban_utils::xml_tools::try_read<int>(node, "nb_threads", nb_threads);
+}
+
+void Policy::setNbThreads(int new_nb_threads)
+{
+  nb_threads = new_nb_threads;
 }
 
 }

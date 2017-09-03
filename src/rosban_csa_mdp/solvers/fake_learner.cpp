@@ -37,4 +37,10 @@ void FakeLearner::endRun()
   if (policy) policy->init();
 }
 
+void FakeLearner::setNbThreads(int nb_threads)
+{
+  Learner::setNbThreads(nb_threads);
+  policy->setNbThreads(nb_threads);
+}
+
 }

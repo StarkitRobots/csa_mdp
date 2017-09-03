@@ -43,11 +43,20 @@ public:
   /// Return an approximation of the current policy as a FATree
   virtual std::unique_ptr<rosban_fa::FATree> extractFATree() const;
 
+  void to_xml(std::ostream & out) const override;
+  void from_xml(TiXmlNode * node) override;
+
+  /// Set number of threads allowed for computing the policy
+  virtual void setNbThreads(int new_nb_threads);
+
 protected:
   std::vector<Eigen::MatrixXd> action_limits;
 
   /// Required when getRawAction doest not provide a random engine
   std::default_random_engine internal_random_engine;
+
+  /// Number of threads allowed when computing action
+  int nb_threads;
 };
 
 }

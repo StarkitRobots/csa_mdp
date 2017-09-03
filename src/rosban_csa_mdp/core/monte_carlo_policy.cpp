@@ -5,6 +5,9 @@
 
 #include "rosban_bbo/optimizer_factory.h"
 
+#include "rosban_random/tools.h"
+#include "rosban_utils/multi_core.h"
+
 namespace csa_mdp
 {
 
@@ -89,13 +92,32 @@ double MonteCarloPolicy::averageReward(const Eigen::VectorXd & initial_state,
                                        int rollouts,
                                        std::default_random_engine * engine) const
 {
-  double total_reward = 0;
-  for (int rollout = 0; rollout < rollouts; rollout++) {
-    total_reward += sampleReward(initial_state, first_action, engine);
+  // Simple version for mono-threading or mono rollout
+  if (nb_threads == 1 || rollouts == 1) {
+    double total_reward = 0;
+    for (int rollout = 0; rollout < rollouts; rollout++) {
+      total_reward += sampleReward(initial_state, first_action, engine);
+    }
+    return total_reward / rollouts;
   }
-  return total_reward / rollouts;
-}
+  // Preparing random_engines + rewards storing
+  std::vector<std::default_random_engine> engines;
+  engines = rosban_random::getRandomEngines(std::min(nb_threads, rollouts), engine);
+  Eigen::VectorXd rewards = Eigen::VectorXd::Zero(rollouts);
+  // The task which has to be performed :
+  rosban_utils::MultiCore::StochasticTask task =
+    [this, &initial_state, &first_action, &rewards]
+    (int start_idx, int end_idx, std::default_random_engine * engine)
+    {
+      for (int idx = start_idx; idx < end_idx; idx++) {
+        rewards[idx] = sampleReward(initial_state, first_action, engine);
+      }
+    };
+  // Running computation
+  rosban_utils::MultiCore::runParallelStochasticTask(task, rollouts, &engines);
 
+  return rewards.mean();
+}
 
 double MonteCarloPolicy::sampleReward(const Eigen::VectorXd & initial_state,
                                       const Eigen::VectorXd & first_action,
@@ -127,12 +149,13 @@ std::string MonteCarloPolicy::class_name() const
 
 void MonteCarloPolicy::to_xml(std::ostream & out) const
 {
-  (void)out;
+  Policy::to_xml(out);
   throw std::logic_error("MonteCarloPolicy::to_xml: not implemented");
 }
 
 void MonteCarloPolicy::from_xml(TiXmlNode * node)
 {
+  Policy::from_xml(node);
   // Read problem directly from node or from another file
   std::string problem_path;
   rosban_utils::xml_tools::try_read<std::string>(node, "problem_path", problem_path);

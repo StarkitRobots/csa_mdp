@@ -25,6 +25,9 @@ public:
   /// Reset effects on policy if necessary
   virtual void endRun() override;
 
+  /// Update number of threads to be used for the policy too
+  virtual void setNbThreads(int nb_threads) override;
+
 protected:
   std::unique_ptr<Policy> policy;
 };

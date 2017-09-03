@@ -58,7 +58,8 @@ private:
   /// Total number of simulations is: nb_rollouts * max_eval
   int max_evals;
 
-  /// Number of rollouts used when the function needs to be validated
+  /// Number of rollouts used to estimate the value of the function for
+  /// each type of action available, once parameters have been optimized
   int validation_rollouts;
 
   /// How many steps are taken in total
