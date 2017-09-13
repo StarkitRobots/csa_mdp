@@ -31,6 +31,10 @@ Eigen::VectorXd MonteCarloPolicy::getRawAction(const Eigen::VectorXd &state)
 Eigen::VectorXd MonteCarloPolicy::getRawAction(const Eigen::VectorXd &state,
                                                std::default_random_engine * engine) const
 {
+  if (debug_level >= 2) {
+    std::cout << "Optimization for state: " << state.transpose() << std::endl;
+  }
+
   // Computing best actions and associatied values for each action
   std::vector<double> action_rewards;
   std::vector<Eigen::VectorXd> actions;
@@ -110,7 +114,7 @@ double MonteCarloPolicy::averageReward(const Eigen::VectorXd & initial_state,
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
       for (int idx = start_idx; idx < end_idx; idx++) {
-        rewards[idx] = sampleReward(initial_state, first_action, engine);
+        rewards(idx) = sampleReward(initial_state, first_action, engine);
       }
     };
   // Running computation
