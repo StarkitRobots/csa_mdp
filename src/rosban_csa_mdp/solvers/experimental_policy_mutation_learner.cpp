@@ -21,21 +21,29 @@ namespace csa_mdp
 
 PolicyMutationLearner::PolicyMutationLearner()
   : training_evaluations(50),
+    training_evaluations_growth(0),
     split_probability(0.1),
-    split_margin(0.05),
+    change_action_probability(0.2),
+    local_probability(0.2),
+    narrow_probability(0.2),
+    split_margin(0.2),
     evaluations_ratio(-1),
-    age_basis(1.02)
+    evaluations_growth(0),
+    age_basis(1.02),
+    avoid_growing_slopes(true),
+    use_visited_states(true),
+    use_density_score(true)
 {
 }
 
 PolicyMutationLearner::~PolicyMutationLearner() {}
 
 int PolicyMutationLearner::getNbEvaluationTrials() const {
-  return nb_evaluation_trials;
+  return nb_evaluation_trials + (int)(evaluations_growth * iterations);
 }
 
 int PolicyMutationLearner::getTrainingEvaluations() const {
-  return training_evaluations;
+  return training_evaluations + (int)(training_evaluations_growth * iterations);
 }
 
 int PolicyMutationLearner::getOptimizerMaxCall() const {
@@ -56,6 +64,7 @@ void PolicyMutationLearner::init(std::default_random_engine * engine) {
       candidate.space = leaf_space;
       candidate.mutation_score = 1.0;
       candidate.last_training = 0;
+      candidate.is_leaf = true;
       mutation_candidates.push_back(candidate);
     }
   }
@@ -77,8 +86,12 @@ void PolicyMutationLearner::init(std::default_random_engine * engine) {
     // Adding mutation candidate
     MutationCandidate candidate;
     candidate.space = problem->getStateLimits();
+    candidate.post_training_score = evaluatePolicy(*policy,
+                                                   getNbEvaluationTrials(),
+                                                   engine);
     candidate.mutation_score = 1.0;
     candidate.last_training = 0;
+    candidate.is_leaf = true;
     mutation_candidates.push_back(candidate);
   }
   policy_tree->save("policy_tree.bin");
@@ -161,25 +174,32 @@ void PolicyMutationLearner::setNbThreads(int nb_threads) {
 double PolicyMutationLearner::evalAndGetStates(std::default_random_engine * engine)
 {
   std::vector<Eigen::VectorXd> global_visited_states;
-  double reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine,
-                                 &global_visited_states);
-  // Clear all visited states between two iterations
-  for (MutationCandidate & c : mutation_candidates) {
-    c.visited_states.clear();
+  std::vector<Eigen::VectorXd> * visited_states_ptr = nullptr;
+  if (use_density_score || use_visited_states) {
+    visited_states_ptr = &global_visited_states;
   }
-  // TODO: should really be optimized using the tree like structure, but require
-  //       to store the mutations using a tree
-  for (const Eigen::VectorXd & state : global_visited_states) {
+  double reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine,
+                                 visited_states_ptr);
+  // Updating visited states if required
+  if (visited_states_ptr != nullptr) {
+    // Clear all visited states between two iterations
     for (MutationCandidate & c : mutation_candidates) {
-      bool valid = true;
-      for (int dim = 0; dim < problem->stateDims(); dim++) {
-        if (state(dim) < c.space(dim,0) || state(dim) >= c.space(dim,1)) {
-          valid = false;
-          break;
+      c.visited_states.clear();
+    }
+    // TODO: should really be optimized using the tree like structure, but require
+    //       to store the mutations using a tree
+    for (const Eigen::VectorXd & state : global_visited_states) {
+      for (MutationCandidate & c : mutation_candidates) {
+        bool valid = true;
+        for (int dim = 0; dim < problem->stateDims(); dim++) {
+          if (state(dim) < c.space(dim,0) || state(dim) >= c.space(dim,1)) {
+            valid = false;
+            break;
+          }
         }
-      }
-      if (valid) {
-        c.visited_states.push_back(state);
+        if (valid) {
+          c.visited_states.push_back(state);
+        }
       }
     }
   }
@@ -188,26 +208,31 @@ double PolicyMutationLearner::evalAndGetStates(std::default_random_engine * engi
 
 void PolicyMutationLearner::updateMutationsScores() {
   for (MutationCandidate & c : mutation_candidates) {
-    // Computing age score
     double age = iterations - c.last_training;
     double relative_age = age / mutation_candidates.size();
     double age_score = pow(age_basis, relative_age);
-    // Computing density score
-    int nb_states = c.visited_states.size();
-    double density_score = 1 + nb_states;// avoid 0 score
-    // Updating mutation score
-    c.mutation_score = age_score * density_score;
+    c.mutation_score = age_score;
+    if (use_density_score) {
+      int nb_states = c.visited_states.size();
+      double density_score = 1 + nb_states;// avoid 0 score
+      c.mutation_score *= density_score;
+    }
   }
 }
 
 void PolicyMutationLearner::mutate(int mutation_id,
                                    std::default_random_engine * engine) {
-  if (isMutationAllowed(mutation_candidates[mutation_id])) {
-    mutateLeaf(mutation_id, engine);
+  if (mutation_candidates[mutation_id].is_leaf) {
+    if (isMutationAllowed(mutation_candidates[mutation_id])) {
+      mutateLeaf(mutation_id, engine);
+    }
+    else {
+      std::cout << "-> Skipping mutation (forbidden)" << std::endl;
+      mutation_candidates[mutation_id].last_training = iterations;
+    }
   }
   else {
-    std::cout << "-> Skipping mutation (forbidden)" << std::endl;
-    mutation_candidates[mutation_id].last_training = iterations;
+    mutatePreLeaf(mutation_id, engine);
   }
 }
 
@@ -218,12 +243,27 @@ void PolicyMutationLearner::mutateLeaf(int mutation_id,
     splitMutation(mutation_id, engine);
   }
   else {
-    refineMutation(mutation_id, engine);
+    // If several actions are available and result of rand_value force to newAction
+    bool change_action =
+      problem->getNbActions() > 1 && rand_val < split_probability + change_action_probability;
+    refineMutation(mutation_id, change_action, engine);
   }
 }
 
+void PolicyMutationLearner::mutatePreLeaf(int mutation_id,
+                                          std::default_random_engine * engine) {
+  (void) mutation_id;
+  (void) engine;
+  //TODO
+}
+
 void PolicyMutationLearner::refineMutation(int mutation_id,
+                                           bool change_action,
                                            std::default_random_engine * engine) {
+  RefinementType type = RefinementType::local;
+  if (!change_action) {
+    type = sampleRefinementType(engine);
+  }
   // Get reference to the appropriate mutation
   MutationCandidate * mutation = &(mutation_candidates[mutation_id]);
   // Get space, and space center
@@ -233,14 +273,34 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   // Getting current action_id
   Eigen::VectorXd current_action = policy_tree->predict(space_center);
   int action_id = (int)current_action(0);
-  // Generate a random number in [0, nb_actions-1]: offset is applied later
-  std::uniform_int_distribution<int> action_id_distrib(0,problem->getNbActions()-1);
-  action_id = action_id_distrib(*engine);
-  // Test action of type
-  std::cout << "Training for action to " << action_id << std::endl;
+  // If changing action, choose replacing action randomly
+  if  (change_action) {
+    // Generate a random number in [0, nb_actions-2]: offset is applied later
+    std::uniform_int_distribution<int> action_id_distrib(0,problem->getNbActions()-2);
+    int old_action_id = action_id;
+    action_id = action_id_distrib(*engine);
+    if (action_id >= old_action_id) action_id++;
+    std::cout << "Changing action to " << action_id << std::endl;
+  }
   int output_dim = problem->actionDims(action_id);
   Eigen::MatrixXd action_limits = problem->getActionLimits(action_id);
-  // Initial states
+  // Debug:
+  std::cout << "-> Applying a refine mutation of type ";
+  std::string name;
+  switch(type) {
+    case RefinementType::local:
+      std::cout << "local";
+      break;
+    case RefinementType::narrow:
+      std::cout << "narrow";
+      break;
+    case RefinementType::wide:
+      std::cout << "wide";
+      break;
+  }
+  std::cout << " on space" << std::endl
+            << space.transpose() << std::endl;
+
   std::vector<Eigen::VectorXd> initial_states = getInitialStates(*mutation, engine);
   std::cout << "-> Nb Initial states: " << initial_states.size() << std::endl;
   // Add the parameters to provide an action_id
@@ -276,9 +336,13 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
       // Type of evaluation depends on the fact that initial_states have been created
       return evaluation(*policy, initial_states, engine);
     };
+  // Getting initial guess
+  Eigen::VectorXd parameters_guess = getGuess(*mutation, action_id);
   // Getting parameters_space
-  Eigen::MatrixXd parameters_space = getParametersSpaces(action_id);
-  Eigen::VectorXd parameters_guess = Eigen::VectorXd::Zero(parameters_space.rows());
+  Eigen::MatrixXd parameters_space = getParametersSpaces(space,
+                                                         parameters_guess,
+                                                         type,
+                                                         action_id);
   for (int dim = 0; dim < parameters_guess.rows(); dim++) {
     double original = parameters_guess(dim);
     double min = parameters_space(dim, 0);
@@ -318,6 +382,16 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   submitTree(std::move(refined_tree), initial_states, engine);
   // Update mutation properties:
   mutation->last_training = iterations;
+}
+
+PolicyMutationLearner::RefinementType
+PolicyMutationLearner::sampleRefinementType(std::default_random_engine * engine) const {
+  double val = std::uniform_real_distribution<double>(0,1)(*engine);
+  val -= local_probability;
+  if (val < 0) return RefinementType::local;
+  val -= narrow_probability;
+  if (val < 0) return RefinementType::narrow;
+  return RefinementType::wide;
 }
 
 void PolicyMutationLearner::splitMutation(int mutation_id,
@@ -371,10 +445,12 @@ void PolicyMutationLearner::splitMutation(int mutation_id,
   for (size_t i = 0; i < split_spaces.size(); i++) {
     MutationCandidate new_mutation;
     new_mutation.space = split_spaces[i];
+    new_mutation.post_training_score = mutation.post_training_score;
     new_mutation.mutation_score = mutation.mutation_score;
     // We consider as training only refinement which are likely to lead to
     // real improvements
     new_mutation.last_training = mutation.last_training;
+    new_mutation.is_leaf = true;
     if (i == 0) {
       mutation_candidates[mutation_id] = new_mutation;
     }
@@ -494,13 +570,71 @@ PolicyMutationLearner::trySplit(int mutation_id, int split_dim,
   return std::move(splitted_tree);
 }
 
-Eigen::MatrixXd PolicyMutationLearner::getParametersSpaces(int action_id) const {
+Eigen::VectorXd PolicyMutationLearner::getGuess(const MutationCandidate & mutation,
+                                                int action_id) const {
+  // Get space, center and original FA
+  Eigen::MatrixXd space = mutation.space;
+  Eigen::VectorXd space_center = (space.col(0) + space.col(1)) / 2;
+  Eigen::MatrixXd action_limits = problem->getActionLimits(action_id);
+  int action_dims = problem->actionDims(action_id);
+  // Default parameters
+  Eigen::VectorXd guess = LinearApproximator::getDefaultParameters(space,
+                                                                   action_limits);
+  // If action does not match, return default guess
+  const FunctionApproximator & fa = policy_tree->getLeafApproximator(space_center);
+  int current_action_id = fa.predict(space_center)(0);
+  if (current_action_id != action_id) { return guess; }
+
+  // Case of Constant Approximator in tree
+  try {
+    const ConstantApproximator & approximation =
+      dynamic_cast<const ConstantApproximator &>(fa);
+    guess.segment(0, action_dims) = approximation.getValue().segment(0, action_dims);
+    return guess;
+  } catch (const std::bad_cast & exc) {
+    // Nothing to be done
+  }
+  // Case of Linear Approximator in tree
+  try {
+    const LinearApproximator & approximation =
+      dynamic_cast<const LinearApproximator &>(fa);
+    Eigen::VectorXd bias_at_center = approximation.getBias(space_center).segment(1,action_dims);
+    const Eigen::MatrixXd & coeffs = approximation.getCoeffs();
+    int state_dims = problem->stateDims();
+    Eigen::VectorXd filtered_coeffs(action_dims * state_dims);
+    for (int state = 0; state < state_dims; state++) {
+      int start = state * action_dims;
+      filtered_coeffs.segment(start, action_dims) = coeffs.col(state).segment(1,action_dims);
+    }
+    guess.segment(0, action_dims) = bias_at_center;
+    guess.segment(action_dims, filtered_coeffs.rows()) = filtered_coeffs;
+    return guess;
+  } catch (const std::bad_cast & exc) {
+    // Nothing to be done
+  }
+  throw std::logic_error("PolicyMutationLearner::getGuess: type of 'fa' is not handled");
+}
+
+Eigen::MatrixXd PolicyMutationLearner::getParametersSpaces(const Eigen::MatrixXd & space,
+                                                           const Eigen::VectorXd & guess,
+                                                           RefinementType type,
+                                                           int action_id) const {
   // Which space is used for parameters
   Eigen::MatrixXd parameters_space;
-  Eigen::MatrixXd space_for_parameters = problem->getStateLimits();
+  bool narrow_slope = (type != RefinementType::wide);
+  Eigen::MatrixXd space_for_parameters = space;
+  if (avoid_growing_slopes) {
+    space_for_parameters = problem->getStateLimits();
+  }
   parameters_space = LinearApproximator::getParametersSpace(space_for_parameters,
                                                             problem->getActionLimits(action_id),
-                                                            false);
+                                                            narrow_slope);
+  // If type is local, then: search around guess
+  if (type == RefinementType::local) {
+    Eigen::VectorXd parameters_size = parameters_space.col(1) - parameters_space.col(0);
+    parameters_space.col(0) = guess - parameters_size / 2;
+    parameters_space.col(1) = guess + parameters_size / 2;
+  }
   return parameters_space;
 }
 
@@ -518,11 +652,21 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   // Calling parent implementation
   BlackBoxLearner::from_xml(node);
   // Reading class variables
+  rosban_utils::xml_tools::try_read<bool>  (node, "avoid_growing_slopes" , avoid_growing_slopes );
+  rosban_utils::xml_tools::try_read<bool>  (node, "use_visited_states"   , use_visited_states   );
   rosban_utils::xml_tools::try_read<int>   (node, "training_evaluations" , training_evaluations );
+  rosban_utils::xml_tools::try_read<double>(node, "training_evaluations_growth",
+                                            training_evaluations_growth);
   rosban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
+  rosban_utils::xml_tools::try_read<double>(node, "local_probability"   , local_probability   );
+  rosban_utils::xml_tools::try_read<double>(node, "narrow_probability"  , narrow_probability  );
   rosban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
   rosban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
+  rosban_utils::xml_tools::try_read<double>(node, "evaluations_growth"  , evaluations_growth  );
   rosban_utils::xml_tools::try_read<double>(node, "age_basis"           , age_basis           );
+  rosban_utils::xml_tools::try_read<double>(node,
+                                            "change_action_probability",
+                                            change_action_probability);
   // Optimizer is mandatory
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
   // Read Policy if provided (optional)
@@ -549,6 +693,9 @@ PolicyMutationLearner::getInitialStates(const MutationCandidate & mc,
                                         std::default_random_engine * engine)
 {
   size_t nb_evaluations_allowed = getTrainingEvaluations();
+  if (!use_visited_states) {
+    return rosban_random::getUniformSamples(mc.space, nb_evaluations_allowed, engine);
+  }
   // If we are lacking samples return them all
   if (nb_evaluations_allowed >= mc.visited_states.size()) {
     return mc.visited_states;
@@ -567,7 +714,7 @@ PolicyMutationLearner::getInitialStates(const MutationCandidate & mc,
 
 bool PolicyMutationLearner::isMutationAllowed(const MutationCandidate & mc) const
 {
-  return mc.visited_states.size() > 10;
+  return !use_visited_states || mc.visited_states.size() > 10;
 }
 
 bool PolicyMutationLearner::submitTree(std::unique_ptr<rosban_fa::FATree> new_tree,
@@ -589,6 +736,8 @@ bool PolicyMutationLearner::submitTree(std::unique_ptr<rosban_fa::FATree> new_tr
       new_global_reward > old_global_reward) {
     policy_tree = std::move(new_tree);
     policy = std::move(new_policy);
+    //TODO: mutation should be provided as a parameter if we want to improve that
+    //mutation->post_training_score = new_local_reward;
     return true;
   }
   return false;
