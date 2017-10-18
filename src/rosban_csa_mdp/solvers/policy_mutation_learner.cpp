@@ -233,7 +233,7 @@ void PolicyMutationLearner::refineMutation(int mutation_id,
   // Getting current action_id
   Eigen::VectorXd current_action = policy_tree->predict(space_center);
   int action_id = (int)current_action(0);
-  // Generate a random number in [0, nb_actions-1]: offset is applied later
+  // Generate a random number in [0, nb_actions-1]
   std::uniform_int_distribution<int> action_id_distrib(0,problem->getNbActions()-1);
   action_id = action_id_distrib(*engine);
   // Test action of type
