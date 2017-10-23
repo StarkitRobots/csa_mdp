@@ -10,5 +10,6 @@ set(SOURCES
   mre_fpf.cpp
   pf_fpf.cpp
   policy_mutation_learner.cpp
+  pml2.cpp
   tree_policy_iteration.cpp
   )
