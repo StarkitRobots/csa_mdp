@@ -34,8 +34,8 @@ protected:
   /// All the information relative to a mutation candidate are stored in this
   /// structure
   struct MutationCandidate {
-    /// Which  is concerned by the candidate
-    Eigen::MatrixXd space;
+//    /// Which  is concerned by the candidate
+//    Eigen::MatrixXd space;
     /// Weight of the mutation in the random selection process
     double mutation_score;
     /// At which iteration was this mutation trained for the last time?
@@ -149,9 +149,16 @@ public:
                   const std::vector<Eigen::VectorXd> & initial_states,
                   std::default_random_engine * engine);
 
+  /// Update the mutation candidates after a split on given id
+  /// - Apply appropriate offset on nodes with higher ids
+  /// - Add mutation candidates for the new leaves
+  /// - Remove mutation candidate on 'node_id'
+  /// - Update policy_tree ids
+  void postSplitUpdate(int node_id, int nb_nodes_added);
+
 protected:
   /// The list of mutations available
-  std::vector<MutationCandidate> mutation_candidates;
+  std::map<int,MutationCandidate> mutation_candidates;
 
   /// The current version of the tree
   std::unique_ptr<rosban_fa::FATree> policy_tree;
