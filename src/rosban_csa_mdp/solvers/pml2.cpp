@@ -623,7 +623,7 @@ PML2::tryLinearSplit(int mutation_id,
   std::unique_ptr<FunctionApproximator> optimized_approximator;
   optimized_approximator = parameters_to_approximator(optimized_parameters);
   std::unique_ptr<FATree> splitted_tree;
-  splitted_tree = policy_tree->copyAndReplaceLeaf(samples_center,
+  splitted_tree = policy_tree->copyAndReplaceLeaf(initial_states[0],
                                                   std::move(optimized_approximator));
   return std::move(splitted_tree);
 }
