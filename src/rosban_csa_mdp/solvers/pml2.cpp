@@ -57,10 +57,7 @@ Eigen::VectorXd computeStatesDeviation(const std::vector<Eigen::VectorXd> & stat
   Eigen::VectorXd center = computeStatesCenter(states);
   Eigen::VectorXd squared_errors = Eigen::VectorXd::Zero(center.rows());
   for (size_t i = 0; i < states.size(); i++) {
-    Eigen::VectorXd diff = center - squared_errors;
-    for (int dim = 0; dim < diff.rows(); dim++) {
-      squared_errors(dim) += diff(dim) * diff(dim);
-    }
+    squared_errors += (states[i] - center).cwiseAbs2();//Add squared error for current state
   }
   return (squared_errors / states.size()).cwiseSqrt();  
 }
@@ -69,7 +66,8 @@ PML2::PML2()
   : training_evaluations(50),
     split_margin(0.05),
     evaluations_ratio(-1),
-    age_basis(1.02)
+    age_basis(1.02),
+    use_linear_splits(false)
 {
 }
 
@@ -252,7 +250,11 @@ void PML2::mutateLeaf(int mutation_id,
   for (int action_id = 0; action_id < problem->getNbActions(); action_id++) {
     tryRefine(mutation_id, action_id, engine);
   }
-  applyBestSplit(mutation_id, engine);
+  if (use_linear_splits) {
+    applyBestLinearSplit(mutation_id, engine);
+  } else { 
+    applyBestSplit(mutation_id, engine);
+  }
 }
 
 void PML2::tryRefine(int mutation_id, int action_id,
@@ -345,6 +347,57 @@ void PML2::applyBestSplit(int mutation_id,
   if (!best_tree) {
     throw std::logic_error("PML2::splitMutation: Failed to find a best tree");
   }
+  // Getting ref to the chosen Split and backing it up in case it is needed after
+  const Split & split = best_tree->getPreLeafApproximator(initial_states[0]).getSplit();
+  std::unique_ptr<Split> split_copy = split.clone();
+  // Evaluating policy with respect to previous solution
+  int nb_new_nodes = split.getNbElements();
+  bool replaced_policy = submitTree(std::move(best_tree), initial_states, engine);
+  // If the new approximation does not replace current one, reuse current FA for children
+  if (!replaced_policy) {
+    // Create a new FATree with cloned approximators
+    std::vector<std::unique_ptr<FunctionApproximator>> approximators;
+    for (int elem = 0; elem < split_copy->getNbElements(); elem++) {
+      approximators.push_back(leaf_fa.clone());
+    }
+    std::unique_ptr<FATree> new_leaf_fa(new FATree(std::move(split_copy),
+                                                   approximators));
+    // Replace it in policy tree and update policy
+    policy_tree->replaceApproximator(initial_states[0], std::move(new_leaf_fa));
+    policy = buildPolicy(*policy_tree);
+  }
+  postSplitUpdate(mutation_id, nb_new_nodes);
+}
+
+
+
+void PML2::applyBestLinearSplit(int mutation_id,
+                                std::default_random_engine * engine) {
+  const MutationCandidate & mutation = mutation_candidates[mutation_id];
+  std::vector<Eigen::VectorXd> initial_states = getInitialStates(mutation, engine);
+  Eigen::VectorXd samples_center = computeStatesCenter(initial_states);
+  const FunctionApproximator & leaf_fa = policy_tree->getLeafApproximator(initial_states[0]);
+  // Debug message
+  std::cout << "-> Applying a linear split mutation " << std::endl;
+  std::cout << "-> Nb initial states: " << initial_states.size() << std::endl;
+  // Testing all actions as split and keeping the best one
+  double best_score = std::numeric_limits<double>::lowest();
+  std::unique_ptr<FATree> best_tree;
+  for (int action_id = 0; action_id < problem->getNbActions(); action_id++) {
+    double score;
+    std::unique_ptr<FATree> current_tree = tryLinearSplit(mutation_id,
+                                                          action_id, initial_states,
+                                                          engine, &score);
+    if (score > best_score) {
+      best_score = score;
+      best_tree = std::move(current_tree);
+    }
+  }
+  // Avoiding risk of segfault if something wrong happened before
+  if (!best_tree) {
+    throw std::logic_error("PML2::applyBestLinearSplit: Failed to find a best tree");
+  }
+  // TODO: this part is duplicated from applyBestOrthogonalSplit code shall be shared
   // Getting ref to the chosen Split and backing it up in case it is needed after
   const Split & split = best_tree->getPreLeafApproximator(initial_states[0]).getSplit();
   std::unique_ptr<Split> split_copy = split.clone();
@@ -477,7 +530,7 @@ PML2::trySplit(int mutation_id, int split_dim,
 /// Function to optimize has the following parameters
 /// 0                  : hyperplane offset factor in [-1 1] (with respect to samples center)
 /// 1 to D             : hyperplane coeffs (with D input dimensionality) [-1 1] for each coeff
-/// D+1 to D+((A+1)*D) : action coefficients (cf getParametersSpace)
+/// D+1 to (D+1)(A+1)  : action coefficients (cf getParametersSpace) ((D+1)*A coeffs)
 /// with: D input dimension and A action space dimension
 std::unique_ptr<rosban_fa::FATree>
 PML2::tryLinearSplit(int mutation_id,
@@ -492,16 +545,23 @@ PML2::tryLinearSplit(int mutation_id,
   int D = problem->stateDims();
   int A = problem->actionDims(action_id);
   // Parameters space
-  Eigen::MatrixXd parameters_space((A+2)*D+1,2);
+  int param_dims = (A+1)*(D+1);
+  Eigen::MatrixXd parameters_space(param_dims,2);
   for (int i = 0; i <= D; i++) {
     parameters_space(i,0) = -1;
     parameters_space(i,1) = 1;
   }
-  parameters_space.block(D+1,0,D*(A+1),2) = getParametersSpaces(action_id);
+  parameters_space.block(D+1,0,(D+1)*A,2) = getParametersSpaces(action_id);
+  // Initial guess
+  // - Impossible to use a normal vector with only 0 -> arbitrary choice for initial vector
+  // - Middle of the spaces for linear coefficients (actions are not necessarily centered in 0)
+  Eigen::VectorXd initial_parameters = Eigen::VectorXd::Zero(param_dims);
+  initial_parameters(1) = 1;
+  initial_parameters.segment(D+1,(D+1)*A) =
+    ( parameters_space.block(D+1,0,(D+1)*A,1) + parameters_space.block(D+1,1,(D+1)*A,1)) / 2;
   // Getting mutation properties
-  MutationCandidate mutation = mutation_candidates[mutation_id];
-  Eigen::VectorXd samples_center = computeStatesCenter(mutation.visited_states);
-  Eigen::VectorXd samples_dev = computeStatesDeviation(mutation.visited_states);
+  Eigen::VectorXd samples_center = computeStatesCenter(initial_states);
+  Eigen::VectorXd samples_dev = computeStatesDeviation(initial_states);
   const FunctionApproximator & leaf_fa = policy_tree->getLeafApproximator(initial_states[0]);
   auto parameters_to_approximator =
     [action_id,A,D,&samples_center,&samples_dev, &leaf_fa]
@@ -510,7 +570,7 @@ PML2::tryLinearSplit(int mutation_id,
       // Importing values from parameters
       double offset_param = parameters(0);
       const Eigen::VectorXd & hyperplane_coeffs_param = parameters.segment(1,D);
-      const Eigen::VectorXd & linear_approximator_params = parameters.segment(D+1,D*(A+1));
+      const Eigen::VectorXd & linear_approximator_params = parameters.segment(D+1,A*(D+1));
       // Extracting hyperplane
       // - Offset of plan is based on deviation of samples, hyperplane coeffs and params
       //   (by using absolute coeffs, we ensure that there is no possible compensation)
@@ -550,28 +610,21 @@ PML2::tryLinearSplit(int mutation_id,
       std::unique_ptr<Policy> policy = buildPolicy(*new_tree);
       return evaluation(*policy, initial_states, engine);
     };
-
-  Eigen::VectorXd initial_parameters;//TODO: initialize properly, warning, cannot use only 0 for split dir
   Eigen::VectorXd optimized_parameters = optimize(reward_func,
                                                   parameters_space,
                                                   initial_parameters,
                                                   engine);
-  // Make a more approximate evaluation
+  // TODO: Evaluate with a larger set
+  *score = reward_func(optimized_parameters, engine);
+  // Debug
+  std::cout << "\t->Optimized params: " << optimized_parameters.transpose() << std::endl;
+  std::cout << "\t->Avg reward: " << *score << std::endl;
+  // return splitted tree
   std::unique_ptr<FunctionApproximator> optimized_approximator;
   optimized_approximator = parameters_to_approximator(optimized_parameters);
   std::unique_ptr<FATree> splitted_tree;
   splitted_tree = policy_tree->copyAndReplaceLeaf(samples_center,
                                                   std::move(optimized_approximator));
-  std::unique_ptr<Policy> optimized_policy = buildPolicy(*splitted_tree);
-  // Evaluate with a larger set
-// TODO: replace with a local evaluation based only on samples
-//
-//  *score = localEvaluation(*optimized_policy, leaf_space,
-//                           getNbEvaluationTrials(), engine);
-  // Debug
-  std::cout << "\t->Optimized params: " << optimized_parameters.transpose() << std::endl;
-  std::cout << "\t->Avg reward: " << *score << std::endl;
-  // return optimized approximator
   return std::move(splitted_tree);
 }
 
@@ -605,6 +658,7 @@ void PML2::from_xml(TiXmlNode *node) {
   rosban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
   rosban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
   rosban_utils::xml_tools::try_read<double>(node, "age_basis"           , age_basis           );
+  rosban_utils::xml_tools::try_read<bool>  (node, "use_linear_splits"   , use_linear_splits   );
   // Optimizer is mandatory
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
   // Read Policy if provided (optional)

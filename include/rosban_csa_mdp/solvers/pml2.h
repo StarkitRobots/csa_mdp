@@ -190,6 +190,9 @@ protected:
 
   /// age_score = age_basis ^ (nb_update_since_update / nb_leafs)
   double age_basis;
+
+  /// If false: uses orthogonal splits
+  bool use_linear_splits;
 };
 
 }
