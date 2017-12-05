@@ -185,7 +185,7 @@ int PML2::getMutationId(std::default_random_engine * engine) {
   for (const auto & e : mutation_candidates) {
     acc += e.second.mutation_score;
     if (acc > c_score) {
-      std::cout << "<- Mutation candidate has score: "
+      std::cout << "<- Mutation candidate: '" << e.first << "' score: "
                 << e.second.mutation_score << std::endl;
       return e.first;
     }
