@@ -96,7 +96,7 @@ public:
   /// Try to split along 'split_dim' at the given mutation.
   /// Return the FATree built to replace current approximator and update score
   std::unique_ptr<rosban_fa::FATree>
-  trySplit(int mutation_id, int split_dim,
+  trySplit(int split_dim,
            const std::vector<Eigen::VectorXd> & initial_states,
            std::default_random_engine * engine,
            double * score);
@@ -104,7 +104,7 @@ public:
   /// Try to split using a linear split and a new action 'action_id' at the given mutation.
   /// Return the FATree built to replace current approximator and update score
   std::unique_ptr<rosban_fa::FATree>
-  tryLinearSplit(int mutation_id, int action_id,
+  tryLinearSplit(int action_id,
                  const std::vector<Eigen::VectorXd> & initial_states,
                  std::default_random_engine * engine,
                  double * score);

@@ -336,7 +336,7 @@ void PML2::applyBestSplit(int mutation_id,
   std::unique_ptr<FATree> best_tree;
   for (int dim = 0; dim < problem->stateDims(); dim++) {
     double score;
-    std::unique_ptr<FATree> current_tree = trySplit(mutation_id, dim, initial_states,
+    std::unique_ptr<FATree> current_tree = trySplit(dim, initial_states,
                                                     engine, &score);
     if (score > best_score) {
       best_score = score;
@@ -385,8 +385,7 @@ void PML2::applyBestLinearSplit(int mutation_id,
   std::unique_ptr<FATree> best_tree;
   for (int action_id = 0; action_id < problem->getNbActions(); action_id++) {
     double score;
-    std::unique_ptr<FATree> current_tree = tryLinearSplit(mutation_id,
-                                                          action_id, initial_states,
+    std::unique_ptr<FATree> current_tree = tryLinearSplit(action_id, initial_states,
                                                           engine, &score);
     if (score > best_score) {
       best_score = score;
@@ -421,7 +420,7 @@ void PML2::applyBestLinearSplit(int mutation_id,
 }
 
 std::unique_ptr<rosban_fa::FATree>
-PML2::trySplit(int mutation_id, int split_dim,
+PML2::trySplit(int split_dim,
                const std::vector<Eigen::VectorXd> & initial_states,
                std::default_random_engine * engine,
                double * score) {
@@ -533,8 +532,7 @@ PML2::trySplit(int mutation_id, int split_dim,
 /// D+1 to (D+1)(A+1)  : action coefficients (cf getParametersSpace) ((D+1)*A coeffs)
 /// with: D input dimension and A action space dimension
 std::unique_ptr<rosban_fa::FATree>
-PML2::tryLinearSplit(int mutation_id,
-                     int action_id,
+PML2::tryLinearSplit(int action_id,
                      const std::vector<Eigen::VectorXd> & initial_states,
                      std::default_random_engine * engine,
                      double * score)
