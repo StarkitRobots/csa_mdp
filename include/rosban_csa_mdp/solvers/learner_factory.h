@@ -2,12 +2,12 @@
 
 #include "rosban_csa_mdp/solvers/learner.h"
 
-#include "rosban_utils/factory.h"
+#include "rhoban_utils/serialization/factory.h"
 
 namespace csa_mdp
 {
 
-class LearnerFactory : public rosban_utils::Factory<Learner>
+class LearnerFactory : public rhoban_utils::Factory<Learner>
 {
 public:
   /// Automatically register several learners

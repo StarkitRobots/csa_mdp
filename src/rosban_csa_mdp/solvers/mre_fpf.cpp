@@ -2,10 +2,10 @@
 
 #include "rosban_regression_forests/approximations/pwc_approximation.h"
 
-#include "rosban_utils/benchmark.h"
+#include "rhoban_utils/benchmark.h"
 
-using rosban_utils::Benchmark;
-using rosban_utils::TimeStamp;
+using rhoban_utils::Benchmark;
+using rhoban_utils::TimeStamp;
 
 using regression_forests::Approximation;
 using regression_forests::PWCApproximation;
@@ -19,7 +19,7 @@ MREFPF::Config::Config()
 {
 }
 
-std::string MREFPF::Config::class_name() const
+std::string MREFPF::Config::getClassName() const
 {
   return "MREFPFConfig";
 }
@@ -27,24 +27,24 @@ std::string MREFPF::Config::class_name() const
 void MREFPF::Config::to_xml(std::ostream &out) const
 {
   FPF::Config::to_xml(out);
-  rosban_utils::xml_tools::write<bool>  ("filter_samples", filter_samples, out);
-  rosban_utils::xml_tools::write<double>("reward_max"    , reward_max    , out);
-  rosban_utils::xml_tools::write<std::string>("update_type", to_string(update_type), out);
+  rhoban_utils::xml_tools::write<bool>  ("filter_samples", filter_samples, out);
+  rhoban_utils::xml_tools::write<double>("reward_max"    , reward_max    , out);
+  rhoban_utils::xml_tools::write<std::string>("update_type", to_string(update_type), out);
 }
 
 void MREFPF::Config::from_xml(TiXmlNode *node)
 {
   FPF::Config::from_xml(node);
   // Mandatory parameters
-  reward_max      = rosban_utils::xml_tools::read<int> (node, "reward_max"    );
+  reward_max      = rhoban_utils::xml_tools::read<int> (node, "reward_max"    );
   std::string update_type_str;
-  rosban_utils::xml_tools::try_read<std::string>(node, "update_type", update_type_str);
+  rhoban_utils::xml_tools::try_read<std::string>(node, "update_type", update_type_str);
   if (update_type_str != "")
   {
     update_type = loadUpdateType(update_type_str);
   }
   // Optional parameters
-  rosban_utils::xml_tools::try_read<bool>(node, "filter_samples", filter_samples);
+  rhoban_utils::xml_tools::try_read<bool>(node, "filter_samples", filter_samples);
 }
 
 MREFPF::MREFPF()

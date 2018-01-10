@@ -15,22 +15,24 @@ KnownnessTree::Config::Config()
 {
 }
 
-std::string KnownnessTree::Config::class_name() const
+std::string KnownnessTree::Config::getClassName() const
 {
   return "KnownnessTreeConfig";
 }
 
-void KnownnessTree::Config::to_xml(std::ostream &out) const
+Json::Value KnownnessTree::Config::toJson() const
 {
-  rosban_utils::xml_tools::write<int>("max_points", max_points, out);
-  rosban_utils::xml_tools::write<std::string>("type", to_string(type), out);
+  Json::Value v;
+  v["max_points"] = max_points;
+  v["type"      ] = to_string(type);
 }
 
-void KnownnessTree::Config::from_xml(TiXmlNode *node)
+void KnownnessTree::Config::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  rosban_utils::xml_tools::try_read<int>(node, "max_points", max_points);
+  (void)dir_name;
   std::string type_str;
-  rosban_utils::xml_tools::try_read<std::string>(node, "type", type_str);
+  rhoban_utils::tryRead(v, "max_points", &max_points);
+  rhoban_utils::tryRead(v, "type"      , &type_str);
   if (type_str != "")
   {
     type = loadType(type_str);

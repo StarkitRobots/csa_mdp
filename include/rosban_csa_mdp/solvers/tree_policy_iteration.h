@@ -22,7 +22,7 @@ public:
   std::unique_ptr<Policy> updatePolicy(std::default_random_engine * engine);
 
 
-  virtual std::string class_name() const override;
+  virtual std::string getClassName() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
 

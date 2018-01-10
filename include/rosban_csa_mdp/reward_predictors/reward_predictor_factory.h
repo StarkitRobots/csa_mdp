@@ -2,12 +2,12 @@
 
 #include "rosban_csa_mdp/reward_predictors/reward_predictor.h"
 
-#include "rosban_utils/factory.h"
+#include "rhoban_utils/serialization/factory.h"
 
 namespace csa_mdp
 {
 
-class RewardPredictorFactory : public rosban_utils::Factory<RewardPredictor>
+class RewardPredictorFactory : public rhoban_utils::Factory<RewardPredictor>
 {
 public:
   RewardPredictorFactory();

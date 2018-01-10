@@ -5,10 +5,10 @@
 
 #include "rosban_random/tools.h"
 
-#include "rosban_utils/multi_core.h"
-#include "rosban_utils/xml_tools.h"
+#include "rhoban_utils/threading/multi_core.h"
+#include "rhoban_utils/io_tools.h"
 
-using rosban_utils::MultiCore;
+using rhoban_utils::MultiCore;
 
 namespace csa_mdp
 {
@@ -83,20 +83,25 @@ void ExtraTreesApproximator::setNbThreads(int nb_threads_) {
     trainer->setNbThreads(nb_threads);
 }
 
-std::string ExtraTreesApproximator::class_name() const
+std::string ExtraTreesApproximator::getClassName() const
 {
   return "ExtraTreesApproximator";
 }
 
-void ExtraTreesApproximator::to_xml(std::ostream &out) const {
-  ValueApproximator::to_xml(out);
+Json::Value ExtraTreesApproximator::toJson() const {
+  Json::Value v = ValueApproximator::toJson();
+  v["nb_samples"] = nb_samples;
+  v["predictor"] = predictor->toFactoryJson();
+  v["trainer"] = trainer->toFactoryJson();
+  return v;
 }
 
-void ExtraTreesApproximator::from_xml(TiXmlNode *node) {
-  ValueApproximator::from_xml(node);
-  rosban_utils::xml_tools::try_read<int>(node, "nb_samples", nb_samples);
-  RewardPredictorFactory().tryRead   (node, "predictor", predictor);
-  rosban_fa::TrainerFactory().tryRead(node, "trainer"  , trainer  );
+void ExtraTreesApproximator::fromJson(const Json::Value & v, const std::string & dir_name)
+{
+  ValueApproximator::fromJson(v);
+  rhoban_utils::tryRead(v, "nb_samples", &nb_samples);
+  RewardPredictorFactory().tryRead   (v, "predictor", &predictor);
+  rosban_fa::TrainerFactory().tryRead(v, "trainer"  , &trainer  );
   setNbThreads(nb_threads);
 }
 

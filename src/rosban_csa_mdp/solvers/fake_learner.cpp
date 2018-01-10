@@ -17,7 +17,7 @@ bool FakeLearner::hasAvailablePolicy() { return false; }
 void FakeLearner::savePolicy(const std::string & prefix) {(void)prefix;}
 void FakeLearner::saveStatus(const std::string & prefix) {(void)prefix;}
 
-std::string FakeLearner::class_name() const
+std::string FakeLearner::getClassName() const
 {
   return "FakeLearner";
 }

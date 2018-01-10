@@ -1,5 +1,7 @@
 #include "rosban_csa_mdp/knownness/knownness_forest.h"
 
+#include <iostream>
+
 namespace csa_mdp
 {
 
@@ -8,21 +10,23 @@ KnownnessForest::Config::Config()
 {
 }
 
-std::string KnownnessForest::Config::class_name() const
+std::string KnownnessForest::Config::getClassName() const
 {
   return "KnownnessForestConfig";
 }
 
-void KnownnessForest::Config::to_xml(std::ostream &out) const
+Json::Value KnownnessForest::Config::toJson() const
 {
-  rosban_utils::xml_tools::write<int>("nb_trees", nb_trees, out);
-  tree_conf.write("tree_conf", out);
+  Json::Value v;
+  v["nb_trees"] = nb_trees;
+  v["tree_conf"] = tree_conf.toJson();
+  return v;
 }
 
-void KnownnessForest::Config::from_xml(TiXmlNode *node)
+void KnownnessForest::Config::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  nb_trees = rosban_utils::xml_tools::read<int>(node, "nb_trees");
-  tree_conf.tryRead(node, "tree_conf");
+  nb_trees = rhoban_utils::read<int>(v, "nb_trees");
+  tree_conf.tryRead(v, "tree_conf", dir_name);
 }
 
 KnownnessForest::KnownnessForest()

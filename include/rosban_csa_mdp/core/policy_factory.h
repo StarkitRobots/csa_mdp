@@ -2,14 +2,14 @@
 
 #include "rosban_csa_mdp/core/policy.h"
 
-#include "rosban_utils/factory.h"
+#include "rhoban_utils/serialization/factory.h"
 
 #include <map>
 
 namespace csa_mdp
 {
 
-class PolicyFactory : public rosban_utils::Factory<Policy>
+class PolicyFactory : public rhoban_utils::Factory<Policy>
 {
 public:
 

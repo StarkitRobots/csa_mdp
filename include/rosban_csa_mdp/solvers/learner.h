@@ -2,14 +2,14 @@
 
 #include "rosban_csa_mdp/core/problem.h"
 
-#include "rosban_utils/serializable.h"
-#include "rosban_utils/time_stamp.h"
+#include "rhoban_utils/serialization/json_serializable.h"
+#include "rhoban_utils/timing/time_stamp.h"
 
 namespace csa_mdp
 {
 
 /// Interface for learning algorithms
-class Learner : public rosban_utils::Serializable
+class Learner : public rhoban_utils::JsonSerializable
 {
 public:
   Learner();
@@ -55,8 +55,8 @@ public:
   /// Save current status with the given prefix
   virtual void saveStatus(const std::string & prefix) = 0;
 
-  virtual void to_xml(std::ostream &out) const override;
-  virtual void from_xml(TiXmlNode *node) override;
+  virtual Json::Value toJson() const override;
+  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
 
   /// Return time elapsed since learning start (in seconds)
   double getLearningTime() const;
@@ -77,7 +77,7 @@ protected:
   /// The number of threads allowed to the learner
   int nb_threads;
   /// The beginning of the learning
-  rosban_utils::TimeStamp learning_start;
+  rhoban_utils::TimeStamp learning_start;
   /// Store time repartition for the last internal update [s]
   std::map<std::string, double> time_repartition;
 

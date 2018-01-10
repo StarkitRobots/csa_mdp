@@ -43,16 +43,16 @@ Eigen::VectorXd ForestsPolicy::getRawAction(const Eigen::VectorXd &state,
   return cmd;
 }
 
-void ForestsPolicy::to_xml(std::ostream & out) const
+Json::Value ForestsPolicy::toJson() const
 {
-  (void) out;
   throw std::runtime_error("Not implemented yet: ForestsPolicy::to_xml");
 }
 
-void ForestsPolicy::from_xml(TiXmlNode * node)
+void ForestsPolicy::fromJson(const Json::Value & v, const std::string & dir_name)
 {
+  (void)dir_name;
   std::vector<std::string> paths;
-  paths = rosban_utils::xml_tools::read_vector<std::string>(node, "paths");
+  paths = rhoban_utils::readVector<std::string>(v, "paths");
   policies.clear();
   for (const std::string &path : paths)
   {
@@ -60,10 +60,10 @@ void ForestsPolicy::from_xml(TiXmlNode * node)
     forest->load(path);
     policies.push_back(std::move(forest));
   }
-  rosban_utils::xml_tools::try_read<bool>(node, "apply_noise", apply_noise);
+  rhoban_utils::tryRead(v, "apply_noise", &apply_noise);
 }
 
-std::string ForestsPolicy::class_name() const
+std::string ForestsPolicy::getClassName() const
 {
   return "forests_policy";
 }

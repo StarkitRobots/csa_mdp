@@ -10,7 +10,7 @@
 
 #include "rosban_random/tools.h"
 
-#include "rosban_utils/multi_core.h"
+#include "rhoban_utils/threading/multi_core.h"
 
 using csa_mdp::ProblemFactory;
 using csa_mdp::RewardPredictorFactory;
@@ -18,8 +18,8 @@ using csa_mdp::RandomPolicy;
 using rosban_fa::Trainer;
 using rosban_fa::TrainerFactory;
 
-using rosban_utils::MultiCore;
-using rosban_utils::TimeStamp;
+using rhoban_utils::MultiCore;
+using rhoban_utils::TimeStamp;
 
 // Default types
 #include "rosban_csa_mdp/reward_predictors/monte_carlo_predictor.h"
@@ -230,7 +230,7 @@ void ModelBasedLearner::updatePolicy()
   time_repartition["policy_trainer"  ] = diffSec(end_action_optimizer  , end_policy_trainer  );
 }
 
-std::string ModelBasedLearner::class_name() const
+std::string ModelBasedLearner::getClassName() const
 { return "ModelBasedLearner"; }
 
 void ModelBasedLearner::to_xml(std::ostream &out) const
@@ -241,7 +241,7 @@ void ModelBasedLearner::to_xml(std::ostream &out) const
   if (value_trainer)    value_trainer   ->factoryWrite("value_trainer"   , out);
   if (action_optimizer) action_optimizer->factoryWrite("action_optimizer", out);
   if (policy_trainer)   policy_trainer  ->factoryWrite("policy_trainer"  , out);
-  rosban_utils::xml_tools::write<bool>("use_stochastic_policies", use_stochastic_policies, out);
+  rhoban_utils::xml_tools::write<bool>("use_stochastic_policies", use_stochastic_policies, out);
 }
 
 void ModelBasedLearner::from_xml(TiXmlNode *node)
@@ -252,7 +252,7 @@ void ModelBasedLearner::from_xml(TiXmlNode *node)
   TrainerFactory().tryRead        (node, "value_trainer"   , value_trainer   );
   ActionOptimizerFactory().tryRead(node, "action_optimizer", action_optimizer);
   TrainerFactory().tryRead        (node, "policy_trainer"  , policy_trainer  );
-  rosban_utils::xml_tools::try_read<bool>(node, "use_stochastic_policies", use_stochastic_policies);
+  rhoban_utils::xml_tools::try_read<bool>(node, "use_stochastic_policies", use_stochastic_policies);
 }
 
 }

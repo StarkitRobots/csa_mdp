@@ -5,7 +5,7 @@
 
 #include <rosban_regression_forests/core/tree.h>
 
-#include <rosban_utils/serializable.h>
+#include <rhoban_utils/serialization/json_serializable.h>
 
 #include <random>
 
@@ -24,7 +24,7 @@ public:
   { MRE, Random };
 
   /// Config of the KnownnessTree
-  class Config : public rosban_utils::Serializable
+  class Config : public rhoban_utils::JsonSerializable
   {
   public:
     /// Maximal number of points by node (automatically split when values is above)
@@ -34,9 +34,9 @@ public:
 
     Config();
 
-    virtual std::string class_name() const override;
-    virtual void to_xml(std::ostream &out) const override;
-    virtual void from_xml(TiXmlNode *node) override;
+    virtual std::string getClassName() const override;
+    virtual Json::Value toJson() const override;
+    virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
   };
 
   KnownnessTree(const Eigen::MatrixXd& space,

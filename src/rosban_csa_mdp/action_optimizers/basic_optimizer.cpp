@@ -8,13 +8,13 @@
 
 #include "rosban_random/tools.h"
 
-#include "rosban_utils/multi_core.h"
+#include "rhoban_utils/threading/multi_core.h"
 
 using rosban_fa::GPTrainer;
 using rosban_fa::Trainer;
 using rosban_fa::TrainerFactory;
 
-using rosban_utils::MultiCore;
+using rhoban_utils::MultiCore;
 
 namespace csa_mdp
 {
@@ -119,25 +119,27 @@ BasicOptimizer::AOTask BasicOptimizer::getTask(const Eigen::VectorXd & input,
     };
 }
 
-std::string BasicOptimizer::class_name() const
+std::string BasicOptimizer::getClassName() const
 {
   return "BasicOptimizer";
 }
 
-void BasicOptimizer::to_xml(std::ostream &out) const
+Json::Value BasicOptimizer::toJson() const
 {
-  rosban_utils::xml_tools::write<int>("nb_additional_steps", nb_additional_steps, out);
-  rosban_utils::xml_tools::write<int>("nb_simulations"     , nb_simulations     , out);
-  rosban_utils::xml_tools::write<int>("nb_actions"         , nb_actions         , out);
-  trainer->factoryWrite(trainer->class_name(), out);
+  Json::Value v;
+  v["nb_additional_steps"] = nb_additional_steps;
+  v["nb_simulations"     ] = nb_simulations     ;
+  v["nb_actions"         ] = nb_actions         ;
+  v["trainer"] = trainer->toFactoryJson();
+  return v;
 }
 
-void BasicOptimizer::from_xml(TiXmlNode *node)
+void BasicOptimizer::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  rosban_utils::xml_tools::try_read<int>(node, "nb_additional_steps", nb_additional_steps);
-  rosban_utils::xml_tools::try_read<int>(node, "nb_simulations"     , nb_simulations     );
-  rosban_utils::xml_tools::try_read<int>(node, "nb_actions"         , nb_actions         );
-  TrainerFactory().tryRead(node, "trainer", trainer);
+  rhoban_utils::tryRead(v, "nb_additional_steps", &nb_additional_steps);
+  rhoban_utils::tryRead(v, "nb_simulations"     , &nb_simulations     );
+  rhoban_utils::tryRead(v, "nb_actions"         , &nb_actions         );
+  TrainerFactory().tryRead(v, "trainer", &trainer, dir_name);
 }
 
 }

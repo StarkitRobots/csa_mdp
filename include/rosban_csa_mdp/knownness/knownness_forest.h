@@ -10,15 +10,15 @@ namespace csa_mdp
 class KnownnessForest : public KnownnessFunction
 {
 public:
-  class Config : public rosban_utils::Serializable
+  class Config : public rhoban_utils::JsonSerializable
   {
   public:
 
     Config();
 
-    virtual std::string class_name() const override;
-    virtual void to_xml(std::ostream &out) const override;
-    virtual void from_xml(TiXmlNode *node) override;
+    virtual std::string getClassName() const override;
+    virtual Json::Value toJson() const override;
+    virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
 
     int nb_trees;
     KnownnessTree::Config tree_conf;

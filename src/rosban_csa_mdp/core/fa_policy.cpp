@@ -57,21 +57,24 @@ Eigen::VectorXd FAPolicy::getRawAction(const Eigen::VectorXd &state,
   return cmd;
 }
 
-std::string FAPolicy::class_name() const
+std::string FAPolicy::getClassName() const
 {
   return "FAPolicy";
 }
 
-void FAPolicy::to_xml(std::ostream & out) const
+Json::Value FAPolicy::toJson() const
 {
-  rosban_utils::xml_tools::write<bool>("noise", apply_noise, out);
+  Json::Value v;
+  v["noise"] = apply_noise;
+  throw std::logic_error("FAPolicy:toJson: not implemented");
 }
 
-void FAPolicy::from_xml(TiXmlNode * node)
+void FAPolicy::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  rosban_utils::xml_tools::try_read<bool>(node, "noise", apply_noise);
-  std::string path = rosban_utils::xml_tools::read<std::string>(node, "path");
-  FunctionApproximatorFactory().loadFromFile(path, fa);
+  std::string path;
+  rhoban_utils::read<std::string>(v, "path");
+  FunctionApproximatorFactory().loadFromFile(dir_name + path, fa);
+  rhoban_utils::tryRead(v, "noise", &apply_noise);
 }
 
 void FAPolicy::saveFA(const std::string & filename) const

@@ -2,24 +2,24 @@
 
 #include "rosban_csa_mdp/core/problem.h"
 
-#include "rosban_utils/factory.h"
+#include "rhoban_utils/serialization/factory.h"
 
 #include <map>
 
 namespace csa_mdp
 {
 
-class ProblemFactory : public rosban_utils::Factory<Problem>
+class ProblemFactory : public rhoban_utils::Factory<Problem>
 {
 public:
 
   ProblemFactory();
 
-  static void registerExtraBuilder(const std::string &name, Builder b, bool parse_xml = true);
-  static void registerExtraBuilder(const std::string &name, XMLBuilder b);
+  static void registerExtraBuilder(const std::string &name, Builder b, bool parse_json = true);
+  static void registerExtraBuilder(const std::string &name, JsonBuilder b);
 
 private:
-  static std::map<std::string, XMLBuilder> extra_builders;
+  static std::map<std::string, JsonBuilder> extra_builders;
 };
 
 }

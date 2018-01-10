@@ -113,7 +113,7 @@ public:
   /// refinement type
   Eigen::MatrixXd getParametersSpaces(int action_id) const;
 
-  virtual std::string class_name() const override;
+  virtual std::string getClassName() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
 

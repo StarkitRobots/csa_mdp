@@ -23,9 +23,9 @@ public:
   Eigen::VectorXd getRawAction(const Eigen::VectorXd &state,
                                std::default_random_engine * engine) const override;
 
-  void to_xml(std::ostream & out) const override;
-  void from_xml(TiXmlNode * node) override;
-  std::string class_name() const override;
+  std::string getClassName() const override;
+  virtual Json::Value toJson() const override;
+  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
 
   void saveFA(const std::string & filename) const;
 

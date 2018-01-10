@@ -11,7 +11,7 @@ Learner::~Learner() {}
 
 void Learner::setStart()
 {
-  learning_start = rosban_utils::TimeStamp::now();
+  learning_start = rhoban_utils::TimeStamp::now();
 }
 
 void Learner::setNbThreads(int new_nb_threads)
@@ -52,22 +52,25 @@ void Learner::feed(const csa_mdp::Sample & sample)
 }
 
 
-void Learner::to_xml(std::ostream &out) const
+Json::Value Learner::toJson() const
 {
-  rosban_utils::xml_tools::write<double>("discount"  , discount  , out);
-  rosban_utils::xml_tools::write<int>   ("nb_threads", nb_threads, out);
+  Json::Value v;
+  v["discount"  ] = discount  ;
+  v["nb_threads"] = nb_threads;
+  return v;
 }
 
 
-void Learner::from_xml(TiXmlNode *node)
+void Learner::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  rosban_utils::xml_tools::try_read<double>(node, "discount"  , discount  );
-  rosban_utils::xml_tools::try_read<int>   (node, "nb_threads", nb_threads);
+  (void)dir_name;
+  rhoban_utils::tryRead(v, "discount"  , &discount  );
+  rhoban_utils::tryRead(v, "nb_threads", &nb_threads);
 }
 
 double Learner::getLearningTime() const
 {
-  return diffSec(learning_start, rosban_utils::TimeStamp::now());
+  return diffSec(learning_start, rhoban_utils::TimeStamp::now());
 }
 
 const std::map<std::string, double> & Learner::getTimeRepartition() const

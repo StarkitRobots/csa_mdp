@@ -7,7 +7,7 @@
 
 #include "rosban_fa/optimizer_trainer_factory.h"
 
-using rosban_utils::TimeStamp;
+using rhoban_utils::TimeStamp;
 
 namespace csa_mdp
 {
@@ -146,7 +146,7 @@ void TreePolicyIteration::setNbThreads(int nb_threads_)
     policy_trainer->setNbThreads(nb_threads);
 }
 
-std::string TreePolicyIteration::class_name() const {
+std::string TreePolicyIteration::getClassName() const {
   return "TreePolicyIteration";
 }
 
@@ -162,8 +162,8 @@ void TreePolicyIteration::from_xml(TiXmlNode *node)
   // Calling parent implementation
   BlackBoxLearner::from_xml(node);
   // Reading simple parameters
-  rosban_utils::xml_tools::try_read<bool>  (node, "memoryless_policy_trainer", memoryless_policy_trainer);
-  rosban_utils::xml_tools::try_read<bool>  (node, "use_value_approximator", use_value_approximator);
+  rhoban_utils::xml_tools::try_read<bool>  (node, "memoryless_policy_trainer", memoryless_policy_trainer);
+  rhoban_utils::xml_tools::try_read<bool>  (node, "use_value_approximator", use_value_approximator);
   // Read value approximator if necessary
   if (use_value_approximator) {
     value_approximator = ValueApproximatorFactory().read(node, "value_approximator");

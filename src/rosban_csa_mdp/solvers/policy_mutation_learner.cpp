@@ -11,10 +11,10 @@
 #include "rosban_fa/linear_approximator.h"
 #include "rosban_fa/orthogonal_split.h"
 #include "rosban_random/tools.h"
-#include "rosban_utils/time_stamp.h"
+#include "rhoban_utils/timing/time_stamp.h"
 
 using namespace rosban_fa;
-using rosban_utils::TimeStamp;
+using rhoban_utils::TimeStamp;
 
 namespace csa_mdp
 {
@@ -504,7 +504,7 @@ Eigen::MatrixXd PolicyMutationLearner::getParametersSpaces(int action_id) const 
   return parameters_space;
 }
 
-std::string PolicyMutationLearner::class_name() const {
+std::string PolicyMutationLearner::getClassName() const {
   return "PolicyMutationLearner";
 }
 
@@ -518,11 +518,11 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   // Calling parent implementation
   BlackBoxLearner::from_xml(node);
   // Reading class variables
-  rosban_utils::xml_tools::try_read<int>   (node, "training_evaluations" , training_evaluations );
-  rosban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
-  rosban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
-  rosban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
-  rosban_utils::xml_tools::try_read<double>(node, "age_basis"           , age_basis           );
+  rhoban_utils::xml_tools::try_read<int>   (node, "training_evaluations" , training_evaluations );
+  rhoban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
+  rhoban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
+  rhoban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
+  rhoban_utils::xml_tools::try_read<double>(node, "age_basis"           , age_basis           );
   // Optimizer is mandatory
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
   // Read Policy if provided (optional)

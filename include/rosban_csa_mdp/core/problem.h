@@ -3,7 +3,7 @@
 #include "rosban_csa_mdp/core/policy.h"
 #include "rosban_csa_mdp/core/sample.h"
 
-#include "rosban_utils/serializable.h"
+#include "rhoban_utils/serialization/json_serializable.h"
 
 #include <Eigen/Core>
 
@@ -13,7 +13,7 @@
 namespace csa_mdp
 {
 
-class Problem : public rosban_utils::Serializable
+class Problem : public rhoban_utils::JsonSerializable
 {
 public:
   /// This inner structure represents the result of a transition

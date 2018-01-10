@@ -2,14 +2,14 @@
 
 #include "rosban_random/tools.h"
 
-#include "rosban_utils/time_stamp.h"
+#include "rhoban_utils/timing/time_stamp.h"
 
 #include <iostream>
 #include <mutex>
 #include <sstream>
 #include <thread>
 
-using rosban_utils::TimeStamp;
+using rhoban_utils::TimeStamp;
 
 using regression_forests::Approximation;
 using regression_forests::ExtraTrees;
@@ -64,37 +64,37 @@ void PF_FPF::Config::setActionLimits(const Eigen::MatrixXd &new_limits)
   u_dim = u_limits.rows();
 }
 
-std::string PF_FPF::Config::class_name() const
+std::string PF_FPF::Config::getClassName() const
 {
   return "PF_FPFConfig";
 }
 
 void PF_FPF::Config::to_xml(std::ostream &out) const
 {
-  rosban_utils::xml_tools::write<int>("x_dim", x_dim, out);
-  rosban_utils::xml_tools::write<int>("u_dim", u_dim, out);
+  rhoban_utils::xml_tools::write<int>("x_dim", x_dim, out);
+  rhoban_utils::xml_tools::write<int>("u_dim", u_dim, out);
   // Gathering limits in a vector
   std::vector<double> x_limits_vec(x_limits.data(), x_limits.data() + x_limits.size());
   std::vector<double> u_limits_vec(u_limits.data(), u_limits.data() + u_limits.size());
-  rosban_utils::xml_tools::write_vector<double>("x_limits", x_limits_vec, out);
-  rosban_utils::xml_tools::write_vector<double>("u_limits", u_limits_vec, out);
+  rhoban_utils::xml_tools::write_vector<double>("x_limits", x_limits_vec, out);
+  rhoban_utils::xml_tools::write_vector<double>("u_limits", u_limits_vec, out);
   // Writing properties
-  rosban_utils::xml_tools::write<int>("horizon", horizon, out);
-  rosban_utils::xml_tools::write<int>("nb_threads", nb_threads, out);
-  rosban_utils::xml_tools::write<double>("discount", discount, out);
-  rosban_utils::xml_tools::write<int>("max_action_tiles", max_action_tiles, out);
-  rosban_utils::xml_tools::write<double>("q_value_time", q_value_time, out);
-  rosban_utils::xml_tools::write<double>("policy_time", policy_time, out);
+  rhoban_utils::xml_tools::write<int>("horizon", horizon, out);
+  rhoban_utils::xml_tools::write<int>("nb_threads", nb_threads, out);
+  rhoban_utils::xml_tools::write<double>("discount", discount, out);
+  rhoban_utils::xml_tools::write<int>("max_action_tiles", max_action_tiles, out);
+  rhoban_utils::xml_tools::write<double>("q_value_time", q_value_time, out);
+  rhoban_utils::xml_tools::write<double>("policy_time", policy_time, out);
 }
 
 void PF_FPF::Config::from_xml(TiXmlNode *node)
 {
-  x_dim = rosban_utils::xml_tools::read<int>(node, "x_dim");
-  u_dim = rosban_utils::xml_tools::read<int>(node, "u_dim");
+  x_dim = rhoban_utils::xml_tools::read<int>(node, "x_dim");
+  u_dim = rhoban_utils::xml_tools::read<int>(node, "u_dim");
   // Gathering limits in a vector
   std::vector<double> x_limits_vec, u_limits_vec;
-  x_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "x_limits");
-  u_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "u_limits");
+  x_limits_vec = rhoban_utils::xml_tools::read_vector<double>(node, "x_limits");
+  u_limits_vec = rhoban_utils::xml_tools::read_vector<double>(node, "u_limits");
   if (x_limits_vec.size() != 2 * x_dim)
     throw std::runtime_error("PF_FPF::from_xml: Invalid number of limits for x_limits");
   if (u_limits_vec.size() != 2 * u_dim)
@@ -102,12 +102,12 @@ void PF_FPF::Config::from_xml(TiXmlNode *node)
   x_limits = Eigen::Map<Eigen::MatrixXd>(x_limits_vec.data(),x_dim, 2);
   u_limits = Eigen::Map<Eigen::MatrixXd>(u_limits_vec.data(),u_dim, 2);
   // Writing properties
-  horizon          = rosban_utils::xml_tools::read<int>   (node, "horizon");
-  nb_threads       = rosban_utils::xml_tools::read<int>   (node, "nb_threads");
-  discount         = rosban_utils::xml_tools::read<double>(node, "discount");
-  max_action_tiles = rosban_utils::xml_tools::read<int>   (node, "max_action_tiles");
-  q_value_time     = rosban_utils::xml_tools::read<double>(node, "q_value_time");
-  policy_time      = rosban_utils::xml_tools::read<double>(node, "policy_time");
+  horizon          = rhoban_utils::xml_tools::read<int>   (node, "horizon");
+  nb_threads       = rhoban_utils::xml_tools::read<int>   (node, "nb_threads");
+  discount         = rhoban_utils::xml_tools::read<double>(node, "discount");
+  max_action_tiles = rhoban_utils::xml_tools::read<int>   (node, "max_action_tiles");
+  q_value_time     = rhoban_utils::xml_tools::read<double>(node, "q_value_time");
+  policy_time      = rhoban_utils::xml_tools::read<double>(node, "policy_time");
 }
 
 PF_FPF::PF_FPF()

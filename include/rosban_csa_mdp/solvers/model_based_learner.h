@@ -42,7 +42,7 @@ public:
   /// Performs an update of current value using internal parameters
   void updatePolicy();
 
-  virtual std::string class_name() const override;
+  virtual std::string getClassName() const override;
   virtual void to_xml(std::ostream &out) const override;
   virtual void from_xml(TiXmlNode *node) override;
 

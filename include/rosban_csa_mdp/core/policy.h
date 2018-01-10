@@ -2,8 +2,8 @@
 
 #include "rosban_fa/fa_tree.h"
 
-#include "rosban_utils/serializable.h"
-#include "rosban_utils/stream_serializable.h"
+#include "rhoban_utils/serialization/json_serializable.h"
+#include "rhoban_utils/serialization/stream_serializable.h"
 
 #include <Eigen/Core>
 
@@ -13,7 +13,7 @@
 namespace csa_mdp
 {
 
-class Policy : public rosban_utils::Serializable
+class Policy : public rhoban_utils::JsonSerializable
 {
 public:
   Policy();
@@ -43,8 +43,8 @@ public:
   /// Return an approximation of the current policy as a FATree
   virtual std::unique_ptr<rosban_fa::FATree> extractFATree() const;
 
-  void to_xml(std::ostream & out) const override;
-  void from_xml(TiXmlNode * node) override;
+  virtual Json::Value toJson() const override;
+  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
 
   /// Set number of threads allowed for computing the policy
   virtual void setNbThreads(int new_nb_threads);

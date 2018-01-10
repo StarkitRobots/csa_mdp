@@ -1,13 +1,13 @@
 #pragma once
 
-#include "rosban_utils/factory.h"
+#include "rhoban_utils/serialization/factory.h"
 
 namespace csa_mdp
 {
 
 class ActionOptimizer;
 
-class ActionOptimizerFactory : public rosban_utils::Factory<ActionOptimizer>
+class ActionOptimizerFactory : public rhoban_utils::Factory<ActionOptimizer>
 {
 public:
   ActionOptimizerFactory();

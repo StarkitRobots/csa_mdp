@@ -11,10 +11,10 @@
 #include "rosban_fa/linear_approximator.h"
 #include "rosban_fa/orthogonal_split.h"
 #include "rosban_random/tools.h"
-#include "rosban_utils/time_stamp.h"
+#include "rhoban_utils/timing/time_stamp.h"
 
 using namespace rosban_fa;
-using rosban_utils::TimeStamp;
+using rhoban_utils::TimeStamp;
 
 namespace csa_mdp
 {
@@ -638,7 +638,7 @@ Eigen::MatrixXd PolicyMutationLearner::getParametersSpaces(const Eigen::MatrixXd
   return parameters_space;
 }
 
-std::string PolicyMutationLearner::class_name() const {
+std::string PolicyMutationLearner::getClassName() const {
   return "PolicyMutationLearner";
 }
 
@@ -652,19 +652,19 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   // Calling parent implementation
   BlackBoxLearner::from_xml(node);
   // Reading class variables
-  rosban_utils::xml_tools::try_read<bool>  (node, "avoid_growing_slopes" , avoid_growing_slopes );
-  rosban_utils::xml_tools::try_read<bool>  (node, "use_visited_states"   , use_visited_states   );
-  rosban_utils::xml_tools::try_read<int>   (node, "training_evaluations" , training_evaluations );
-  rosban_utils::xml_tools::try_read<double>(node, "training_evaluations_growth",
+  rhoban_utils::xml_tools::try_read<bool>  (node, "avoid_growing_slopes" , avoid_growing_slopes );
+  rhoban_utils::xml_tools::try_read<bool>  (node, "use_visited_states"   , use_visited_states   );
+  rhoban_utils::xml_tools::try_read<int>   (node, "training_evaluations" , training_evaluations );
+  rhoban_utils::xml_tools::try_read<double>(node, "training_evaluations_growth",
                                             training_evaluations_growth);
-  rosban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
-  rosban_utils::xml_tools::try_read<double>(node, "local_probability"   , local_probability   );
-  rosban_utils::xml_tools::try_read<double>(node, "narrow_probability"  , narrow_probability  );
-  rosban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
-  rosban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
-  rosban_utils::xml_tools::try_read<double>(node, "evaluations_growth"  , evaluations_growth  );
-  rosban_utils::xml_tools::try_read<double>(node, "age_basis"           , age_basis           );
-  rosban_utils::xml_tools::try_read<double>(node,
+  rhoban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
+  rhoban_utils::xml_tools::try_read<double>(node, "local_probability"   , local_probability   );
+  rhoban_utils::xml_tools::try_read<double>(node, "narrow_probability"  , narrow_probability  );
+  rhoban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
+  rhoban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
+  rhoban_utils::xml_tools::try_read<double>(node, "evaluations_growth"  , evaluations_growth  );
+  rhoban_utils::xml_tools::try_read<double>(node, "age_basis"           , age_basis           );
+  rhoban_utils::xml_tools::try_read<double>(node,
                                             "change_action_probability",
                                             change_action_probability);
   // Optimizer is mandatory

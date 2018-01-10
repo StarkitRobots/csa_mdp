@@ -22,14 +22,14 @@ private:
 public:
 
   /// Describe the config used to load an History or a vector of History
-  class Config : public rosban_utils::Serializable
+  class Config : public rhoban_utils::JsonSerializable
   {
   public:
     Config();
 
-    void to_xml(std::ostream &out) const override;
-    void from_xml(TiXmlNode *node) override;
-    std::string class_name() const override;
+    std::string getClassName() const override;
+    virtual Json::Value toJson() const override;
+    virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
 
     std::string log_path;
     int run_column;

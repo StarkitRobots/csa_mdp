@@ -3,9 +3,9 @@
 #include "rosban_csa_mdp/core/problem_factory.h"
 
 #include "rosban_random/tools.h"
-#include "rosban_utils/multi_core.h"
+#include "rhoban_utils/threading/multi_core.h"
 
-using rosban_utils::TimeStamp;
+using rhoban_utils::TimeStamp;
 
 namespace csa_mdp
 {
@@ -30,14 +30,14 @@ void BlackBoxLearner::run(std::default_random_engine * engine)
 {
   init(engine);
   // Main learning loop
-  learning_start = rosban_utils::TimeStamp::now();
+  learning_start = rhoban_utils::TimeStamp::now();
   double elapsed = 0;
   while (elapsed < time_budget) {
     iterations++;
     std::cout << "Iteration " << iterations << std::endl;
     update(engine);
     // Stop if time has elapsed
-    elapsed = diffSec(learning_start, rosban_utils::TimeStamp::now());
+    elapsed = diffSec(learning_start, rhoban_utils::TimeStamp::now());
   }
 }
 
@@ -58,7 +58,7 @@ double BlackBoxLearner::evaluatePolicy(const Policy & p,
   std::vector<std::vector<Eigen::VectorXd>> visited_states_per_thread(nb_evaluations);
   bool store_visited_states = visited_states != nullptr;
   // The task which has to be performed :
-  rosban_utils::MultiCore::StochasticTask task =
+  rhoban_utils::MultiCore::StochasticTask task =
     [this, &p, &rewards, &visited_states_per_thread, store_visited_states]
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
@@ -80,7 +80,7 @@ double BlackBoxLearner::evaluatePolicy(const Policy & p,
       }
     };
   // Running computation
-  rosban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
+  rhoban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
   // Fill visited states if required
   if (store_visited_states) {
     for (const std::vector<Eigen::VectorXd> & eval_visited_states : visited_states_per_thread) {
@@ -101,7 +101,7 @@ double BlackBoxLearner::localEvaluation(const Policy & p,
   // Sampling starting states
   Eigen::VectorXd rewards = Eigen::VectorXd::Zero(nb_evaluations);
   // The task which has to be performed :
-  rosban_utils::MultiCore::StochasticTask task =
+  rhoban_utils::MultiCore::StochasticTask task =
     [this, &p, &rewards, &space]
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
@@ -135,7 +135,7 @@ double BlackBoxLearner::localEvaluation(const Policy & p,
   std::vector<std::default_random_engine> engines;
   engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
   // Running computation
-  rosban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
+  rhoban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
   // Result
   return rewards.mean();
 }
@@ -148,7 +148,7 @@ double BlackBoxLearner::evaluation(const Policy & p,
   int nb_evaluations = initial_states.size();
   Eigen::VectorXd rewards = Eigen::VectorXd::Zero(nb_evaluations);
   // The task which has to be performed :
-  rosban_utils::MultiCore::StochasticTask task =
+  rhoban_utils::MultiCore::StochasticTask task =
     [this, &p, &rewards, &initial_states]
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
@@ -170,7 +170,7 @@ double BlackBoxLearner::evaluation(const Policy & p,
   std::vector<std::default_random_engine> engines;
   engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
   // Running computation
-  rosban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
+  rhoban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
   // Result
   return rewards.mean();
 }
@@ -190,17 +190,17 @@ void BlackBoxLearner::to_xml(std::ostream &out) const
 void BlackBoxLearner::from_xml(TiXmlNode *node)
 {
   // Reading simple parameters
-  rosban_utils::xml_tools::try_read<int>   (node, "nb_threads"          , nb_threads          );
-  rosban_utils::xml_tools::try_read<int>   (node, "trial_length"        , trial_length        );
-  rosban_utils::xml_tools::try_read<int>   (node, "nb_evaluation_trials", nb_evaluation_trials);
-  rosban_utils::xml_tools::try_read<int>   (node, "verbosity"           , verbosity           );
-  rosban_utils::xml_tools::try_read<double>(node, "time_budget"         , time_budget         );
-  rosban_utils::xml_tools::try_read<double>(node, "discount"            , discount            );
+  rhoban_utils::xml_tools::try_read<int>   (node, "nb_threads"          , nb_threads          );
+  rhoban_utils::xml_tools::try_read<int>   (node, "trial_length"        , trial_length        );
+  rhoban_utils::xml_tools::try_read<int>   (node, "nb_evaluation_trials", nb_evaluation_trials);
+  rhoban_utils::xml_tools::try_read<int>   (node, "verbosity"           , verbosity           );
+  rhoban_utils::xml_tools::try_read<double>(node, "time_budget"         , time_budget         );
+  rhoban_utils::xml_tools::try_read<double>(node, "discount"            , discount            );
 
   // Getting problem
   std::shared_ptr<const Problem> tmp_problem;
   std::string problem_path;
-  rosban_utils::xml_tools::try_read<std::string>(node, "problem_path", problem_path);
+  rhoban_utils::xml_tools::try_read<std::string>(node, "problem_path", problem_path);
   if (problem_path != "") {
     tmp_problem = ProblemFactory().buildFromXmlFile(problem_path, "Problem");
   } else {
@@ -237,7 +237,7 @@ void BlackBoxLearner::writeTime(const std::string & name, double time)
 }
 
 void BlackBoxLearner::writeScore(double score) {
-  double elapsed = diffSec(learning_start, rosban_utils::TimeStamp::now());
+  double elapsed = diffSec(learning_start, rhoban_utils::TimeStamp::now());
   results_file << iterations << "," << score << "," << elapsed << std::endl;
 }
 

@@ -1,7 +1,7 @@
 #include "rosban_csa_mdp/core/history.h"
 #include "rosban_csa_mdp/core/problem_factory.h"
 
-#include "rosban_utils/string_tools.h"
+#include "rhoban_utils/util.h"
 
 #include <fstream>
 #include <sstream>
@@ -14,39 +14,37 @@ History::Config::Config()
 {
 }
 
-void History::Config::to_xml(std::ostream &out) const
+Json::Value History::Config::toJson() const
 {
   if (!problem)
   {
     throw std::runtime_error("History::Config::to_xml: forbidden while problem is not set");
   }
-  out << "<problem>";
-  problem->write(problem->class_name(), out);
-  out << "</problem>";
-  rosban_utils::xml_tools::write<std::string>("log_path"      , log_path      , out);
-  rosban_utils::xml_tools::write<int>        ("run_column"    , run_column    , out);
-  rosban_utils::xml_tools::write<int>        ("step_column"   , step_column   , out);
-  rosban_utils::xml_tools::write_vector<int> ("state_columns" , state_columns , out);
-  rosban_utils::xml_tools::write_vector<int> ("action_columns", action_columns, out);
+  Json::Value v;
+  v["problem"] = problem->toFactoryJson();
+  v["log_path"      ] = log_path      ;
+  v["run_column"    ] = run_column    ;
+  v["step_column"   ] = step_column   ;
+  v["state_columns" ] = rhoban_utils::vector2Json(state_columns );
+  v["action_columns"] = rhoban_utils::vector2Json(action_columns);
+  return v;
 }
 
-void History::Config::from_xml(TiXmlNode *node)
+void History::Config::fromJson(const Json::Value & v, const std::string & dir_name)
 {
   // Try to read problem if found
-  TiXmlNode * problem_node = node->FirstChild("problem");
-  if(problem_node)
-  {
-    problem = std::unique_ptr<Problem>(ProblemFactory().build(problem_node));
-  }
+  std::unique_ptr<Problem> new_problem;
+  ProblemFactory().tryRead(v, "problem", dir_name, &new_problem);
+  if (new_problem) problem = std::move(new_problem);
 
-  rosban_utils::xml_tools::try_read<std::string>(node, "log_path"      , log_path      );
-  rosban_utils::xml_tools::try_read<int>        (node, "run_column"    , run_column    );
-  rosban_utils::xml_tools::try_read<int>        (node, "step_column"   , step_column   );
-  rosban_utils::xml_tools::try_read_vector<int> (node, "state_columns" , state_columns );
-  rosban_utils::xml_tools::try_read_vector<int> (node, "action_columns", action_columns);
+  rhoban_utils::tryRead      (v, "log_path"      , &log_path      );
+  rhoban_utils::tryRead      (v, "run_column"    , &run_column    );
+  rhoban_utils::tryRead      (v, "step_column"   , &step_column   );
+  rhoban_utils::tryReadVector(v, "state_columns" , &state_columns );
+  rhoban_utils::tryReadVector(v, "action_columns", &action_columns);
 }
 
-std::string History::Config::class_name() const
+std::string History::Config::getClassName() const
 {
   return "history_config";
 }
@@ -150,7 +148,8 @@ std::vector<History> History::readCSV(const std::string &path,
       continue;
     }
     // Getting columns
-    std::vector<std::string> cols = rosban_utils::split_string(line,',');
+    std::vector<std::string> cols;
+    rhoban_utils::split(line,',',cols);
     // Checking if a new run is started (if run-col is specified)
     if (run_col >= 0 && std::stoi(cols[run_col]) != curr_run)
     {

@@ -3,7 +3,7 @@
 #include "rosban_csa_mdp/core/policy.h"
 #include "rosban_csa_mdp/core/problem.h"
 
-#include "rosban_utils/serializable.h"
+#include "rhoban_utils/serialization/json_serializable.h"
 
 #include <Eigen/Core>
 
@@ -13,7 +13,7 @@ namespace csa_mdp
 {
 
 /// Describe the interface of an action optimizer
-class ActionOptimizer : public rosban_utils::Serializable
+class ActionOptimizer : public rhoban_utils::JsonSerializable
 {
 public:
   ActionOptimizer();

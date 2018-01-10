@@ -64,14 +64,17 @@ std::unique_ptr<rosban_fa::FATree> Policy::extractFATree() const {
   throw std::logic_error("Policy::extractFATree: unimplemented");
 }
 
-void Policy::to_xml(std::ostream & out) const
+Json::Value Policy::toJson() const
 {
-  rosban_utils::xml_tools::write<int>("nb_threads", nb_threads, out);
+  Json::Value v;
+  v["nb_threads"] = nb_threads;
+  return v;
 }
 
-void Policy::from_xml(TiXmlNode * node)
+void Policy::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  rosban_utils::xml_tools::try_read<int>(node, "nb_threads", nb_threads);
+  (void)dir_name;
+  rhoban_utils::tryRead(v, "nb_threads", &nb_threads);
 }
 
 void Policy::setNbThreads(int new_nb_threads)

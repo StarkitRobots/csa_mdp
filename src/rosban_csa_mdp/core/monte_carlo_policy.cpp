@@ -6,7 +6,7 @@
 #include "rosban_bbo/optimizer_factory.h"
 
 #include "rosban_random/tools.h"
-#include "rosban_utils/multi_core.h"
+#include "rhoban_utils/threading/multi_core.h"
 
 namespace csa_mdp
 {
@@ -109,7 +109,7 @@ double MonteCarloPolicy::averageReward(const Eigen::VectorXd & initial_state,
   engines = rosban_random::getRandomEngines(std::min(nb_threads, rollouts), engine);
   Eigen::VectorXd rewards = Eigen::VectorXd::Zero(rollouts);
   // The task which has to be performed :
-  rosban_utils::MultiCore::StochasticTask task =
+  rhoban_utils::MultiCore::StochasticTask task =
     [this, &initial_state, &first_action, &rewards]
     (int start_idx, int end_idx, std::default_random_engine * engine)
     {
@@ -118,7 +118,7 @@ double MonteCarloPolicy::averageReward(const Eigen::VectorXd & initial_state,
       }
     };
   // Running computation
-  rosban_utils::MultiCore::runParallelStochasticTask(task, rollouts, &engines);
+  rhoban_utils::MultiCore::runParallelStochasticTask(task, rollouts, &engines);
 
   return rewards.mean();
 }
@@ -146,7 +146,7 @@ double MonteCarloPolicy::sampleReward(const Eigen::VectorXd & initial_state,
   return cumulated_reward;
 }
 
-std::string MonteCarloPolicy::class_name() const
+std::string MonteCarloPolicy::getClassName() const
 {
   return "monte_carlo_policy";
 }
@@ -162,7 +162,7 @@ void MonteCarloPolicy::from_xml(TiXmlNode * node)
   Policy::from_xml(node);
   // Read problem directly from node or from another file
   std::string problem_path;
-  rosban_utils::xml_tools::try_read<std::string>(node, "problem_path", problem_path);
+  rhoban_utils::xml_tools::try_read<std::string>(node, "problem_path", problem_path);
   if (problem_path != "") {
     problem = ProblemFactory().buildFromXmlFile(problem_path, "Problem");
   } else {
@@ -170,11 +170,11 @@ void MonteCarloPolicy::from_xml(TiXmlNode * node)
   }
   default_policy = PolicyFactory().read(node, "default_policy");
   optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
-  nb_rollouts = rosban_utils::xml_tools::read<int>(node, "nb_rollouts");
-  validation_rollouts = rosban_utils::xml_tools::read<int>(node, "validation_rollouts");
-  simulation_depth = rosban_utils::xml_tools::read<int>(node, "simulation_depth");
-  rosban_utils::xml_tools::try_read<int>(node, "max_evals"  , max_evals  );
-  rosban_utils::xml_tools::try_read<int>(node, "debug_level", debug_level);
+  nb_rollouts = rhoban_utils::xml_tools::read<int>(node, "nb_rollouts");
+  validation_rollouts = rhoban_utils::xml_tools::read<int>(node, "validation_rollouts");
+  simulation_depth = rhoban_utils::xml_tools::read<int>(node, "simulation_depth");
+  rhoban_utils::xml_tools::try_read<int>(node, "max_evals"  , max_evals  );
+  rhoban_utils::xml_tools::try_read<int>(node, "debug_level", debug_level);
 
 
   if (!default_policy || !optimizer || !problem) {

@@ -7,8 +7,8 @@
 #include "rosban_fa/function_approximator.h"
 #include "rosban_fa/optimizer_trainer.h"
 
-#include "rosban_utils/serializable.h"
-#include "rosban_utils/time_stamp.h"
+#include "rhoban_utils/serialization/json_serializable.h"
+#include "rhoban_utils/timing/time_stamp.h"
 
 #include <fstream>
 #include <memory>
@@ -20,7 +20,7 @@ namespace csa_mdp
 /// unlike the 'Learner' objects, 'BlackBoxLearners' are not fed with
 /// samples, they interact directly with the blackbox model and can choose
 /// any action from any state.
-class BlackBoxLearner : public rosban_utils::Serializable {
+class BlackBoxLearner : public rhoban_utils::JsonSerializable {
 public:
   BlackBoxLearner();
   virtual ~BlackBoxLearner();
@@ -61,8 +61,8 @@ public:
   /// Set the maximal number of threads allowed
   virtual void setNbThreads(int nb_threads);
 
-  virtual void to_xml(std::ostream &out) const override;
-  virtual void from_xml(TiXmlNode *node) override;
+  virtual Json::Value toJson() const override;
+  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
 
   /// Open all logs streams
   void openLogs();
@@ -84,7 +84,7 @@ protected:
   int nb_threads;
 
   /// The beginning of the learning process
-  rosban_utils::TimeStamp learning_start;
+  rhoban_utils::TimeStamp learning_start;
 
   /// Time allocated for the learning experiment [s]
   double time_budget;

@@ -16,7 +16,7 @@ namespace csa_mdp
 /// - The possibility to learn a fitted policy from the q-value
 class FPF {
 public:
-  class Config : public rosban_utils::Serializable{
+  class Config : public rhoban_utils::JsonSerializable{
   private:
     // Storing x_dim and u_dim is required in order to load properly a configuration
     // TODO: not exactly in fact, dividing size of read vector by 2 should give the
@@ -81,9 +81,9 @@ public:
     void setActionLimits(const Eigen::MatrixXd &new_limits);
 
     // XML stuff
-    virtual std::string class_name() const override;
-    virtual void to_xml(std::ostream &out) const override;
-    virtual void from_xml(TiXmlNode *node) override;
+    virtual std::string getClassName() const override;
+    virtual Json::Value toJson() const override;
+    virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
   };
 
 protected:

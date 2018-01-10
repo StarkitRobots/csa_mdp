@@ -15,7 +15,7 @@ class PF_FPF
 {
 public:
   /// The configuration include all the necessary information for computing 
-  class Config : public rosban_utils::Serializable{
+  class Config : public rhoban_utils::JsonSerializable{
   private:
     /// The number of continuous dimensions for the state
     size_t x_dim;
@@ -54,7 +54,7 @@ public:
     void setActionLimits(const Eigen::MatrixXd &new_limits);
 
     // XML stuff
-    virtual std::string class_name() const override;
+    virtual std::string getClassName() const override;
     virtual void to_xml(std::ostream &out) const override;
     virtual void from_xml(TiXmlNode *node) override;
   };

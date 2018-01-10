@@ -4,9 +4,9 @@
 
 #include "rosban_random/tools.h"
 
-#include "rosban_utils/multi_core.h"
+#include "rhoban_utils/threading/multi_core.h"
 
-using rosban_utils::MultiCore;
+using rhoban_utils::MultiCore;
 
 namespace csa_mdp
 {
@@ -75,21 +75,24 @@ MonteCarloPredictor::getTask(const Eigen::VectorXd & input,
     };
 }
 
-std::string MonteCarloPredictor::class_name() const
+std::string MonteCarloPredictor::getClassName() const
 {
   return "MonteCarloPredictor";
 }
 
-void MonteCarloPredictor::to_xml(std::ostream & out) const
+Json::Value MonteCarloPredictor::toJson() const
 {
-  rosban_utils::xml_tools::write<int>("nb_predictions", nb_predictions, out);
-  rosban_utils::xml_tools::write<int>("nb_steps"      , nb_steps      , out);
+  Json::Value v;
+  v["nb_predictions"] = nb_predictions;
+  v["nb_steps"      ] = nb_steps      ;
+  return v;
 }
 
-void MonteCarloPredictor::from_xml(TiXmlNode * node)
+void MonteCarloPredictor::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  rosban_utils::xml_tools::try_read<int>(node, "nb_predictions", nb_predictions);
-  rosban_utils::xml_tools::try_read<int>(node, "nb_steps"      , nb_steps      );
+  (void)dir_name;
+  rhoban_utils::tryRead(v, "nb_predictions", &nb_predictions);
+  rhoban_utils::tryRead(v, "nb_steps"      , &nb_steps      );
 }
 
 }

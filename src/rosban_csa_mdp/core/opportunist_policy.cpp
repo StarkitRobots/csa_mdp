@@ -45,21 +45,20 @@ OpportunistPolicy::getRawAction(const Eigen::VectorXd & state,
   return best_action;
 }
 
-void OpportunistPolicy::to_xml(std::ostream & out) const
+Json::Value OpportunistPolicy::toJson() const
 {
-  (void) out;
   throw std::logic_error("OpportunistPolicy::to_xml: not implemented");
 }
 
-void OpportunistPolicy::from_xml(TiXmlNode * node)
+void OpportunistPolicy::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  problem = ProblemFactory().read(node,"problem");
-  policies = PolicyFactory().readVector(node,"policies");
-  rosban_utils::xml_tools::try_read<int>(node, "nb_rollouts" , nb_rollouts);
-  rosban_utils::xml_tools::try_read<int>(node, "horizon" , horizon);
+  problem = ProblemFactory().read(v,"problem", dir_name);
+  policies = PolicyFactory().readVector(v,"policies", dir_name);
+  rhoban_utils::tryRead(v, "nb_rollouts" , &nb_rollouts);
+  rhoban_utils::tryRead(v, "horizon"     , &horizon);
   setActionLimits(problem->getActionsLimits());
 }
-std::string OpportunistPolicy::class_name() const
+std::string OpportunistPolicy::getClassName() const
 {
   return "OpportunistPolicy";
 }

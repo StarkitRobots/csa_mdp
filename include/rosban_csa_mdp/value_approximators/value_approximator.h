@@ -5,7 +5,7 @@
 
 #include "rosban_fa/function_approximator.h"
 
-#include "rosban_utils/serializable.h"
+#include "rhoban_utils/serialization/json_serializable.h"
 
 #include <Eigen/Core>
 
@@ -14,7 +14,7 @@
 namespace csa_mdp
 {
 
-class ValueApproximator : public rosban_utils::Serializable {
+class ValueApproximator : public rhoban_utils::JsonSerializable {
 public:
 
   ValueApproximator();
@@ -30,8 +30,8 @@ public:
 
   virtual void setNbThreads(int nb_threads);
 
-  virtual void to_xml(std::ostream &out) const override;
-  virtual void from_xml(TiXmlNode *node) override;
+  virtual Json::Value toJson() const override;
+  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
 
 protected:
   /// Number of threads allowed to run simultaneously

@@ -40,17 +40,18 @@ Eigen::VectorXd RandomPolicy::getRawAction(const Eigen::VectorXd &state,
   return raw_action;
 }
 
-void RandomPolicy::to_xml(std::ostream & out) const
+Json::Value RandomPolicy::toJson() const
 {
-  (void)out;
+  return Json::Value();
 }
 
-void RandomPolicy::from_xml(TiXmlNode * node)
+void RandomPolicy::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  (void)node;
+  (void)v;
+  (void)dir_name;
 }
 
-std::string RandomPolicy::class_name() const
+std::string RandomPolicy::getClassName() const
 {
   return "random_policy";
 }

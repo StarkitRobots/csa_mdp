@@ -52,7 +52,7 @@ public:
   void setActionLimits(const std::vector<Eigen::MatrixXd> & limits) override;
   void updateQSpaceLimits();
 
-  std::string class_name() const override;
+  std::string getClassName() const override;
   void to_xml(std::ostream &out) const override;
   void from_xml(TiXmlNode *node) override;
 

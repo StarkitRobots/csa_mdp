@@ -4,24 +4,21 @@
 
 #include "rosban_random/tools.h"
 
-#include "rosban_utils/benchmark.h"
-#include "rosban_utils/multi_core.h"
+#include "rhoban_utils/timing/benchmark.h"
+#include "rhoban_utils/threading/multi_core.h"
 
 #include <iostream>
 #include <mutex>
 #include <sstream>
 #include <thread>
 
-using rosban_utils::Benchmark;
-using rosban_utils::MultiCore;
-using rosban_utils::TimeStamp;
+using rhoban_utils::Benchmark;
+using rhoban_utils::MultiCore;
+using rhoban_utils::TimeStamp;
 
 using regression_forests::Approximation;
 using regression_forests::ExtraTrees;
 using regression_forests::TrainingSet;
-
-
-using namespace rosban_utils::xml_tools;//Read and writes
 
 namespace csa_mdp
 {
@@ -76,79 +73,79 @@ void FPF::Config::setActionLimits(const Eigen::MatrixXd &new_limits)
   u_dim = u_limits.rows();
 }
 
-std::string FPF::Config::class_name() const
+std::string FPF::Config::getClassName() const
 {
   return "FPFConfig";
 }
 
-void FPF::Config::to_xml(std::ostream &out) const
+Json::Value FPF::Config::toJson() const
 {
-  rosban_utils::xml_tools::write<int>("x_dim", x_dim, out);
-  rosban_utils::xml_tools::write<int>("u_dim", u_dim, out);
-  // Gathering limits in a vector if dim have been specified
+  Json::Value v;
+  // Gathering limits in a vector and writing dimensions
   std::vector<double> x_limits_vec(x_limits.data(), x_limits.data() + x_limits.size());
   std::vector<double> u_limits_vec(u_limits.data(), u_limits.data() + u_limits.size());
-  rosban_utils::xml_tools::write_vector<double>("x_limits", x_limits_vec, out);
-  rosban_utils::xml_tools::write_vector<double>("u_limits", u_limits_vec, out);
+  v["x_limits"] = rhoban_utils::vector2Json(x_limits_vec);
+  v["u_limits"] = rhoban_utils::vector2Json(u_limits_vec);
+  v["x_dim"] = x_dim;
+  v["u_dim"] = u_dim;
   // Writing properties
-  rosban_utils::xml_tools::write<int>("horizon", horizon, out);
-  rosban_utils::xml_tools::write<int>("nb_threads", nb_threads, out);
-  rosban_utils::xml_tools::write<double>("discount", discount, out);
-  rosban_utils::xml_tools::write<int>("policy_samples", policy_samples, out);
-  rosban_utils::xml_tools::write<int>("max_action_tiles", max_action_tiles, out);
-  rosban_utils::xml_tools::write<bool>("auto_parameters", auto_parameters, out);
+  v["horizon"         ] = horizon         ;
+  v["nb_threads"      ] = nb_threads      ;
+  v["discount"        ] = discount        ;
+  v["policy_samples"  ] = policy_samples  ;
+  v["max_action_tiles"] = max_action_tiles;
+  v["auto_parameters" ] = auto_parameters ;
+  v["gp_values"       ] = gp_values       ;
+  v["gp_policies"     ] = gp_policies     ;
+  // If parameters are not auto, writing parameters for forests training
   if (!auto_parameters)
   {
-    q_value_conf.write("q_value_conf", out);
-    policy_conf.write("policy_conf", out);
+    v["q_value_conf"] = q_value_conf.toJson();
+    v["policy_conf"] = policy_conf.toJson();
   }
-  rosban_utils::xml_tools::write<bool>("gp_values", gp_values, out);
-  rosban_utils::xml_tools::write<bool>("gp_policies", gp_policies, out);
   if (gp_values) {
-    find_max_rprop_conf.write("find_max_rprop_conf", out);
+    v["find_max_rprop_conf"] = find_max_rprop_conf.toJson();
   }
   if (gp_values || gp_policies) {
-    hyper_rprop_conf.write("hyper_rprop_conf", out);
+    v["hyper_rprop_conf"] = hyper_rprop_conf.toJson();
   }
 }
 
-void FPF::Config::from_xml(TiXmlNode *node)
+void FPF::Config::fromJson(const Json::Value & v, const std::string & dir_name)
 {
   // Reading size of the problem if provided
-  rosban_utils::xml_tools::try_read<int>(node, "x_dim", x_dim);
-  rosban_utils::xml_tools::try_read<int>(node, "u_dim", u_dim);
+  rhoban_utils::tryRead(v, "x_dim", &x_dim);
+  rhoban_utils::tryRead(v, "u_dim", &u_dim);
   // Gathering limits in a vector
   if (x_dim != 0)
   {
-    std::vector<double> x_limits_vec;
-    x_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "x_limits");
+    std::vector<double> x_limits_vec = rhoban_utils::readVector(v,"x_limits");
     if (x_limits_vec.size() != (size_t) 2 * x_dim)
       throw std::runtime_error("FPF::from_xml: Invalid number of limits for x_limits");
     x_limits = Eigen::Map<Eigen::MatrixXd>(x_limits_vec.data(),x_dim, 2);
   }
   if (u_dim != 0)
   {
-    std::vector<double> u_limits_vec;
-    u_limits_vec = rosban_utils::xml_tools::read_vector<double>(node, "u_limits");
+    std::vector<double> u_limits_vec = rhoban_utils::readVector(v,"u_limits");
     if (u_limits_vec.size() != (size_t)2 * u_dim)
       throw std::runtime_error("FPF::from_xml: Invalid number of limits for u_limits");
     u_limits = Eigen::Map<Eigen::MatrixXd>(u_limits_vec.data(),u_dim, 2);
   }
   // Reading mandatory properties
-  horizon          = rosban_utils::xml_tools::read<int>   (node, "horizon"         );
-  discount         = rosban_utils::xml_tools::read<double>(node, "discount"        );
-  max_action_tiles = rosban_utils::xml_tools::read<int>   (node, "max_action_tiles");
+  horizon          = rhoban_utils::xml_tools::read<int>   (node, "horizon"         );
+  discount         = rhoban_utils::xml_tools::read<double>(node, "discount"        );
+  max_action_tiles = rhoban_utils::xml_tools::read<int>   (node, "max_action_tiles");
   // Reading optional properties
-  rosban_utils::xml_tools::try_read<int>   (node, "nb_threads"      , nb_threads      );
-  rosban_utils::xml_tools::try_read<int>   (node, "policy_samples"  , policy_samples  );
-  rosban_utils::xml_tools::try_read<bool>  (node, "auto_parameters" , auto_parameters );
+  rhoban_utils::xml_tools::try_read<int>   (node, "nb_threads"      , nb_threads      );
+  rhoban_utils::xml_tools::try_read<int>   (node, "policy_samples"  , policy_samples  );
+  rhoban_utils::xml_tools::try_read<bool>  (node, "auto_parameters" , auto_parameters );
   if (!auto_parameters)
   {
     q_value_conf.read(node, "q_value_conf");
     policy_conf.read(node, "policy_conf");
   }
-  rosban_utils::xml_tools::try_read<bool>  (node, "gp_values" , gp_values);
-  rosban_utils::xml_tools::try_read<bool>  (node, "gp_policies" , gp_policies);
+  rhoban_utils::xml_tools::try_read<bool>  (node, "gp_values" , gp_values);
+  rhoban_utils::xml_tools::try_read<bool>  (node, "gp_policies" , gp_policies);
   if (gp_values) {
     find_max_rprop_conf.tryRead(node, "find_max_rprop_conf");
   }

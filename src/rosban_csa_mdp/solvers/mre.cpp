@@ -7,13 +7,13 @@
 #include "rosban_random/tools.h"
 #include "rosban_regression_forests/tools/statistics.h"
 
-#include "rosban_utils/benchmark.h"
+#include "rhoban_utils/benchmark.h"
 
 #include <set>
 #include <iostream>
 
-using rosban_utils::Benchmark;
-using rosban_utils::TimeStamp;
+using rhoban_utils::Benchmark;
+using rhoban_utils::TimeStamp;
 
 using rosban_fa::ForestApproximator;
 using rosban_fa::FunctionApproximator;
@@ -185,21 +185,21 @@ void MRE::updateQSpaceLimits()
   solver.setKnownnessFunc(knownness_forest);
 }
 
-std::string MRE::class_name() const
+std::string MRE::getClassName() const
 {
   return "MRE";
 }
 
 void MRE::to_xml(std::ostream &out) const
 {
-  rosban_utils::xml_tools::write<int>("plan_period", plan_period, out);
+  rhoban_utils::xml_tools::write<int>("plan_period", plan_period, out);
   mrefpf_conf.write("mrefpf_conf", out);
   knownness_conf.write("knownness_conf", out);
 }
 
 void MRE::from_xml(TiXmlNode *node)
 {
-  rosban_utils::xml_tools::try_read<int>(node, "plan_period", plan_period);
+  rhoban_utils::xml_tools::try_read<int>(node, "plan_period", plan_period);
   mrefpf_conf.read(node, "mrefpf_conf");
   knownness_conf.tryRead(node, "knownness_conf");
 }
