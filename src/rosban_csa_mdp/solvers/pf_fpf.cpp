@@ -87,6 +87,7 @@ Json::Value PF_FPF::Config::toJson() const
 
 void PF_FPF::Config::fromJson(const Json::Value & v, const std::string & dir_name)
 {
+  (void)dir_name;
   // Reading limits of the problem
   x_limits = rhoban_utils::read<Eigen::MatrixXd>(v,"x_limits");
   u_limits = rhoban_utils::read<Eigen::MatrixXd>(v,"u_limits");
