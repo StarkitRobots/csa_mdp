@@ -45,7 +45,7 @@ Eigen::VectorXd ForestsPolicy::getRawAction(const Eigen::VectorXd &state,
 
 Json::Value ForestsPolicy::toJson() const
 {
-  throw std::runtime_error("Not implemented yet: ForestsPolicy::to_xml");
+  throw std::runtime_error("Not implemented yet: ForestsPolicy::toJson");
 }
 
 void ForestsPolicy::fromJson(const Json::Value & v, const std::string & dir_name)

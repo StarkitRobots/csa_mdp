@@ -25,6 +25,7 @@ Json::Value KnownnessTree::Config::toJson() const
   Json::Value v;
   v["max_points"] = max_points;
   v["type"      ] = to_string(type);
+  return v;
 }
 
 void KnownnessTree::Config::fromJson(const Json::Value & v, const std::string & dir_name)

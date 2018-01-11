@@ -641,31 +641,29 @@ std::string PML2::getClassName() const {
   return "PML2";
 }
 
-void PML2::to_xml(std::ostream &out) const {
-  //TODO
-  (void) out;
-  throw std::logic_error("PML2::to_xml: not implemented");
+Json::Value PML2::toJson() const {
+  throw std::logic_error("PML2::toJson: not implemented");
 }
 
-void PML2::from_xml(TiXmlNode *node) {
+void PML2::fromJson(const Json::Value & v, const std::string & dir_name) {
   // Calling parent implementation
-  BlackBoxLearner::from_xml(node);
+  BlackBoxLearner::fromJson(v, dir_name);
   // Reading class variables
-  rhoban_utils::xml_tools::try_read<int>   (node, "training_evaluations" , training_evaluations );
-  rhoban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
-  rhoban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
-  rhoban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
-  rhoban_utils::xml_tools::try_read<double>(node, "age_basis"           , age_basis           );
-  rhoban_utils::xml_tools::try_read<bool>  (node, "use_linear_splits"   , use_linear_splits   );
+  rhoban_utils::tryRead(v, "training_evaluations", &training_evaluations);
+  rhoban_utils::tryRead(v, "split_probability"   , &split_probability   );
+  rhoban_utils::tryRead(v, "split_margin"        , &split_margin        );
+  rhoban_utils::tryRead(v, "evaluations_ratio"   , &evaluations_ratio   );
+  rhoban_utils::tryRead(v, "age_basis"           , &age_basis           );
+  rhoban_utils::tryRead(v, "use_linear_splits"   , &use_linear_splits   );
   // Optimizer is mandatory
-  optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
+  optimizer = rosban_bbo::OptimizerFactory().read(v, "optimizer", dir_name);
   // Read Policy if provided (optional)
-  PolicyFactory().tryRead(node, "policy", policy);
+  PolicyFactory().tryRead(v, "policy", dir_name, &policy);
   // Performing some checks
   if (split_margin < 0 || split_margin >= 0.5) {
-    throw std::logic_error("PML2::from_xml: invalid value for split_margin");
+    throw std::logic_error("PML2::fromJson: invalid value for split_margin");
   }
-  //TODO: add checks on probability
+  //TODO: add checks on probabilities
   // Synchronize number of threads
   setNbThreads(nb_threads);
 }

@@ -149,7 +149,3 @@ add_library(rosban_csa_mdp
 target_link_libraries(rosban_csa_mdp
   ${catkin_LIBRARIES}
   )
-
-#TODO: check meaning + consistency
-add_executable(generate_xml_config src/generate_xml_config.cpp)
-target_link_libraries(generate_xml_config rosban_csa_mdp ${catkin_LIBRARIES})

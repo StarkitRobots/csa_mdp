@@ -150,28 +150,26 @@ std::string TreePolicyIteration::getClassName() const {
   return "TreePolicyIteration";
 }
 
-void TreePolicyIteration::to_xml(std::ostream &out) const
+Json::Value TreePolicyIteration::toJson() const
 {
-  //TODO
-  (void) out;
-  throw std::logic_error("TreePolicyIteration::to_xml: not implemented");
+  throw std::logic_error("TreePolicyIteration::toJson: not implemented");
 }
 
-void TreePolicyIteration::from_xml(TiXmlNode *node)
+void TreePolicyIteration::fromJson(const Json::Value & v, const std::string & dir_name)
 {
   // Calling parent implementation
-  BlackBoxLearner::from_xml(node);
+  BlackBoxLearner::fromJson(v, dir_name);
   // Reading simple parameters
-  rhoban_utils::xml_tools::try_read<bool>  (node, "memoryless_policy_trainer", memoryless_policy_trainer);
-  rhoban_utils::xml_tools::try_read<bool>  (node, "use_value_approximator", use_value_approximator);
+  rhoban_utils::tryRead(v, "memoryless_policy_trainer", &memoryless_policy_trainer);
+  rhoban_utils::tryRead(v, "use_value_approximator"   , &use_value_approximator   );
   // Read value approximator if necessary
   if (use_value_approximator) {
-    value_approximator = ValueApproximatorFactory().read(node, "value_approximator");
+    value_approximator = ValueApproximatorFactory().read(v, "value_approximator", dir_name);
   }
   // Policy trainer is required
-  policy_trainer = rosban_fa::OptimizerTrainerFactory().read(node, "policy_trainer");
+  policy_trainer = rosban_fa::OptimizerTrainerFactory().read(v, "policy_trainer", dir_name);
   // Initial policy might be provided (not necessary)
-  PolicyFactory().tryRead(node, "policy", policy);
+  PolicyFactory().tryRead(v, "policy", dir_name, &policy);
   // Update number of threads for all
   setNbThreads(nb_threads);
 }

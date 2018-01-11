@@ -47,7 +47,7 @@ OpportunistPolicy::getRawAction(const Eigen::VectorXd & state,
 
 Json::Value OpportunistPolicy::toJson() const
 {
-  throw std::logic_error("OpportunistPolicy::to_xml: not implemented");
+  throw std::logic_error("OpportunistPolicy::toJson: not implemented");
 }
 
 void OpportunistPolicy::fromJson(const Json::Value & v, const std::string & dir_name)

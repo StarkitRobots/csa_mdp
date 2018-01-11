@@ -151,34 +151,36 @@ std::string MonteCarloPolicy::getClassName() const
   return "monte_carlo_policy";
 }
 
-void MonteCarloPolicy::to_xml(std::ostream & out) const
+Json::Value MonteCarloPolicy::toJson() const
 {
-  Policy::to_xml(out);
-  throw std::logic_error("MonteCarloPolicy::to_xml: not implemented");
+  Json::Value v = Policy::toJson();
+  throw std::logic_error("MonteCarloPolicy::toJson: not implemented");
 }
 
-void MonteCarloPolicy::from_xml(TiXmlNode * node)
+void MonteCarloPolicy::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  Policy::from_xml(node);
+  Policy::fromJson(v,dir_name);
   // Read problem directly from node or from another file
   std::string problem_path;
-  rhoban_utils::xml_tools::try_read<std::string>(node, "problem_path", problem_path);
+  rhoban_utils::tryRead<std::string>(v, "problem_path", &problem_path);
   if (problem_path != "") {
-    problem = ProblemFactory().buildFromXmlFile(problem_path, "Problem");
+    problem = ProblemFactory().buildFromJsonFile(problem_path);
   } else {
-    problem = ProblemFactory().read(node, "problem");
+    problem = ProblemFactory().read(v, "problem", dir_name);
   }
-  default_policy = PolicyFactory().read(node, "default_policy");
-  optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
-  nb_rollouts = rhoban_utils::xml_tools::read<int>(node, "nb_rollouts");
-  validation_rollouts = rhoban_utils::xml_tools::read<int>(node, "validation_rollouts");
-  simulation_depth = rhoban_utils::xml_tools::read<int>(node, "simulation_depth");
-  rhoban_utils::xml_tools::try_read<int>(node, "max_evals"  , max_evals  );
-  rhoban_utils::xml_tools::try_read<int>(node, "debug_level", debug_level);
+  // Mandatory elements
+  default_policy = PolicyFactory().read(v, "default_policy", dir_name);
+  optimizer = rosban_bbo::OptimizerFactory().read(v, "optimizer", dir_name);
+  nb_rollouts         = rhoban_utils::read<int>(v, "nb_rollouts");
+  validation_rollouts = rhoban_utils::read<int>(v, "validation_rollouts");
+  simulation_depth    = rhoban_utils::read<int>(v, "simulation_depth");
+  // Optional elements
+  rhoban_utils::tryRead(v, "max_evals"  , &max_evals  );
+  rhoban_utils::tryRead(v, "debug_level", &debug_level);
 
 
   if (!default_policy || !optimizer || !problem) {
-    throw std::runtime_error("MonteCarloPolicy::from_xml: incomplete initialization");
+    throw std::runtime_error("MonteCarloPolicy::fromJson: incomplete initialization");
   }
 
   default_policy->setActionLimits(problem->getActionsLimits());

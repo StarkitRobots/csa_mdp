@@ -180,35 +180,33 @@ void BlackBoxLearner::setNbThreads(int nb_threads_)
   nb_threads = nb_threads_;
 }
 
-void BlackBoxLearner::to_xml(std::ostream &out) const
+Json::Value BlackBoxLearner::toJson() const
 {
-  //TODO
-  (void) out;
-  throw std::logic_error("BlackBoxLearner::to_xml: not implemented");
+  throw std::logic_error("BlackBoxLearner::toJson: not implemented");
 }
 
-void BlackBoxLearner::from_xml(TiXmlNode *node)
+void BlackBoxLearner::fromJson(const Json::Value & v, const std::string & dir_name)
 {
   // Reading simple parameters
-  rhoban_utils::xml_tools::try_read<int>   (node, "nb_threads"          , nb_threads          );
-  rhoban_utils::xml_tools::try_read<int>   (node, "trial_length"        , trial_length        );
-  rhoban_utils::xml_tools::try_read<int>   (node, "nb_evaluation_trials", nb_evaluation_trials);
-  rhoban_utils::xml_tools::try_read<int>   (node, "verbosity"           , verbosity           );
-  rhoban_utils::xml_tools::try_read<double>(node, "time_budget"         , time_budget         );
-  rhoban_utils::xml_tools::try_read<double>(node, "discount"            , discount            );
+  rhoban_utils::tryRead(v, "nb_threads"          , &nb_threads          );
+  rhoban_utils::tryRead(v, "trial_length"        , &trial_length        );
+  rhoban_utils::tryRead(v, "nb_evaluation_trials", &nb_evaluation_trials);
+  rhoban_utils::tryRead(v, "verbosity"           , &verbosity           );
+  rhoban_utils::tryRead(v, "time_budget"         , &time_budget         );
+  rhoban_utils::tryRead(v, "discount"            , &discount            );
 
   // Getting problem
   std::shared_ptr<const Problem> tmp_problem;
   std::string problem_path;
-  rhoban_utils::xml_tools::try_read<std::string>(node, "problem_path", problem_path);
+  rhoban_utils::tryRead(v, "problem_path", &problem_path);
   if (problem_path != "") {
-    tmp_problem = ProblemFactory().buildFromXmlFile(problem_path, "Problem");
+    tmp_problem = ProblemFactory().buildFromJsonFile(dir_name + problem_path);
   } else {
-    tmp_problem = ProblemFactory().read(node, "problem");
+    tmp_problem = ProblemFactory().read(v, "problem", dir_name);
   }
   problem = std::dynamic_pointer_cast<const BlackBoxProblem>(tmp_problem);
   if (!problem) {
-    throw std::runtime_error("BlackBoxLearner::from_xml: problem is not a BlackBoxProblem");
+    throw std::runtime_error("BlackBoxLearner::fromJson: problem is not a BlackBoxProblem");
   }
 }
 

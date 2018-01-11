@@ -22,14 +22,16 @@ std::string FakeLearner::getClassName() const
   return "FakeLearner";
 }
 
-void FakeLearner::to_xml(std::ostream &out) const
+Json::Value FakeLearner::toJson() const
 {
-  policy->factoryWrite("policy", out);
+  Json::Value v;
+  v["policy"] = policy->toFactoryJson();
+  return v;
 }
 
-void FakeLearner::from_xml(TiXmlNode *node)
+void FakeLearner::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  policy = PolicyFactory().read(node, "policy");
+  policy = PolicyFactory().read(v, "policy", dir_name);
 }
 
 void FakeLearner::endRun()

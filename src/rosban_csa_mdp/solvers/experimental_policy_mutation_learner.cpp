@@ -642,15 +642,15 @@ std::string PolicyMutationLearner::getClassName() const {
   return "PolicyMutationLearner";
 }
 
-void PolicyMutationLearner::to_xml(std::ostream &out) const {
+void PolicyMutationLearner::toJson(std::ostream &out) const {
   //TODO
   (void) out;
-  throw std::logic_error("PolicyMutationLearner::to_xml: not implemented");
+  throw std::logic_error("PolicyMutationLearner::toJson: not implemented");
 }
 
-void PolicyMutationLearner::from_xml(TiXmlNode *node) {
+void PolicyMutationLearner::fromJson(TiXmlNode *node) {
   // Calling parent implementation
-  BlackBoxLearner::from_xml(node);
+  BlackBoxLearner::fromJson(node);
   // Reading class variables
   rhoban_utils::xml_tools::try_read<bool>  (node, "avoid_growing_slopes" , avoid_growing_slopes );
   rhoban_utils::xml_tools::try_read<bool>  (node, "use_visited_states"   , use_visited_states   );
@@ -673,7 +673,7 @@ void PolicyMutationLearner::from_xml(TiXmlNode *node) {
   PolicyFactory().tryRead(node, "policy", policy);
   // Performing some checks
   if (split_margin < 0 || split_margin >= 0.5) {
-    throw std::logic_error("PolicyMutationLearner::from_xml: invalid value for split_margin");
+    throw std::logic_error("PolicyMutationLearner::fromJson: invalid value for split_margin");
   }
   //TODO: add checks on probability
   // Synchronize number of threads

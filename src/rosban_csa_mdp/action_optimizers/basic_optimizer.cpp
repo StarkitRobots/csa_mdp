@@ -139,7 +139,7 @@ void BasicOptimizer::fromJson(const Json::Value & v, const std::string & dir_nam
   rhoban_utils::tryRead(v, "nb_additional_steps", &nb_additional_steps);
   rhoban_utils::tryRead(v, "nb_simulations"     , &nb_simulations     );
   rhoban_utils::tryRead(v, "nb_actions"         , &nb_actions         );
-  TrainerFactory().tryRead(v, "trainer", &trainer, dir_name);
+  TrainerFactory().tryRead(v, "trainer", dir_name, &trainer);
 }
 
 }

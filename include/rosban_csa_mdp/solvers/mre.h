@@ -53,8 +53,8 @@ public:
   void updateQSpaceLimits();
 
   std::string getClassName() const override;
-  void to_xml(std::ostream &out) const override;
-  void from_xml(TiXmlNode *node) override;
+  virtual Json::Value toJson() const override;
+  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
 
 private:
   /// Which is the plan frequency: '-1' -> update only when requested

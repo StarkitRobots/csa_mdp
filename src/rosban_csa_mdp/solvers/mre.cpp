@@ -7,7 +7,7 @@
 #include "rosban_random/tools.h"
 #include "rosban_regression_forests/tools/statistics.h"
 
-#include "rhoban_utils/benchmark.h"
+#include "rhoban_utils/timing/benchmark.h"
 
 #include <set>
 #include <iostream>
@@ -190,18 +190,21 @@ std::string MRE::getClassName() const
   return "MRE";
 }
 
-void MRE::to_xml(std::ostream &out) const
+Json::Value MRE::toJson() const
 {
-  rhoban_utils::xml_tools::write<int>("plan_period", plan_period, out);
-  mrefpf_conf.write("mrefpf_conf", out);
-  knownness_conf.write("knownness_conf", out);
+  Json::Value v;
+  v["plan_period"] = plan_period;
+  v["mrefpf_conf"] = mrefpf_conf.toJson();
+  v["knownness_conf"] = knownness_conf.toJson();
+  return v;
 }
 
-void MRE::from_xml(TiXmlNode *node)
+void MRE::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  rhoban_utils::xml_tools::try_read<int>(node, "plan_period", plan_period);
-  mrefpf_conf.read(node, "mrefpf_conf");
-  knownness_conf.tryRead(node, "knownness_conf");
+  (void)dir_name;
+  rhoban_utils::tryRead(v, "plan_period", &plan_period);
+  mrefpf_conf.read(v, "mrefpf_conf");
+  knownness_conf.tryRead(v, "knownness_conf");
 }
 
 }

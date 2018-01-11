@@ -18,7 +18,7 @@ Json::Value History::Config::toJson() const
 {
   if (!problem)
   {
-    throw std::runtime_error("History::Config::to_xml: forbidden while problem is not set");
+    throw std::runtime_error("History::Config::toJson: forbidden while problem is not set");
   }
   Json::Value v;
   v["problem"] = problem->toFactoryJson();

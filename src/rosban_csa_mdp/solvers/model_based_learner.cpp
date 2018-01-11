@@ -233,26 +233,27 @@ void ModelBasedLearner::updatePolicy()
 std::string ModelBasedLearner::getClassName() const
 { return "ModelBasedLearner"; }
 
-void ModelBasedLearner::to_xml(std::ostream &out) const
+Json::Value ModelBasedLearner::toJson() const
 {
-  Learner::to_xml(out);
-  if (model)            model->factoryWrite("model", out);
-  if (reward_predictor) reward_predictor->factoryWrite("reward_predictor", out);
-  if (value_trainer)    value_trainer   ->factoryWrite("value_trainer"   , out);
-  if (action_optimizer) action_optimizer->factoryWrite("action_optimizer", out);
-  if (policy_trainer)   policy_trainer  ->factoryWrite("policy_trainer"  , out);
-  rhoban_utils::xml_tools::write<bool>("use_stochastic_policies", use_stochastic_policies, out);
+  Json::Value v = Learner::toJson();
+  if (model)            v["model"           ] = model->toFactoryJson();
+  if (reward_predictor) v["reward_predictor"] = reward_predictor->toFactoryJson();
+  if (value_trainer)    v["value_trainer"   ] = value_trainer->toFactoryJson();
+  if (action_optimizer) v["action_optimizer"] = action_optimizer->toFactoryJson();
+  if (policy_trainer)   v["policy_trainer"  ] = policy_trainer->toFactoryJson();
+  v["use_stochastic_policies"] = use_stochastic_policies;
+  return v;
 }
 
-void ModelBasedLearner::from_xml(TiXmlNode *node)
+void ModelBasedLearner::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  Learner::from_xml(node);
-  model  = ProblemFactory().read(node, "model");
-  RewardPredictorFactory().tryRead(node, "reward_predictor", reward_predictor);
-  TrainerFactory().tryRead        (node, "value_trainer"   , value_trainer   );
-  ActionOptimizerFactory().tryRead(node, "action_optimizer", action_optimizer);
-  TrainerFactory().tryRead        (node, "policy_trainer"  , policy_trainer  );
-  rhoban_utils::xml_tools::try_read<bool>(node, "use_stochastic_policies", use_stochastic_policies);
+  Learner::fromJson(v, dir_name);
+  model  = ProblemFactory().read(v, "model", dir_name);
+  RewardPredictorFactory().tryRead(v, "reward_predictor", dir_name, &reward_predictor);
+  TrainerFactory().tryRead        (v, "value_trainer"   , dir_name, &value_trainer   );
+  ActionOptimizerFactory().tryRead(v, "action_optimizer", dir_name, &action_optimizer);
+  TrainerFactory().tryRead        (v, "policy_trainer"  , dir_name, &policy_trainer  );
+  rhoban_utils::tryRead(v, "use_stochastic_policies", &use_stochastic_policies);
 }
 
 }

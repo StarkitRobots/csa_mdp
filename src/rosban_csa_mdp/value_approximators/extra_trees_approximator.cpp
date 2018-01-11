@@ -98,10 +98,10 @@ Json::Value ExtraTreesApproximator::toJson() const {
 
 void ExtraTreesApproximator::fromJson(const Json::Value & v, const std::string & dir_name)
 {
-  ValueApproximator::fromJson(v);
+  ValueApproximator::fromJson(v, dir_name);
   rhoban_utils::tryRead(v, "nb_samples", &nb_samples);
-  RewardPredictorFactory().tryRead   (v, "predictor", &predictor);
-  rosban_fa::TrainerFactory().tryRead(v, "trainer"  , &trainer  );
+  RewardPredictorFactory().tryRead   (v, "predictor", dir_name, &predictor);
+  rosban_fa::TrainerFactory().tryRead(v, "trainer"  , dir_name, &trainer  );
   setNbThreads(nb_threads);
 }
 

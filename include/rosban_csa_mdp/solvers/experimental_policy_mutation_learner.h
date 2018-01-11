@@ -140,8 +140,8 @@ public:
                                       int action_id) const;
 
   virtual std::string getClassName() const override;
-  virtual void to_xml(std::ostream &out) const override;
-  virtual void from_xml(TiXmlNode *node) override;
+  virtual void toJson(std::ostream &out) const override;
+  virtual void fromJson(TiXmlNode *node) override;
 
   /// Return the best candidate found
   /// rf: the reward function

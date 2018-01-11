@@ -43,8 +43,8 @@ public:
   void updatePolicy();
 
   virtual std::string getClassName() const override;
-  virtual void to_xml(std::ostream &out) const override;
-  virtual void from_xml(TiXmlNode *node) override;
+  virtual Json::Value toJson() const override;
+  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
 
 private:
   /// The current state of the model

@@ -508,28 +508,26 @@ std::string PolicyMutationLearner::getClassName() const {
   return "PolicyMutationLearner";
 }
 
-void PolicyMutationLearner::to_xml(std::ostream &out) const {
-  //TODO
-  (void) out;
-  throw std::logic_error("PolicyMutationLearner::to_xml: not implemented");
+Json::Value PolicyMutationLearner::toJson() const {
+  throw std::logic_error("PolicyMutationLearner::toJson: not implemented");
 }
 
-void PolicyMutationLearner::from_xml(TiXmlNode *node) {
+void PolicyMutationLearner::fromJson(const Json::Value & v, const std::string & dir_name) {
   // Calling parent implementation
-  BlackBoxLearner::from_xml(node);
+  BlackBoxLearner::fromJson(v, dir_name);
   // Reading class variables
-  rhoban_utils::xml_tools::try_read<int>   (node, "training_evaluations" , training_evaluations );
-  rhoban_utils::xml_tools::try_read<double>(node, "split_probability"   , split_probability   );
-  rhoban_utils::xml_tools::try_read<double>(node, "split_margin"        , split_margin        );
-  rhoban_utils::xml_tools::try_read<double>(node, "evaluations_ratio"   , evaluations_ratio   );
-  rhoban_utils::xml_tools::try_read<double>(node, "age_basis"           , age_basis           );
+  rhoban_utils::tryRead(v, "training_evaluations", &training_evaluations);
+  rhoban_utils::tryRead(v, "split_probability"   , &split_probability   );
+  rhoban_utils::tryRead(v, "split_margin"        , &split_margin        );
+  rhoban_utils::tryRead(v, "evaluations_ratio"   , &evaluations_ratio   );
+  rhoban_utils::tryRead(v, "age_basis"           , &age_basis           );
   // Optimizer is mandatory
-  optimizer = rosban_bbo::OptimizerFactory().read(node, "optimizer");
+  optimizer = rosban_bbo::OptimizerFactory().read(v, "optimizer", dir_name);
   // Read Policy if provided (optional)
-  PolicyFactory().tryRead(node, "policy", policy);
+  PolicyFactory().tryRead(v, "policy", dir_name, &policy);
   // Performing some checks
   if (split_margin < 0 || split_margin >= 0.5) {
-    throw std::logic_error("PolicyMutationLearner::from_xml: invalid value for split_margin");
+    throw std::logic_error("PolicyMutationLearner::fromJson: invalid value for split_margin");
   }
   //TODO: add checks on probability
   // Synchronize number of threads
