@@ -65,7 +65,7 @@ void ForestsPolicy::fromJson(const Json::Value & v, const std::string & dir_name
 
 std::string ForestsPolicy::getClassName() const
 {
-  return "forests_policy";
+  return "ForestsPolicy";
 }
 
 }

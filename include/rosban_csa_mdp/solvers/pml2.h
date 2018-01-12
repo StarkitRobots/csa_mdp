@@ -174,9 +174,6 @@ protected:
   /// parameters of the policy while optimizing them.
   int training_evaluations;
 
-  /// Probability of splitting a leaf when applying a mutation
-  double split_probability;
-
   /// When operating a split on a dimension, this parameters ensures that the
   /// split value is inside [min + delta, max - delta], with:
   /// - delta: (max-min)*split_margin

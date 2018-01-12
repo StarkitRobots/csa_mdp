@@ -204,6 +204,7 @@ void PML2::setNbThreads(int nb_threads) {
 double PML2::evalAndGetStates(std::default_random_engine * engine)
 {
   std::vector<Eigen::VectorXd> global_visited_states;
+  std::cout << "Evaluating with " << getNbEvaluationTrials() << " trials" << std::endl;
   double reward = evaluatePolicy(*policy, getNbEvaluationTrials(), engine,
                                  &global_visited_states);
   // Clear all visited states between two iterations
@@ -650,7 +651,6 @@ void PML2::fromJson(const Json::Value & v, const std::string & dir_name) {
   BlackBoxLearner::fromJson(v, dir_name);
   // Reading class variables
   rhoban_utils::tryRead(v, "training_evaluations", &training_evaluations);
-  rhoban_utils::tryRead(v, "split_probability"   , &split_probability   );
   rhoban_utils::tryRead(v, "split_margin"        , &split_margin        );
   rhoban_utils::tryRead(v, "evaluations_ratio"   , &evaluations_ratio   );
   rhoban_utils::tryRead(v, "age_basis"           , &age_basis           );

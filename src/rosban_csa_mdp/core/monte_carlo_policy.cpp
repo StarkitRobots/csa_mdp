@@ -148,7 +148,7 @@ double MonteCarloPolicy::sampleReward(const Eigen::VectorXd & initial_state,
 
 std::string MonteCarloPolicy::getClassName() const
 {
-  return "monte_carlo_policy";
+  return "MonteCarloPolicy";
 }
 
 Json::Value MonteCarloPolicy::toJson() const

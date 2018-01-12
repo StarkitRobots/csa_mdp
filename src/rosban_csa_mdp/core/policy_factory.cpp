@@ -13,13 +13,13 @@ std::map<std::string,PolicyFactory::Builder> PolicyFactory::extra_builders;
 
 PolicyFactory::PolicyFactory()
 {
-  registerBuilder("fa_policy",[](){return std::unique_ptr<Policy>(new FAPolicy);});
-  registerBuilder("forests_policy",[](){return std::unique_ptr<Policy>(new ForestsPolicy);});
-  registerBuilder("monte_carlo_policy",
+  registerBuilder("FAPolicy",[](){return std::unique_ptr<Policy>(new FAPolicy);});
+  registerBuilder("ForestsPolicy",[](){return std::unique_ptr<Policy>(new ForestsPolicy);});
+  registerBuilder("MonteCarloPolicy",
                   [](){return std::unique_ptr<Policy>(new MonteCarloPolicy );});
-  registerBuilder("opportunist_policy",
+  registerBuilder("OpportunistPolicy",
                   [](){return std::unique_ptr<Policy>(new OpportunistPolicy);});
-  registerBuilder("random"        ,[](){return std::unique_ptr<Policy>(new RandomPolicy );});
+  registerBuilder("RandomPolicy",[](){return std::unique_ptr<Policy>(new RandomPolicy );});
   for (const auto & entry : extra_builders)
   {
     registerBuilder(entry.first, entry.second);

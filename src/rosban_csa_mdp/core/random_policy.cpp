@@ -53,7 +53,7 @@ void RandomPolicy::fromJson(const Json::Value & v, const std::string & dir_name)
 
 std::string RandomPolicy::getClassName() const
 {
-  return "random_policy";
+  return "RandomPolicy";
 }
 
 }
