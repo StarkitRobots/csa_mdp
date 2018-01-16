@@ -5,6 +5,7 @@ set(SOURCES
   fpf.cpp
   learner.cpp
   learner_factory.cpp
+  lppi.cpp
   model_based_learner.cpp
   mre.cpp
   mre_fpf.cpp

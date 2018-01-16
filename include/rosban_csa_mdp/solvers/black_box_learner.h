@@ -25,6 +25,9 @@ public:
   BlackBoxLearner();
   virtual ~BlackBoxLearner();
 
+  /// Build a policy from the given function approximator
+  std::unique_ptr<Policy> buildPolicy(const rosban_fa::FunctionApproximator & fa) const;
+
   // Initialize the learner
   virtual void init(std::default_random_engine * engine) = 0;
 

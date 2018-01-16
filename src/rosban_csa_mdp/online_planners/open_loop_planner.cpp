@@ -44,7 +44,9 @@ OpenLoopPlanner::planNextAction(const Problem & p,
         bool is_terminated = false;
         Eigen::VectorXd curr_state = state;
         for (int step = 0; step < this->look_ahead; step++) {
-          Eigen::VectorXd action = next_actions.segment(action_dims*step, action_dims);
+          Eigen::VectorXd action(action_dims+1);
+          action(0) = 0;
+          action.segment(1,action_dims) = next_actions.segment(action_dims*step, action_dims);
           Problem::Result result = p.getSuccessor(curr_state, action, engine);
           rollout_reward += gain * result.reward;
           curr_state = result.successor;
@@ -58,7 +60,8 @@ OpenLoopPlanner::planNextAction(const Problem & p,
         }
         total_reward += rollout_reward;
       }
-      return total_reward / rollouts_per_sample;
+      double avg_reward = total_reward / rollouts_per_sample;
+      return avg_reward;
     };
   // Optimizing next actions
   Eigen::VectorXd next_actions = optimizer->train(reward_function, engine);

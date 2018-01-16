@@ -1,5 +1,6 @@
 #include "rosban_csa_mdp/solvers/black_box_learner.h"
 
+#include "rosban_csa_mdp/core/fa_policy.h"
 #include "rosban_csa_mdp/core/problem_factory.h"
 
 #include "rosban_random/tools.h"
@@ -24,6 +25,12 @@ BlackBoxLearner::BlackBoxLearner()
 BlackBoxLearner::~BlackBoxLearner()
 {
   closeLogs();
+}
+
+std::unique_ptr<Policy> BlackBoxLearner::buildPolicy(const rosban_fa::FunctionApproximator & fa) const {
+  std::unique_ptr<Policy> p(new FAPolicy(fa.clone()));
+  p->setActionLimits(problem->getActionsLimits());
+  return p;
 }
 
 void BlackBoxLearner::run(std::default_random_engine * engine)
