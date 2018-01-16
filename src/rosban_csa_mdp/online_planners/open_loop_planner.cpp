@@ -1,10 +1,12 @@
 #include "rosban_csa_mdp/online_planners/open_loop_planner.h"
 
+#include "rosban_bbo/optimizer_factory.h"
+
 namespace csa_mdp
 {
 
 OpenLoopPlanner::OpenLoopPlanner()
-  : look_ahead(0)
+  : look_ahead(0), rollouts_per_sample(1), discount(1)
 {
 }
 
@@ -63,5 +65,31 @@ OpenLoopPlanner::planNextAction(const Problem & p,
   // Only return next action
   return next_actions.segment(0,action_dims);
 }
+
+std::string OpenLoopPlanner::getClassName() const
+{
+  return "OpenLoopPlanner";
+}
+
+Json::Value OpenLoopPlanner::toJson() const
+{
+  Json::Value v;
+  v["optimizer" ]          = optimizer->toFactoryJson();
+  v["look_ahead"]          = look_ahead                ;
+  v["rollouts_per_sample"] = rollouts_per_sample       ;
+  v["discount"           ] = discount                  ;
+  return v;
+}
+
+void OpenLoopPlanner::fromJson(const Json::Value & v,
+                               const std::string & dir_name)
+{
+  rosban_bbo::OptimizerFactory().tryRead(v, "optimizer", dir_name, &optimizer);
+  rhoban_utils::tryRead(v, "look_ahead"         , &look_ahead         );
+  rhoban_utils::tryRead(v, "rollouts_per_sample", &rollouts_per_sample);
+  rhoban_utils::tryRead(v, "discount"           , &discount           );
+}
+
+
 
 }

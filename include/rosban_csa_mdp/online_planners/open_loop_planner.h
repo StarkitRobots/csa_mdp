@@ -22,6 +22,11 @@ public:
                                  const rosban_fa::FunctionApproximator & value_function,
                                  std::default_random_engine * engine);
 
+  virtual std::string getClassName() const override;
+  virtual Json::Value toJson() const override;
+  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+
+
 private:
   /// Optimizer used for open loop planning
   std::unique_ptr<rosban_bbo::Optimizer> optimizer;
