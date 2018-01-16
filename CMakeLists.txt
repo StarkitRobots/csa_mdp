@@ -120,6 +120,7 @@ set(DIRECTORIES
   src/rosban_csa_mdp/action_optimizers
   src/rosban_csa_mdp/core
   src/rosban_csa_mdp/knownness
+  src/rosban_csa_mdp/online_planners
   src/rosban_csa_mdp/reward_predictors
   src/rosban_csa_mdp/value_approximators
   src/rosban_csa_mdp/solvers
