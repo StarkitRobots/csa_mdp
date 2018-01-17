@@ -14,10 +14,19 @@ public:
   LPPI();
   virtual ~LPPI();
 
+  /// Perform a single rollout and stores the results
+  /// - states  : each column will be a different state
+  /// - actions : each column will be a different action
+  /// - values  : each row is the sampled value for the state
+  void performRollout(Eigen::MatrixXd * states,
+                      Eigen::MatrixXd * actions,
+                      Eigen::VectorXd * values,
+                      std::default_random_engine * engine);
+
   /// Perform the rollouts and store the results
   /// - states  : each column will be a different state
   /// - actions : each column will be a different action
-  /// - values  : each row is a different
+  /// - values  : each row is the sampled value for a state
   void performRollouts(Eigen::MatrixXd * states,
                        Eigen::MatrixXd * actions,
                        Eigen::VectorXd * values,
