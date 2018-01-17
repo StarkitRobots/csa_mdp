@@ -39,7 +39,7 @@ void LPPI::performRollout(Eigen::MatrixXd * states,
   std::vector<Eigen::VectorXd> rollout_states, rollout_actions;
   std::vector<double> rollout_rewards;
   Eigen::VectorXd state = problem->getStartingState(engine);
-  bool end_with_terminal = true;
+  bool end_with_terminal = false;
   for (int step = 0; step < max_rollout_length; step++) {
     // Local optimization of the action
     Eigen::VectorXd action = planner.planNextAction(*problem, state, *value, engine);
