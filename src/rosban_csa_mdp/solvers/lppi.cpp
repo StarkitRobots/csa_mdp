@@ -187,7 +187,6 @@ void LPPI::setNbThreads(int nb_threads) {
   if (policy_trainer) {
     policy_trainer->setNbThreads(nb_threads);
   }
-  //TODO: use open_loop_planner.setNbThreads
 }
 
 std::string LPPI::getClassName() const {
@@ -207,6 +206,8 @@ void LPPI::fromJson(const Json::Value & v, const std::string & dir_name) {
   rhoban_utils::tryRead(v, "min_rollout_length", &min_rollout_length);
   rhoban_utils::tryRead(v, "max_rollout_length", &max_rollout_length);
   rhoban_utils::tryRead(v, "nb_entries"        , &nb_entries        );
+  // Update value_trainer and policy_trainer
+  setNbThreads(nb_threads);
 }
 
 }
