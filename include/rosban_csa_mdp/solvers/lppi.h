@@ -61,6 +61,9 @@ private:
   int max_rollout_length;
   /// Number of entries per update
   int nb_entries;
+  /// The best average reward for policies encountered:
+  /// - It is used to choose if we update the policy
+  double best_reward;
 };
 
 }

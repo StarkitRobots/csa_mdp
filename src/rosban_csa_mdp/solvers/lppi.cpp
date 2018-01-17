@@ -9,6 +9,7 @@
 #include "rhoban_utils/threading/multi_core.h"
 #include "rhoban_utils/timing/time_stamp.h"
 
+#include <limits>
 #include <mutex>
 
 using namespace rosban_fa;
@@ -17,7 +18,9 @@ using rhoban_utils::TimeStamp;
 namespace csa_mdp
 {
 
-LPPI::LPPI() : min_rollout_length(-1), max_rollout_length(-1), nb_entries(-1)
+LPPI::LPPI()
+  : min_rollout_length(-1), max_rollout_length(-1), nb_entries(-1),
+    best_reward(std::numeric_limits<double>::lowest())
 {
 }
 
@@ -154,17 +157,22 @@ void LPPI::update(std::default_random_engine * engine) {
   // Updating both policy and value based on actions
   Eigen::MatrixXd state_limits = problem->getStateLimits();
   value = value_trainer->train(states, values, state_limits);
-  policy = policy_trainer->train(states, actions.transpose(), state_limits);
+  std::unique_ptr<rosban_fa::FunctionApproximator> new_policy_fa;
+  new_policy_fa = policy_trainer->train(states, actions.transpose(), state_limits);
   TimeStamp mid2 = TimeStamp::now();
-  std::unique_ptr<Policy> new_policy = buildPolicy(*policy);
+  std::unique_ptr<Policy> new_policy = buildPolicy(*new_policy_fa);
   double new_reward = evaluatePolicy(*new_policy, engine);
   TimeStamp end = TimeStamp::now();
   std::cout << "New reward: " << new_reward << std::endl;
-  policy->save("policy_tree.bin");
+  if (new_reward > best_reward) {
+    policy = std::move(new_policy_fa);
+    policy->save("policy_tree.bin");
+    best_reward = new_reward;
+  }
   writeTime("performRollouts"  , diffSec(start , mid1 ));
   writeTime("updateValues"     , diffSec(mid1  , mid2 ));
   writeTime("evalPolicy"       , diffSec(mid2  , end  ));
-  writeScore(new_reward);
+  writeScore(best_reward);
 }
 
 void LPPI::setNbThreads(int nb_threads) {
