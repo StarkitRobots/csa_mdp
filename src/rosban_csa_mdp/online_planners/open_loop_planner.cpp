@@ -65,8 +65,11 @@ OpenLoopPlanner::planNextAction(const Problem & p,
     };
   // Optimizing next actions
   Eigen::VectorXd next_actions = optimizer->train(reward_function, engine);
+  Eigen::VectorXd prefixed_action(1+action_dims);
+  prefixed_action(0) = 0;
+  prefixed_action.segment(1,action_dims) = next_actions;
   // Only return next action
-  return next_actions.segment(0,action_dims);
+  return prefixed_action;
 }
 
 std::string OpenLoopPlanner::getClassName() const

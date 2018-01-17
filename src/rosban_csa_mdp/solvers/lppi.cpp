@@ -42,19 +42,16 @@ void LPPI::performRollouts(Eigen::MatrixXd * states,
     bool trial_interrupted = true;
     for (int step = 0; step < max_rollout_length; step++) {
       // Local optimization of the action
-      Eigen::VectorXd action;
-      action = planner.planNextAction(*problem, state, *value, engine);
-      Eigen::VectorXd prefixed_action(1+action_dims);
-      prefixed_action(0) = 0;
-      prefixed_action.segment(1,action_dims);
+      Eigen::VectorXd action = planner.planNextAction(*problem, state, *value, engine);
       // Applying action, storing results and updating current state
-      Problem::Result res = problem->getSuccessor(state, prefixed_action, engine);
+      Problem::Result res = problem->getSuccessor(state, action, engine);
       rollout_states.push_back(state);
-      rollout_actions.push_back(prefixed_action);
+      rollout_actions.push_back(action);
       rollout_rewards.push_back(res.reward);
       // Stop if we obtained a terminal status, otherwise, update current state
       if (res.terminal) {
         trial_interrupted = true;
+        std::cout << "Last action : " << action.transpose() << std::endl;
         std::cout << "Trial interrupted in state : " << res.successor.transpose() << std::endl;
         break;
       } else {
@@ -77,6 +74,7 @@ void LPPI::performRollouts(Eigen::MatrixXd * states,
         }
       }
     }
+    std::cout << "Rollout value: " << value << std::endl;
     std::cout << "Entry_idx: " << entry_idx << std::endl;
   }
 }
