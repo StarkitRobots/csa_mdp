@@ -156,11 +156,15 @@ void LPPI::update(std::default_random_engine * engine) {
   TimeStamp mid1 = TimeStamp::now();
   // Updating both policy and value based on actions
   Eigen::MatrixXd state_limits = problem->getStateLimits();
+  std::cout << "Training value" << std::endl;
   value = value_trainer->train(states, values, state_limits);
   std::unique_ptr<rosban_fa::FunctionApproximator> new_policy_fa;
+  std::cout << "Training policy" << std::endl;
   new_policy_fa = policy_trainer->train(states, actions.transpose(), state_limits);
   TimeStamp mid2 = TimeStamp::now();
+  std::cout << "Building policy" << std::endl;
   std::unique_ptr<Policy> new_policy = buildPolicy(*new_policy_fa);
+  std::cout << "Evaluating policy" << std::endl;
   double new_reward = evaluatePolicy(*new_policy, engine);
   TimeStamp end = TimeStamp::now();
   std::cout << "New reward: " << new_reward << std::endl;
