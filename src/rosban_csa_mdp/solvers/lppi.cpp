@@ -170,6 +170,7 @@ void LPPI::update(std::default_random_engine * engine) {
   std::cout << "New reward: " << new_reward << std::endl;
   if (new_reward > best_reward) {
     policy = std::move(new_policy_fa);
+    value->save("value.bin");
     policy->save("policy_tree.bin");
     best_reward = new_reward;
   }
