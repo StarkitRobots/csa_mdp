@@ -2,6 +2,7 @@
 
 #include "rosban_fa/constant_approximator.h"
 #include "rosban_fa/function_approximator.h"
+#include "rosban_fa/function_approximator_factory.h"
 #include "rosban_fa/trainer_factory.h"
 
 #include "rosban_random/tools.h"
@@ -204,10 +205,11 @@ void LPPI::fromJson(const Json::Value & v, const std::string & dir_name) {
   planner.read(v, "planner", dir_name);
   TrainerFactory().tryRead(v, "value_trainer" , dir_name, &value_trainer );
   TrainerFactory().tryRead(v, "policy_trainer", dir_name, &policy_trainer);
+  FunctionApproximatorFactory().tryRead(v, "value" , dir_name, &value);
   rhoban_utils::tryRead(v, "min_rollout_length", &min_rollout_length);
   rhoban_utils::tryRead(v, "max_rollout_length", &max_rollout_length);
   rhoban_utils::tryRead(v, "nb_entries"        , &nb_entries        );
-  // Update value_trainer and policy_trainer
+  // Update value_trainer and policy_trainer number of threads
   setNbThreads(nb_threads);
 }
 
