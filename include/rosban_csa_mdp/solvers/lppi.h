@@ -50,8 +50,10 @@ private:
   std::unique_ptr<rosban_fa::FunctionApproximator> value;
   /// A forest describing the value function trainer
   std::unique_ptr<rosban_fa::Trainer> value_trainer;
-  /// A forest describing the current policy
-  std::unique_ptr<rosban_fa::FunctionApproximator> policy;
+  /// The current policy
+  std::unique_ptr<Policy> policy;
+  /// The function approximator used as a basis for the current policy
+  std::unique_ptr<rosban_fa::FunctionApproximator> policy_fa;
   /// A forest describing policy trainer
   std::unique_ptr<rosban_fa::Trainer> policy_trainer;
   /// Minimal remaining length of a rollout to allow use of an entry if the
@@ -64,6 +66,9 @@ private:
   /// The best average reward for policies encountered:
   /// - It is used to choose if we update the policy
   double best_reward;
+  /// If true, current policy is used to finish the trials, otherwise, value
+  /// estimation is used to estimate remaining value
+  bool use_policy;
 };
 
 }

@@ -1,5 +1,8 @@
 #include "rosban_csa_mdp/solvers/lppi.h"
 
+#include "rosban_csa_mdp/core/random_policy.h"
+#include "rosban_csa_mdp/core/policy_factory.h"
+
 #include "rosban_fa/constant_approximator.h"
 #include "rosban_fa/function_approximator.h"
 #include "rosban_fa/function_approximator_factory.h"
@@ -21,7 +24,7 @@ namespace csa_mdp
 
 LPPI::LPPI()
   : min_rollout_length(-1), max_rollout_length(-1), nb_entries(-1),
-    best_reward(std::numeric_limits<double>::lowest())
+    best_reward(std::numeric_limits<double>::lowest()), use_policy(false)
 {
 }
 
@@ -43,7 +46,12 @@ void LPPI::performRollout(Eigen::MatrixXd * states,
   bool end_with_terminal = false;
   for (int step = 0; step < max_rollout_length; step++) {
     // Local optimization of the action
-    Eigen::VectorXd action = planner.planNextAction(*problem, state, *value, engine);
+    Eigen::VectorXd action;
+    if (use_policy) {
+      action = planner.planNextAction(*problem, state, *policy, engine);
+    } else {
+      action = planner.planNextAction(*problem, state, *value, engine);
+    }
     // Applying action, storing results and updating current state
     Problem::Result res = problem->getSuccessor(state, action, engine);
     rollout_states.push_back(state);
@@ -141,10 +149,20 @@ void LPPI::init(std::default_random_engine * engine) {
     throw std::runtime_error("LPPI::performRollouts: no support for hybrid action spaces");
   }
   (void)engine;
+  if (!policy) {
+    policy = std::unique_ptr<Policy>(new RandomPolicy);
+    policy->setActionLimits(problem->getActionsLimits());
+  }
   if (!value) {
     Eigen::VectorXd default_value(1);
     default_value(0) = 0;
     value = std::unique_ptr<FunctionApproximator>(new ConstantApproximator(default_value));
+  }
+  if (!policy_trainer) {
+    throw std::runtime_error("LPPI::init: no policy trainer");
+  }
+  if (!value_trainer) {
+    throw std::runtime_error("LPPI::init: no policy trainer");
   }
 }
 
@@ -170,9 +188,10 @@ void LPPI::update(std::default_random_engine * engine) {
   TimeStamp end = TimeStamp::now();
   std::cout << "New reward: " << new_reward << std::endl;
   if (new_reward > best_reward) {
-    policy = std::move(new_policy_fa);
+    policy = std::move(new_policy);
+    policy_fa = std::move(new_policy_fa);
     value->save("value.bin");
-    policy->save("policy_tree.bin");
+    policy_fa->save("policy_fa.bin");
     best_reward = new_reward;
   }
   writeTime("performRollouts"  , diffSec(start , mid1 ));
@@ -206,9 +225,11 @@ void LPPI::fromJson(const Json::Value & v, const std::string & dir_name) {
   TrainerFactory().tryRead(v, "value_trainer" , dir_name, &value_trainer );
   TrainerFactory().tryRead(v, "policy_trainer", dir_name, &policy_trainer);
   FunctionApproximatorFactory().tryRead(v, "value" , dir_name, &value);
+  PolicyFactory().tryRead(v, "policy" , dir_name, &policy);
   rhoban_utils::tryRead(v, "min_rollout_length", &min_rollout_length);
   rhoban_utils::tryRead(v, "max_rollout_length", &max_rollout_length);
   rhoban_utils::tryRead(v, "nb_entries"        , &nb_entries        );
+  rhoban_utils::tryRead(v, "use_policy"        , &use_policy        );
   // Update value_trainer and policy_trainer number of threads
   setNbThreads(nb_threads);
 }
