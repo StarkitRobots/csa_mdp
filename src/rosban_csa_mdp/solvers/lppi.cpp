@@ -77,10 +77,6 @@ void LPPI::performRollout(Eigen::MatrixXd * states,
       value = value * discount + rollout_rewards[idx];
     }
   }
-  std::cout << "-----" << std::endl
-            << "rollout_length : " << rollout_length << std::endl
-            << "last_idx_used : " << last_idx_used << std::endl
-            << "value : " << value << std::endl;
   // Initalize and fill results
   int rollout_entries = last_idx_used + 1;
   (*states)  = Eigen::MatrixXd(state_dims , rollout_entries);
@@ -92,6 +88,10 @@ void LPPI::performRollout(Eigen::MatrixXd * states,
     actions->col(idx) = rollout_actions[idx];
     (*values)(idx) = value;
   }
+  std::cout << "-----" << std::endl
+            << "rollout_length : " << rollout_length << std::endl
+            << "final_state : " << state.transpose() << std::endl
+            << "value : " << value << std::endl;
 }
 
 void LPPI::performRollouts(Eigen::MatrixXd * states,
