@@ -181,8 +181,7 @@ void LPPI::update(std::default_random_engine * engine) {
   TimeStamp mid2 = TimeStamp::now();
   writeTime("updateValue"      , diffSec(mid1  , mid2 ));
   std::cout << "Training policy" << std::endl;
-  std::unique_ptr<rosban_fa::FunctionApproximator> new_policy_fa;;
-  updatePolicy(states, actions);
+  std::unique_ptr<rosban_fa::FunctionApproximator> new_policy_fa = updatePolicy(states, actions);
   TimeStamp mid3 = TimeStamp::now();
   writeTime("updatePolicy"     , diffSec(mid2  , mid3 ));
   std::cout << "Building policy" << std::endl;
