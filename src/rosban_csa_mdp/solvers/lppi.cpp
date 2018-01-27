@@ -173,19 +173,24 @@ void LPPI::update(std::default_random_engine * engine) {
   TimeStamp start = TimeStamp::now();
   performRollouts(&states, &actions, &values, engine);
   TimeStamp mid1 = TimeStamp::now();
+  writeTime("performRollouts"  , diffSec(start , mid1 ));
   // Updating both policy and value based on actions
   Eigen::MatrixXd state_limits = problem->getStateLimits();
   std::cout << "Training value" << std::endl;
-  value = value_trainer->train(states, values, state_limits);
-  std::unique_ptr<rosban_fa::FunctionApproximator> new_policy_fa;
-  std::cout << "Training policy" << std::endl;
-  new_policy_fa = policy_trainer->train(states, actions.transpose(), state_limits);
+  updateValues(states, values);
   TimeStamp mid2 = TimeStamp::now();
+  writeTime("updateValue"      , diffSec(mid1  , mid2 ));
+  std::cout << "Training policy" << std::endl;
+  std::unique_ptr<rosban_fa::FunctionApproximator> new_policy_fa;;
+  updatePolicy(states, actions);
+  TimeStamp mid3 = TimeStamp::now();
+  writeTime("updatePolicy"     , diffSec(mid2  , mid3 ));
   std::cout << "Building policy" << std::endl;
   std::unique_ptr<Policy> new_policy = buildPolicy(*new_policy_fa);
   std::cout << "Evaluating policy" << std::endl;
   double new_reward = evaluatePolicy(*new_policy, engine);
   TimeStamp end = TimeStamp::now();
+  writeTime("evalPolicy"       , diffSec(mid3  , end  ));
   std::cout << "New reward: " << new_reward << std::endl;
   if (new_reward > best_reward) {
     policy = std::move(new_policy);
@@ -194,10 +199,29 @@ void LPPI::update(std::default_random_engine * engine) {
     policy_fa->save("policy_fa.bin");
     best_reward = new_reward;
   }
-  writeTime("performRollouts"  , diffSec(start , mid1 ));
-  writeTime("updateValues"     , diffSec(mid1  , mid2 ));
-  writeTime("evalPolicy"       , diffSec(mid2  , end  ));
   writeScore(best_reward);
+}
+void LPPI::updateValues(const Eigen::MatrixXd & states,
+                        const Eigen::VectorXd & values) {
+  Eigen::MatrixXd state_limits = problem->getStateLimits();
+  if (value) {
+    value = value_trainer->train(states, values, state_limits, *value);
+  } else {
+    value = value_trainer->train(states, values, state_limits);
+  }
+}
+
+std::unique_ptr<FunctionApproximator>
+LPPI::updatePolicy(const Eigen::MatrixXd & states,
+                   const Eigen::MatrixXd & actions) const{
+  Eigen::MatrixXd state_limits = problem->getStateLimits();
+  std::unique_ptr<FunctionApproximator> new_policy_fa;
+  if (policy_fa) {
+    new_policy_fa = policy_trainer->train(states, actions.transpose(), state_limits, *policy_fa);
+  } else {
+    new_policy_fa = policy_trainer->train(states, actions.transpose(), state_limits);
+  }
+  return new_policy_fa;
 }
 
 void LPPI::setNbThreads(int nb_threads) {

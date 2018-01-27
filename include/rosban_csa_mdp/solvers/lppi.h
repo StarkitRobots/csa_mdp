@@ -5,6 +5,10 @@
 
 #include "rosban_fa/trainer.h"
 
+namespace rosban_fa {
+class FunctionApproximator;
+}
+
 namespace csa_mdp
 {
 
@@ -36,6 +40,14 @@ public:
 
   /// Perform rollouts according to the OpenLoopPlanner
   virtual void update(std::default_random_engine * engine) override;
+
+
+  void updateValues(const Eigen::MatrixXd & states,
+                    const Eigen::VectorXd & values);
+  /// Return the new policy_fa, but do not modify object
+  std::unique_ptr<rosban_fa::FunctionApproximator>
+  updatePolicy(const Eigen::MatrixXd & states,
+               const Eigen::MatrixXd & actions) const;
 
   virtual void setNbThreads(int nb_threads) override;
 
