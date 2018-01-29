@@ -143,6 +143,18 @@ void LPPI::performRollouts(Eigen::MatrixXd * states,
   int local_nb_threads = std::min(nb_threads, nb_entries);
   engines = rosban_random::getRandomEngines(local_nb_threads, engine);
   rhoban_utils::MultiCore::runParallelStochasticTask(thread_task, local_nb_threads, &engines);
+
+  // Json Writing
+  std::cout << "Writing dataset.json" << std::endl;
+  Json::StyledWriter writer;
+  Json::Value content;
+  content["states"]  = rhoban_utils::matrix2Json(*states);
+  content["actions"] = rhoban_utils::matrix2Json(*actions);
+  content["values"]  = rhoban_utils::vector2Json(*values);
+  // Prepare output stream
+  //TODO: error treatment
+  std::ofstream output("dataset.json");
+  output << writer.write(content);
 }
 void LPPI::init(std::default_random_engine * engine) {
   if (problem->getNbActions() != 1) {
