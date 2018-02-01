@@ -11,7 +11,7 @@
 #include "rosban_fa/linear_approximator.h"
 #include "rosban_fa/linear_split.h"
 #include "rosban_fa/orthogonal_split.h"
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 #include "rhoban_utils/timing/time_stamp.h"
 
 using namespace rosban_fa;
@@ -688,7 +688,7 @@ PML2::getInitialStates(const MutationCandidate & mc,
   // Filter most important samples
   std::vector<Eigen::VectorXd> initial_states;
   std::vector<size_t> indices =
-    rosban_random::getKDistinctFromN(nb_evaluations_allowed, 
+    rhoban_random::getKDistinctFromN(nb_evaluations_allowed, 
                                      mc.visited_states.size(),
                                      engine);
   for (size_t idx : indices) {

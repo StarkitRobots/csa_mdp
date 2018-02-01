@@ -1,6 +1,6 @@
 #include "rosban_csa_mdp/core/forests_policy.h"
 
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 
 using regression_forests::Forest;
 
@@ -10,7 +10,7 @@ namespace csa_mdp
 ForestsPolicy::ForestsPolicy()
   : Policy(), apply_noise(false)
 {
-  engine = rosban_random::getRandomEngine();
+  engine = rhoban_random::getRandomEngine();
 }
 
 Eigen::VectorXd ForestsPolicy::getRawAction(const Eigen::VectorXd &state)
@@ -25,7 +25,7 @@ Eigen::VectorXd ForestsPolicy::getRawAction(const Eigen::VectorXd &state,
   if (apply_noise && external_engine == nullptr)
   {
     delete_engine = true;
-    external_engine = rosban_random::newRandomEngine();
+    external_engine = rhoban_random::newRandomEngine();
   }
 
   Eigen::VectorXd cmd(policies.size());

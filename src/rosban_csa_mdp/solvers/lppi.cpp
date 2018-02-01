@@ -8,7 +8,7 @@
 #include "rosban_fa/function_approximator_factory.h"
 #include "rosban_fa/trainer_factory.h"
 
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 
 #include "rhoban_utils/threading/multi_core.h"
 #include "rhoban_utils/timing/time_stamp.h"
@@ -141,7 +141,7 @@ void LPPI::performRollouts(Eigen::MatrixXd * states,
     };
   std::vector<std::default_random_engine> engines;
   int local_nb_threads = std::min(nb_threads, nb_entries);
-  engines = rosban_random::getRandomEngines(local_nb_threads, engine);
+  engines = rhoban_random::getRandomEngines(local_nb_threads, engine);
   rhoban_utils::MultiCore::runParallelStochasticTask(thread_task, local_nb_threads, &engines);
 
   // Json Writing

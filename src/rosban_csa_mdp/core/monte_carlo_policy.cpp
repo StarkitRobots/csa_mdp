@@ -5,7 +5,7 @@
 
 #include "rosban_bbo/optimizer_factory.h"
 
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 #include "rhoban_utils/threading/multi_core.h"
 
 namespace csa_mdp
@@ -106,7 +106,7 @@ double MonteCarloPolicy::averageReward(const Eigen::VectorXd & initial_state,
   }
   // Preparing random_engines + rewards storing
   std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(std::min(nb_threads, rollouts), engine);
+  engines = rhoban_random::getRandomEngines(std::min(nb_threads, rollouts), engine);
   Eigen::VectorXd rewards = Eigen::VectorXd::Zero(rollouts);
   // The task which has to be performed :
   rhoban_utils::MultiCore::StochasticTask task =

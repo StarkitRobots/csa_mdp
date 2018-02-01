@@ -2,7 +2,7 @@
 
 #include "rosban_gp/gradient_ascent/randomized_rprop.h"
 
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 
 #include "rhoban_utils/timing/benchmark.h"
 #include "rhoban_utils/threading/multi_core.h"
@@ -353,7 +353,7 @@ std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Samp
 {
   if (conf.policy_samples > 0)
   {
-    return rosban_random::getUniformSamples(conf.getStateLimits(), conf.policy_samples);
+    return rhoban_random::getUniformSamples(conf.getStateLimits(), conf.policy_samples);
   }
   std::vector<Eigen::VectorXd> result;
   result.reserve(samples.size());

@@ -4,7 +4,7 @@
 #include "rosban_fa/function_approximator.h"
 
 #include "rosban_regression_forests/approximations/pwc_approximation.h"
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 #include "rosban_regression_forests/tools/statistics.h"
 
 #include "rhoban_utils/timing/benchmark.h"
@@ -29,7 +29,7 @@ MRE::MRE()
   : plan_period(-1)
 {
   // Init random engine
-  random_engine = rosban_random::getRandomEngine();
+  random_engine = rhoban_random::getRandomEngine();
 }
 
 void MRE::setNbThreads(int new_nb_threads)
@@ -83,7 +83,7 @@ Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
     }
     return action;
   }
-  return rosban_random::getUniformSamples(limits, 1, &random_engine)[0];
+  return rhoban_random::getUniformSamples(limits, 1, &random_engine)[0];
 }
 
 void MRE::internalUpdate()

@@ -8,7 +8,7 @@
 
 #include "rosban_fa/trainer_factory.h"
 
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 
 #include "rhoban_utils/threading/multi_core.h"
 
@@ -42,7 +42,7 @@ ModelBasedLearner::ModelBasedLearner()
     policy_trainer(new PWLForestTrainer()),
     use_stochastic_policies(true)
 {
-  engine = rosban_random::getRandomEngine();
+  engine = rhoban_random::getRandomEngine();
 }
 
 const std::shared_ptr<const Policy> ModelBasedLearner::getPolicy() const
@@ -152,7 +152,7 @@ void ModelBasedLearner::updateValue()
 
   // Preparing random_engines
   std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(wished_threads, &engine);
+  engines = rhoban_random::getRandomEngines(wished_threads, &engine);
   // Run threads in parallel
   MultiCore::runParallelStochasticTask(rp_task, nb_samples, &engines);
   TimeStamp end_reward_predictor = TimeStamp::now();
@@ -214,7 +214,7 @@ void ModelBasedLearner::updatePolicy()
 
   // Preparing random_engines
   std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(wished_threads, &engine);
+  engines = rhoban_random::getRandomEngines(wished_threads, &engine);
   // Run threads in parallel
   MultiCore::runParallelStochasticTask(ao_task, nb_samples, &engines);
 

@@ -10,7 +10,7 @@
 #include "rosban_fa/function_approximator_factory.h"
 #include "rosban_fa/linear_approximator.h"
 #include "rosban_fa/orthogonal_split.h"
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 #include "rhoban_utils/timing/time_stamp.h"
 
 using namespace rosban_fa;
@@ -694,7 +694,7 @@ PolicyMutationLearner::getInitialStates(const MutationCandidate & mc,
 {
   size_t nb_evaluations_allowed = getTrainingEvaluations();
   if (!use_visited_states) {
-    return rosban_random::getUniformSamples(mc.space, nb_evaluations_allowed, engine);
+    return rhoban_random::getUniformSamples(mc.space, nb_evaluations_allowed, engine);
   }
   // If we are lacking samples return them all
   if (nb_evaluations_allowed >= mc.visited_states.size()) {
@@ -703,7 +703,7 @@ PolicyMutationLearner::getInitialStates(const MutationCandidate & mc,
   // Filter most important samples
   std::vector<Eigen::VectorXd> initial_states;
   std::vector<size_t> indices =
-    rosban_random::getKDistinctFromN(nb_evaluations_allowed, 
+    rhoban_random::getKDistinctFromN(nb_evaluations_allowed, 
                                      mc.visited_states.size(),
                                      engine);
   for (size_t idx : indices) {

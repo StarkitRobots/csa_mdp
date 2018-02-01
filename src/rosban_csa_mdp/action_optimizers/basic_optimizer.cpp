@@ -6,7 +6,7 @@
 
 #include "rosban_regression_forests/tools/statistics.h"
 
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 
 #include "rhoban_utils/threading/multi_core.h"
 
@@ -36,18 +36,18 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
 {
   bool clean_engine = false;
   if (engine == nullptr) {
-    engine = rosban_random::newRandomEngine();
+    engine = rhoban_random::newRandomEngine();
     clean_engine = true;
   }
 
   // actionDim by nb_actions
-  Eigen::MatrixXd actions = rosban_random::getUniformSamplesMatrix(action_limits,
+  Eigen::MatrixXd actions = rhoban_random::getUniformSamplesMatrix(action_limits,
                                                                    nb_actions,
                                                                    engine);
   Eigen::VectorXd results = Eigen::VectorXd::Zero(nb_actions);
   // Preparing random_engines
   std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_actions), engine);
+  engines = rhoban_random::getRandomEngines(std::min(nb_threads, nb_actions), engine);
   // Preparing function:
   AOTask task = getTask(input, actions, current_policy, result_function,
                         value_function, discount, results);

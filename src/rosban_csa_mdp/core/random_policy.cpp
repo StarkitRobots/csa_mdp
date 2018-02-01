@@ -1,6 +1,6 @@
 #include "rosban_csa_mdp/core/random_policy.h"
 
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 
 namespace csa_mdp
 {
@@ -8,7 +8,7 @@ namespace csa_mdp
 RandomPolicy::RandomPolicy()
   : Policy()
 {
-  random_engine = rosban_random::getRandomEngine();
+  random_engine = rhoban_random::getRandomEngine();
 }
 
 Eigen::VectorXd RandomPolicy::getRawAction(const Eigen::VectorXd &state)
@@ -23,7 +23,7 @@ Eigen::VectorXd RandomPolicy::getRawAction(const Eigen::VectorXd &state,
   bool delete_engine = false;
   if (external_engine == nullptr) {
     delete_engine = true;
-    external_engine = rosban_random::newRandomEngine();
+    external_engine = rhoban_random::newRandomEngine();
   }
   // Choosing action_id randomly
   std::uniform_int_distribution<int> action_distrib(0, action_limits.size() - 1);

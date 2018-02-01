@@ -2,7 +2,7 @@
 
 #include "rosban_regression_forests/tools/statistics.h"
 
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 
 #include "rhoban_utils/threading/multi_core.h"
 
@@ -31,7 +31,7 @@ void MonteCarloPredictor::predict(const Eigen::VectorXd & input,
                             discount, rewards);
   // Preparing random_engines
   std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_predictions), engine);
+  engines = rhoban_random::getRandomEngines(std::min(nb_threads, nb_predictions), engine);
   // Now filling reward in parallel
   MultiCore::runParallelStochasticTask(prediction_task, nb_predictions, &engines);
   double internal_mean = regression_forests::Statistics::mean(rewards);

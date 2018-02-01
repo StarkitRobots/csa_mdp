@@ -1,7 +1,7 @@
 #include "rosban_csa_mdp/knownness/knownness_tree.h"
 
 #include "rosban_regression_forests/approximations/pwc_approximation.h"
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 #include "rosban_regression_forests/tools/statistics.h"
 
 using regression_forests::Approximation;
@@ -44,7 +44,7 @@ KnownnessTree::KnownnessTree(const Eigen::MatrixXd& space,
                              const Config &conf_)
   : tree(space), conf(conf_), nb_points(0), next_split_dim(0)
 {
-  random_engine = rosban_random::getRandomEngine();
+  random_engine = rhoban_random::getRandomEngine();
 }
 
 void KnownnessTree::push(const Eigen::VectorXd& point)

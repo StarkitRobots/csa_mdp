@@ -2,25 +2,25 @@
 
 #include "rosban_fa/function_approximator_factory.h"
 
-#include "rosban_random/multivariate_gaussian.h"
-#include "rosban_random/tools.h"
+#include "rhoban_random/multivariate_gaussian.h"
+#include "rhoban_random/tools.h"
 
 using namespace rhoban_utils;
 using rosban_fa::FunctionApproximatorFactory;
-using rosban_random::MultivariateGaussian;
+using rhoban_random::MultivariateGaussian;
 
 namespace csa_mdp
 {
 
 FAPolicy::FAPolicy() : apply_noise(false)
 {
-  engine = rosban_random::getRandomEngine();
+  engine = rhoban_random::getRandomEngine();
 }
 
 FAPolicy::FAPolicy(std::unique_ptr<rosban_fa::FunctionApproximator> fa_)
   : fa(std::move(fa_)), apply_noise(false)
 {
-  engine = rosban_random::getRandomEngine();
+  engine = rhoban_random::getRandomEngine();
 }
 
 void FAPolicy::setRandomness(bool new_apply_noise)
@@ -40,7 +40,7 @@ Eigen::VectorXd FAPolicy::getRawAction(const Eigen::VectorXd &state,
   if (apply_noise && external_engine == nullptr)
   {
     delete_engine = true;
-    external_engine = rosban_random::newRandomEngine();
+    external_engine = rhoban_random::newRandomEngine();
   }
   Eigen::VectorXd mean;
   Eigen::MatrixXd covar;

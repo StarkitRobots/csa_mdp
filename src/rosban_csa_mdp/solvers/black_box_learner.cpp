@@ -3,7 +3,7 @@
 #include "rosban_csa_mdp/core/fa_policy.h"
 #include "rosban_csa_mdp/core/problem_factory.h"
 
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 #include "rhoban_utils/threading/multi_core.h"
 
 using rhoban_utils::TimeStamp;
@@ -59,7 +59,7 @@ double BlackBoxLearner::evaluatePolicy(const Policy & p,
                                        std::vector<Eigen::VectorXd> * visited_states) const {
   // Preparing random_engines
   std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
+  engines = rhoban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
   // Rewards + visited_states are computed by different threads and stored in the same vector
   Eigen::VectorXd rewards = Eigen::VectorXd::Zero(nb_evaluations);
   std::vector<std::vector<Eigen::VectorXd>> visited_states_per_thread(nb_evaluations);
@@ -115,7 +115,7 @@ double BlackBoxLearner::localEvaluation(const Policy & p,
       // 1: Generating states
       int thread_evaluations = end_idx - start_idx;
       std::vector<Eigen::VectorXd> starting_states;
-      starting_states = rosban_random::getUniformSamples(space, thread_evaluations, engine);
+      starting_states = rhoban_random::getUniformSamples(space, thread_evaluations, engine);
       // 2: Simulating trajectories
       try {
         for (int idx = 0; idx < thread_evaluations; idx++) {
@@ -140,7 +140,7 @@ double BlackBoxLearner::localEvaluation(const Policy & p,
     };
   // Preparing random_engines
   std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
+  engines = rhoban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
   // Running computation
   rhoban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
   // Result
@@ -175,7 +175,7 @@ double BlackBoxLearner::evaluation(const Policy & p,
     };
   // Preparing random_engines
   std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
+  engines = rhoban_random::getRandomEngines(std::min(nb_threads, nb_evaluations), engine);
   // Running computation
   rhoban_utils::MultiCore::runParallelStochasticTask(task, nb_evaluations, &engines);
   // Result

@@ -3,7 +3,7 @@
 #include "rosban_csa_mdp/reward_predictors/reward_predictor_factory.h"
 #include "rosban_fa/trainer_factory.h"
 
-#include "rosban_random/tools.h"
+#include "rhoban_random/tools.h"
 
 #include "rhoban_utils/threading/multi_core.h"
 #include "rhoban_utils/io_tools.h"
@@ -32,7 +32,7 @@ ExtraTreesApproximator::train(const Policy & policy,
     throw std::logic_error("ExtraTreesApproximator::train: trainer is not initialized");
   }
   Eigen::MatrixXd inputs =
-    rosban_random::getUniformSamplesMatrix(problem.getStateLimits(),
+    rhoban_random::getUniformSamplesMatrix(problem.getStateLimits(),
                                            nb_samples,
                                            engine);
   Eigen::VectorXd observations(nb_samples);
@@ -68,7 +68,7 @@ ExtraTreesApproximator::train(const Policy & policy,
 
   // Preparing random_engines
   std::vector<std::default_random_engine> engines;
-  engines = rosban_random::getRandomEngines(wished_threads, engine);
+  engines = rhoban_random::getRandomEngines(wished_threads, engine);
   // Run threads in parallel
   MultiCore::runParallelStochasticTask(rp_task, nb_samples, &engines);
   // Approximate the gathered samples
