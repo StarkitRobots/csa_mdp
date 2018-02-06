@@ -76,9 +76,9 @@ void FAPolicy::fromJson(const Json::Value & v, const std::string & dir_name)
   rhoban_utils::tryRead<std::string>(v, "abs path", &abs_path);
   rhoban_utils::tryRead<std::string>(v, "rel path", &rel_path);
   if (abs_path != "" && rel_path != "") {
-    throw JsonParsingError("FAPolicy::fromJson: both abs_path and rel_path specified");
+    throw JsonParsingError("FAPolicy::fromJson: both 'abs path' and 'rel path' specified");
   } else if (abs_path == "" && rel_path == "") {
-    throw JsonParsingError("FAPolicy::fromJson: no abs_path neither rel_path specified");
+    throw JsonParsingError("FAPolicy::fromJson: no 'abs path' neither 'rel path' specified");
   } else if (abs_path != "") {
     path = abs_path;
   } else {
