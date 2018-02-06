@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>rosban_csa_mdp</name>
+  <name>rhoban_csa_mdp</name>
   <version>0.0.0</version>
   <description>This package provide tools to solve Continuous State and Action Markov Decision Processes</description>
 
@@ -15,9 +15,9 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <build_depend>rosban_fa</build_depend> <!-- rhoban/rosban_fa.git -->
+  <build_depend>rhoban_fa</build_depend> <!-- rhoban/function_approximators.git -->
 
-  <run_depend>rosban_fa</run_depend>
+  <run_depend>rhoban_fa</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

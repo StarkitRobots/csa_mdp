@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(rosban_csa_mdp)
+project(rhoban_csa_mdp)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  rosban_fa
+  rhoban_fa
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++11")
@@ -101,8 +101,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++11")
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES rosban_csa_mdp
-  CATKIN_DEPENDS rosban_fa
+  LIBRARIES rhoban_csa_mdp
+  CATKIN_DEPENDS rhoban_fa
 #  DEPENDS system_lib
 )
 
@@ -117,13 +117,13 @@ include_directories(
 
 # Directories containing sources files
 set(DIRECTORIES
-  src/rosban_csa_mdp/action_optimizers
-  src/rosban_csa_mdp/core
-  src/rosban_csa_mdp/knownness
-  src/rosban_csa_mdp/online_planners
-  src/rosban_csa_mdp/reward_predictors
-  src/rosban_csa_mdp/value_approximators
-  src/rosban_csa_mdp/solvers
+  src/rhoban_csa_mdp/action_optimizers
+  src/rhoban_csa_mdp/core
+  src/rhoban_csa_mdp/knownness
+  src/rhoban_csa_mdp/online_planners
+  src/rhoban_csa_mdp/reward_predictors
+  src/rhoban_csa_mdp/value_approximators
+  src/rhoban_csa_mdp/solvers
   src/kd_trees# Should be elsewhere...
   )
 
@@ -143,10 +143,10 @@ foreach (DIRECTORY ${DIRECTORIES})
 endforeach (DIRECTORY)
 
 # Declare a C++ library
-add_library(rosban_csa_mdp
+add_library(rhoban_csa_mdp
   ${ALL_SOURCES}
   )
 
-target_link_libraries(rosban_csa_mdp
+target_link_libraries(rhoban_csa_mdp
   ${catkin_LIBRARIES}
   )
