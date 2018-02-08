@@ -54,21 +54,25 @@ public:
     /// If activated, internal config are ignored and replaced by heuristic based
     /// parameters. (see ExtraTrees::Config::generateAuto)
     bool auto_parameters;
+#ifdef RHOBAN_RF_USES_GP
     /// If activated, gaussian processes are used to represent the values
     /// and max is computed according to gradient
     bool gp_values;
     /// If activated, gaussian processes are used to represent the policies
     bool gp_policies;
+#endif
 
     /// Config used for computing the Q-value
     regression_forests::ExtraTrees::Config q_value_conf;
     /// Config used for computing the Policy
     regression_forests::ExtraTrees::Config policy_conf;
 
+#ifdef RHOBAN_RF_USES_GP
     /// Config used for auto_tuning of GP hyperparameters
     rhoban_gp::RandomizedRProp::Config hyper_rprop_conf;
     /// Config used for gradient ascent when using gp
     rhoban_gp::RandomizedRProp::Config find_max_rprop_conf;
+#endif
 
     Config();
 

@@ -24,12 +24,12 @@ using rhoban_utils::TimeStamp;
 // Default types
 #include "rhoban_csa_mdp/reward_predictors/monte_carlo_predictor.h"
 #include "rhoban_csa_mdp/action_optimizers/basic_optimizer.h"
-#include "rhoban_fa/gp_forest_trainer.h"
+#include "rhoban_fa/pwc_forest_trainer.h"
 #include "rhoban_fa/pwl_forest_trainer.h"
 
 using csa_mdp::MonteCarloPredictor;
 using csa_mdp::BasicOptimizer;
-using rhoban_fa::GPForestTrainer;
+using rhoban_fa::PWCForestTrainer;
 using rhoban_fa::PWLForestTrainer;
 
 namespace csa_mdp
@@ -37,7 +37,7 @@ namespace csa_mdp
 
 ModelBasedLearner::ModelBasedLearner()
   : reward_predictor(new MonteCarloPredictor()),
-    value_trainer(new GPForestTrainer()),
+    value_trainer(new PWCForestTrainer()),
     action_optimizer(new BasicOptimizer()),
     policy_trainer(new PWLForestTrainer()),
     use_stochastic_policies(true)

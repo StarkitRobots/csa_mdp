@@ -1,7 +1,6 @@
 #include "rhoban_csa_mdp/action_optimizers/basic_optimizer.h"
 
 #include "rhoban_fa/function_approximator.h"
-#include "rhoban_fa/gp_trainer.h"
 #include "rhoban_fa/trainer_factory.h"
 
 #include "rhoban_regression_forests/tools/statistics.h"
@@ -10,7 +9,6 @@
 
 #include "rhoban_utils/threading/multi_core.h"
 
-using rhoban_fa::GPTrainer;
 using rhoban_fa::Trainer;
 using rhoban_fa::TrainerFactory;
 
@@ -23,7 +21,7 @@ BasicOptimizer::BasicOptimizer()
   : nb_additional_steps(4),
     nb_simulations(100),
     nb_actions(15),
-    trainer(new GPTrainer)
+    trainer()
 {}
 
 Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
@@ -38,6 +36,9 @@ Eigen::VectorXd BasicOptimizer::optimize(const Eigen::VectorXd & input,
   if (engine == nullptr) {
     engine = rhoban_random::newRandomEngine();
     clean_engine = true;
+  }
+  if (!trainer) {
+    throw std::logic_error("BasicOptimizer::optimize: trainer has not been initialized");
   }
 
   // actionDim by nb_actions

@@ -1,6 +1,8 @@
 #include "rhoban_csa_mdp/solvers/fpf.h"
 
+#ifdef RHOBAN_RF_USES_GP
 #include "rhoban_gp/gradient_ascent/randomized_rprop.h"
+#endif
 
 #include "rhoban_random/tools.h"
 
@@ -37,8 +39,10 @@ FPF::Config::Config()
   p_training_set_time = 0;
   p_extra_trees_time  = 0;
   auto_parameters = true;
+#ifdef RHOBAN_RF_USES_GP
   gp_values = false;
   gp_policies = false;
+#endif
 }
 
 const Eigen::MatrixXd & FPF::Config::getStateLimits() const
@@ -91,20 +95,22 @@ Json::Value FPF::Config::toJson() const
   v["policy_samples"  ] = policy_samples       ;
   v["max_action_tiles"] = (int)max_action_tiles;
   v["auto_parameters" ] = auto_parameters      ;
-  v["gp_values"       ] = gp_values            ;
-  v["gp_policies"     ] = gp_policies          ;
   // If parameters are not auto, writing parameters for forests training
   if (!auto_parameters)
   {
     v["q_value_conf"] = q_value_conf.toJson();
     v["policy_conf"] = policy_conf.toJson();
   }
+#ifdef RHOBAN_RF_USES_GP
+  v["gp_values"       ] = gp_values            ;
+  v["gp_policies"     ] = gp_policies          ;
   if (gp_values) {
     v["find_max_rprop_conf"] = find_max_rprop_conf.toJson();
   }
   if (gp_values || gp_policies) {
     v["hyper_rprop_conf"] = hyper_rprop_conf.toJson();
   }
+#endif
   return v;
 }
 
@@ -126,6 +132,7 @@ void FPF::Config::fromJson(const Json::Value & v, const std::string & dir_name)
     q_value_conf.read(v, "q_value_conf", dir_name);
     policy_conf.read(v, "policy_conf", dir_name);
   }
+#ifdef RHOBAN_RF_USES_GP
   rhoban_utils::tryRead(v, "gp_values"   , &gp_values);
   rhoban_utils::tryRead(v, "gp_policies" , &gp_policies);
   if (gp_values) {
@@ -134,6 +141,7 @@ void FPF::Config::fromJson(const Json::Value & v, const std::string & dir_name)
   if (gp_values || gp_policies) {
     hyper_rprop_conf.tryRead(v, "hyper_rprop_conf", dir_name);
   }
+#endif
 }
 
 FPF::FPF()
@@ -169,15 +177,19 @@ void FPF::updateQValue(const std::vector<Sample>& samples,
     Approximation::ID appr_type = last_step ? Approximation::ID::PWL : Approximation::ID::PWC;
     // TODO implement alternative update with PWL approximations to allow their use
     appr_type = Approximation::ID::PWC;
+#ifdef RHOBAN_RF_USES_GP
     // Replacing by GP if required
     if (conf.gp_values) appr_type = Approximation::ID::GP;
+#endif
     // Generating the configuration automatically
     q_learner.conf = ExtraTrees::Config::generateAuto(conf.getInputLimits(),
                                                       samples.size(),
                                                       appr_type);
     q_learner.conf.nb_threads = conf.nb_threads;
+#ifdef RHOBAN_RF_USES_GP
     // If using GP, use the custom parameters for hyperparameters tuning
     q_learner.conf.gp_conf = conf.hyper_rprop_conf;
+#endif
   }
   else
   {
@@ -226,15 +238,17 @@ void FPF::solve(const std::vector<Sample>& samples,
     regression_forests::ExtraTrees policy_learner;
     if (conf.auto_parameters)
     {
+#ifdef RHOBAN_RF_USES_GP
       Approximation::ID policy_appr_type = Approximation::ID::PWL;
       // Use GP if required
       if (conf.gp_policies) policy_appr_type = Approximation::ID::GP;
       policy_learner.conf = ExtraTrees::Config::generateAuto(conf.getStateLimits(),
                                                              samples.size(),
                                                              policy_appr_type);
-      policy_learner.conf.nb_threads = conf.nb_threads;
       // If using GP, use the custom parameters for hyperparameters tuning
       policy_learner.conf.gp_conf = conf.hyper_rprop_conf;
+#endif
+      policy_learner.conf.nb_threads = conf.nb_threads;
     }
     else
     {
@@ -318,6 +332,7 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample> &samples,
       limits.block(    0, 1, x_dim, 1) = next_state;
       limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
       double best_reward;
+#ifdef RHOBAN_RF_USES_GP
       if (conf.gp_values) {
         // Preparing functions
         std::function<Eigen::VectorXd(const Eigen::VectorXd)> gradient_func;
@@ -335,8 +350,10 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample> &samples,
         best_guess = rhoban_gp::RandomizedRProp::run(gradient_func, scoring_func,
                                                      limits, conf.find_max_rprop_conf);
         best_reward = scoring_func(best_guess);
-      }
-      else {
+      } else {
+#else
+      {
+#endif
         std::unique_ptr<regression_forests::Tree> sub_tree;
         sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
         best_reward = sub_tree->getMax(limits);
@@ -409,6 +426,7 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
     limits.block(    0, 1, x_dim, 1) = states[i];
     limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
     Eigen::VectorXd best_input;
+#ifdef RHOBAN_RF_USES_GP
     if (conf.gp_values) {
       // Preparing functions
       std::function<Eigen::VectorXd(const Eigen::VectorXd)> gradient_func;
@@ -424,8 +442,10 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
       // Performing multiple rProp and conserving the best candidate
       best_input = rhoban_gp::RandomizedRProp::run(gradient_func, scoring_func,
                                                    limits, conf.find_max_rprop_conf);
-    }
-    else {
+    } else {
+#else
+    {
+#endif
       std::unique_ptr<regression_forests::Tree> sub_tree;
       sub_tree = q_value->unifiedProjectedTree(limits, conf.max_action_tiles);
       best_input = sub_tree->getArgMax(limits);

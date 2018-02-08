@@ -132,9 +132,11 @@ void MRE::savePolicy(const std::string &prefix)
   {
     forests->push_back(std::unique_ptr<Forest>(policies[dim]->clone()));
   }
+#ifdef RHOBAN_RF_USES_GP
   if (mrefpf_conf.gp_policies) {
     throw std::logic_error("Saving gp_policies with MRE is not implemented yet");
   }
+#endif
   ForestApproximator fa(std::move(forests), 0);
   fa.save(prefix + "policy.data");
 }
