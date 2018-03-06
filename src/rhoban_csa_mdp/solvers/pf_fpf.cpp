@@ -89,8 +89,8 @@ void PF_FPF::Config::fromJson(const Json::Value & v, const std::string & dir_nam
 {
   (void)dir_name;
   // Reading limits of the problem
-  x_limits = rhoban_utils::read<Eigen::MatrixXd>(v,"x_limits");
-  u_limits = rhoban_utils::read<Eigen::MatrixXd>(v,"u_limits");
+  x_limits = rhoban_utils::readEigen<-1,-1>(v,"x_limits");
+  u_limits = rhoban_utils::readEigen<-1,-1>(v,"u_limits");
   // Writing properties
   horizon          = rhoban_utils::read<int>   (v, "horizon");
   nb_threads       = rhoban_utils::read<int>   (v, "nb_threads");
