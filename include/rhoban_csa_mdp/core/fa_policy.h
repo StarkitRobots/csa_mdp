@@ -9,7 +9,6 @@
 
 namespace csa_mdp
 {
-
 /// This class implements a policy using a function approximator
 class FAPolicy : public Policy
 {
@@ -19,15 +18,14 @@ public:
 
   void setRandomness(bool apply_noise);
 
-  Eigen::VectorXd getRawAction(const Eigen::VectorXd &state) override;
-  Eigen::VectorXd getRawAction(const Eigen::VectorXd &state,
-                               std::default_random_engine * engine) const override;
+  Eigen::VectorXd getRawAction(const Eigen::VectorXd& state) override;
+  Eigen::VectorXd getRawAction(const Eigen::VectorXd& state, std::default_random_engine* engine) const override;
 
   std::string getClassName() const override;
   virtual Json::Value toJson() const override;
-  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+  virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
 
-  void saveFA(const std::string & filename) const;
+  void saveFA(const std::string& filename) const;
 
 private:
   /// The policies
@@ -40,4 +38,4 @@ private:
   std::default_random_engine engine;
 };
 
-}
+}  // namespace csa_mdp

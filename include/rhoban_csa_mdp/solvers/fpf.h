@@ -7,16 +7,17 @@
 
 namespace csa_mdp
 {
-
 /// FPF acronym stands for Fitted Policy Forest. This algorithms (unpublished yet) is based
 /// on FQI (cf. Tree-Based Batch Mode Reinforcement Learning. Ernst, Geurts & Wehenkel, 2005).
 /// The main additions over FQI are:
 /// - The choice of the best action for a given state by merging a regression forest into a
-///   single tree. 
+///   single tree.
 /// - The possibility to learn a fitted policy from the q-value
-class FPF {
+class FPF
+{
 public:
-  class Config : public rhoban_utils::JsonSerializable{
+  class Config : public rhoban_utils::JsonSerializable
+  {
   private:
     // Storing x_dim and u_dim is required in order to load properly a configuration
     // TODO: not exactly in fact, dividing size of read vector by 2 should give the
@@ -30,6 +31,7 @@ public:
     Eigen::MatrixXd x_limits;
     /// The action space
     Eigen::MatrixXd u_limits;
+
   public:
     /// Until which horizon should value be computed
     size_t horizon;
@@ -76,18 +78,18 @@ public:
 
     Config();
 
-    const Eigen::MatrixXd & getStateLimits() const;
-    const Eigen::MatrixXd & getActionLimits() const;
+    const Eigen::MatrixXd& getStateLimits() const;
+    const Eigen::MatrixXd& getActionLimits() const;
     /// Return the space limits for the input State, then action
     Eigen::MatrixXd getInputLimits() const;
 
-    void setStateLimits(const Eigen::MatrixXd &new_limits);
-    void setActionLimits(const Eigen::MatrixXd &new_limits);
+    void setStateLimits(const Eigen::MatrixXd& new_limits);
+    void setActionLimits(const Eigen::MatrixXd& new_limits);
 
     // XML stuff
     virtual std::string getClassName() const override;
     virtual Json::Value toJson() const override;
-    virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+    virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
   };
 
 protected:
@@ -102,42 +104,31 @@ protected:
   /// Note: this method is not virtual, because if other algorithms (such as MRE)
   ///       need to use a custom way of initializing the data, they should implement
   ///       the method which generate samples for a given interval
-  regression_forests::TrainingSet
-  getTrainingSet(const std::vector<Sample>& samples,
-                 std::function<bool(const Eigen::VectorXd&)> is_terminal,
-                 const Config &conf);
+  regression_forests::TrainingSet getTrainingSet(const std::vector<Sample>& samples,
+                                                 std::function<bool(const Eigen::VectorXd&)> is_terminal,
+                                                 const Config& conf);
 
   /// Create a TrainingSet from current q_value, using samples from samples[start_idx,end_idx[
-  virtual regression_forests::TrainingSet
-  getTrainingSet(const std::vector<Sample>& samples,
-                 std::function<bool(const Eigen::VectorXd&)> is_terminal,
-                 const Config &conf,
-                 int start_idx, int end_idx);
+  virtual regression_forests::TrainingSet getTrainingSet(const std::vector<Sample>& samples,
+                                                         std::function<bool(const Eigen::VectorXd&)> is_terminal,
+                                                         const Config& conf, int start_idx, int end_idx);
 
   /// Perform one step of update on the Q-value, last_step might include special update.
   /// This function is virtual because some algorithms need to modify it.
-  virtual void updateQValue(const std::vector<Sample>& samples,
-                            std::function<bool(const Eigen::VectorXd&)> isTerminal,
-                            Config &conf,
-                            bool last_step);
+  virtual void updateQValue(const std::vector<Sample>& samples, std::function<bool(const Eigen::VectorXd&)> isTerminal,
+                            Config& conf, bool last_step);
 
   /// Create a set of states which will be used to build the the policy forest, in the default implementation,
   /// states are chosen at uniformous random inside the state space
   /// Note: this method is virtual, because other algorithms (such as MRE) might need to use a
   ///       custom way of creating their policy training state
-  virtual std::vector<Eigen::VectorXd>
-  getPolicyTrainingStates(const std::vector<Sample>& samples,
-                          const Config &conf);
+  virtual std::vector<Eigen::VectorXd> getPolicyTrainingStates(const std::vector<Sample>& samples, const Config& conf);
 
   /// This function is not virtual, because it mainly handle the multi threading
-  std::vector<Eigen::VectorXd>
-  getPolicyActions(const std::vector<Eigen::VectorXd> &states,
-                   const Config &conf);
+  std::vector<Eigen::VectorXd> getPolicyActions(const std::vector<Eigen::VectorXd>& states, const Config& conf);
 
-  virtual std::vector<Eigen::VectorXd>
-  getPolicyActions(const std::vector<Eigen::VectorXd> &states,
-                   const Config &conf,
-                   int start_idx, int end_idx);
+  virtual std::vector<Eigen::VectorXd> getPolicyActions(const std::vector<Eigen::VectorXd>& states, const Config& conf,
+                                                        int start_idx, int end_idx);
 
   /// Compute the bestAction at given state according to the current q_value
   Eigen::VectorXd bestAction(const Eigen::VectorXd& state);
@@ -152,10 +143,7 @@ public:
   /// Remove the forest from the memory of the solver!!!
   std::unique_ptr<regression_forests::Forest> stealPolicyForest(int action_index);
 
-  void solve(const std::vector<Sample>& samples,
-             std::function<bool(const Eigen::VectorXd&)> is_terminal,
-             Config &conf);
+  void solve(const std::vector<Sample>& samples, std::function<bool(const Eigen::VectorXd&)> is_terminal, Config& conf);
 };
 
-
-}
+}  // namespace csa_mdp

@@ -18,8 +18,8 @@
  */
 namespace csa_mdp
 {
-
-class MRE : public Learner{
+class MRE : public Learner
+{
 public:
   MRE();
 
@@ -27,11 +27,11 @@ public:
   virtual void setNbThreads(int nb_threads) override;
 
   /// Feed the learning process with a new sample, update policy if required
-  void feed(const Sample &s) override;
+  void feed(const Sample& s) override;
 
   /// Return the best action according to current policy
   /// if there is no policy available yet, return a random action
-  Eigen::VectorXd getAction(const Eigen::VectorXd &state) override;
+  Eigen::VectorXd getAction(const Eigen::VectorXd& state) override;
 
   /// Update policy and solver status
   /// Called automatically on feed each plan_period samples
@@ -41,20 +41,20 @@ public:
   /// are chosen at uniformous random
   bool hasAvailablePolicy();
 
-  const regression_forests::Forest & getPolicy(int dim);
+  const regression_forests::Forest& getPolicy(int dim);
 
-  void savePolicy(const std::string &prefix) override;
-  void saveValue(const std::string &prefix);
-  void saveKnownnessTree(const std::string &prefix);
-  void saveStatus(const std::string &prefix) override;
+  void savePolicy(const std::string& prefix) override;
+  void saveValue(const std::string& prefix);
+  void saveKnownnessTree(const std::string& prefix);
+  void saveStatus(const std::string& prefix) override;
 
-  void setStateLimits(const Eigen::MatrixXd & limits) override;
-  void setActionLimits(const std::vector<Eigen::MatrixXd> & limits) override;
+  void setStateLimits(const Eigen::MatrixXd& limits) override;
+  void setActionLimits(const std::vector<Eigen::MatrixXd>& limits) override;
   void updateQSpaceLimits();
 
   std::string getClassName() const override;
   virtual Json::Value toJson() const override;
-  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+  virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
 
 private:
   /// Which is the plan frequency: '-1' -> update only when requested
@@ -80,4 +80,4 @@ private:
   std::vector<std::unique_ptr<regression_forests::Forest>> policies;
 };
 
-}
+}  // namespace csa_mdp

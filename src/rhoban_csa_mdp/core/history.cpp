@@ -8,9 +8,7 @@
 
 namespace csa_mdp
 {
-
-History::Config::Config()
-  : run_column(-1), step_column(-1)
+History::Config::Config() : run_column(-1), step_column(-1)
 {
 }
 
@@ -22,25 +20,26 @@ Json::Value History::Config::toJson() const
   }
   Json::Value v;
   v["problem"] = problem->toFactoryJson();
-  v["log_path"      ] = log_path      ;
-  v["run_column"    ] = run_column    ;
-  v["step_column"   ] = step_column   ;
-  v["state_columns" ] = rhoban_utils::vector2Json(state_columns );
+  v["log_path"] = log_path;
+  v["run_column"] = run_column;
+  v["step_column"] = step_column;
+  v["state_columns"] = rhoban_utils::vector2Json(state_columns);
   v["action_columns"] = rhoban_utils::vector2Json(action_columns);
   return v;
 }
 
-void History::Config::fromJson(const Json::Value & v, const std::string & dir_name)
+void History::Config::fromJson(const Json::Value& v, const std::string& dir_name)
 {
   // Try to read problem if found
   std::unique_ptr<Problem> new_problem;
   ProblemFactory().tryRead(v, "problem", dir_name, &new_problem);
-  if (new_problem) problem = std::move(new_problem);
+  if (new_problem)
+    problem = std::move(new_problem);
 
-  rhoban_utils::tryRead      (v, "log_path"      , &log_path      );
-  rhoban_utils::tryRead      (v, "run_column"    , &run_column    );
-  rhoban_utils::tryRead      (v, "step_column"   , &step_column   );
-  rhoban_utils::tryReadVector(v, "state_columns" , &state_columns );
+  rhoban_utils::tryRead(v, "log_path", &log_path);
+  rhoban_utils::tryRead(v, "run_column", &run_column);
+  rhoban_utils::tryRead(v, "step_column", &step_column);
+  rhoban_utils::tryReadVector(v, "state_columns", &state_columns);
   rhoban_utils::tryReadVector(v, "action_columns", &action_columns);
 }
 
@@ -49,14 +48,11 @@ std::string History::Config::getClassName() const
   return "history_config";
 }
 
-
 History::History()
 {
 }
 
-void History::push(const Eigen::VectorXd &state,
-                   const Eigen::VectorXd &action,
-                   double reward)
+void History::push(const Eigen::VectorXd& state, const Eigen::VectorXd& action, double reward)
 {
   states.push_back(state);
   actions.push_back(action);
@@ -66,18 +62,19 @@ void History::push(const Eigen::VectorXd &state,
 std::vector<Sample> History::getBatch() const
 {
   std::vector<Sample> samples;
-  if (states.size() == 0) return samples;
+  if (states.size() == 0)
+    return samples;
   for (size_t i = 0; i < states.size() - 1; i++)
   {
-    samples.push_back(Sample(states[i], actions[i], states[i+1], rewards[i + 1]));
+    samples.push_back(Sample(states[i], actions[i], states[i + 1], rewards[i + 1]));
   }
   return samples;
 }
 
-std::vector<Sample> History::getBatch(const std::vector<History> &histories)
+std::vector<Sample> History::getBatch(const std::vector<History>& histories)
 {
   std::vector<Sample> samples;
-  for (const History &h : histories)
+  for (const History& h : histories)
   {
     std::vector<Sample> new_samples = h.getBatch();
     samples.reserve(samples.size() + new_samples.size());
@@ -86,13 +83,15 @@ std::vector<Sample> History::getBatch(const std::vector<History> &histories)
   return samples;
 }
 
-std::vector<History> History::readCSV(const History::Config & conf)
+std::vector<History> History::readCSV(const History::Config& conf)
 {
-  if (conf.log_path == "") {
+  if (conf.log_path == "")
+  {
     throw std::runtime_error("History::readCSV: Trying to read from a conf with log_path=\"\"");
   }
   int nb_actions = conf.problem->getNbActions();
-  if (nb_actions > 1) {
+  if (nb_actions > 1)
+  {
     throw std::logic_error("History::readCSV: not implemented for multi-action-spaces problems");
   }
   // TODO start by validating config and accept other format
@@ -101,30 +100,24 @@ std::vector<History> History::readCSV(const History::Config & conf)
   return readCSV(conf.log_path, nb_states_dims, nb_actions_dims);
 }
 
-std::vector<History> History::readCSV(const std::string &path,
-                                      int nb_states,
-                                      int nb_actions)
+std::vector<History> History::readCSV(const std::string& path, int nb_states, int nb_actions)
 {
   std::vector<int> state_cols, action_cols;
   for (int i = 0; i < nb_states; i++)
   {
-    state_cols.push_back(i+2);
+    state_cols.push_back(i + 2);
   }
   for (int i = 0; i < nb_actions; i++)
   {
-    action_cols.push_back(i+2+nb_states);
+    action_cols.push_back(i + 2 + nb_states);
   }
   int reward_col = 2 + nb_states + nb_actions;
   return readCSV(path, 0, 1, state_cols, action_cols, reward_col, true);
 }
 
-std::vector<History> History::readCSV(const std::string &path,
-                                      int run_col,
-                                      int step_col,
-                                      const std::vector<int> &state_cols,
-                                      const std::vector<int> &action_cols,
-                                      int reward_col,
-                                      bool header)
+std::vector<History> History::readCSV(const std::string& path, int run_col, int step_col,
+                                      const std::vector<int>& state_cols, const std::vector<int>& action_cols,
+                                      int reward_col, bool header)
 {
   std::vector<History> histories;
   int x_dim = state_cols.size();
@@ -149,7 +142,7 @@ std::vector<History> History::readCSV(const std::string &path,
     }
     // Getting columns
     std::vector<std::string> cols;
-    rhoban_utils::split(line,',',cols);
+    rhoban_utils::split(line, ',', cols);
     // Checking if a new run is started (if run-col is specified)
     if (run_col >= 0 && std::stoi(cols[run_col]) != curr_run)
     {
@@ -162,8 +155,7 @@ std::vector<History> History::readCSV(const std::string &path,
     if (step_col >= 0 && std::stoi(cols[step_col]) != expected_step)
     {
       std::ostringstream oss;
-      oss << "Unexpected step: '" << cols[step_col] << "' expecting step '"
-          << expected_step << "'";
+      oss << "Unexpected step: '" << cols[step_col] << "' expecting step '" << expected_step << "'";
       throw std::runtime_error(oss.str());
     }
 
@@ -200,44 +192,33 @@ std::vector<History> History::readCSV(const std::string &path,
   return histories;
 }
 
-std::vector<History> History::readCSV(const std::string &path,
-                                      int run_col,
-                                      int step_col,
-                                      const std::vector<int> &state_cols,
-                                      const std::vector<int> &action_cols,
-                                      Problem::RewardFunction compute_reward,
-                                      bool header)
+std::vector<History> History::readCSV(const std::string& path, int run_col, int step_col,
+                                      const std::vector<int>& state_cols, const std::vector<int>& action_cols,
+                                      Problem::RewardFunction compute_reward, bool header)
 {
   // Factorizing code
-  std::vector<History> histories = History::readCSV(path, run_col, step_col,
-                                                    state_cols, action_cols, -1, header);
+  std::vector<History> histories = History::readCSV(path, run_col, step_col, state_cols, action_cols, -1, header);
   // Computing rewards
-  for (auto & h : histories)
+  for (auto& h : histories)
   {
     for (size_t i = 1; i < h.states.size(); i++)
     {
-      h.rewards[i] = compute_reward(h.states[i-1], h.actions[i-1], h.states[i]);
+      h.rewards[i] = compute_reward(h.states[i - 1], h.actions[i - 1], h.states[i]);
     }
   }
   return histories;
 }
 
-History History::readCSV(const std::string &path,
-                         const std::vector<int> &state_cols,
-                         const std::vector<int> &action_cols,
-                         int reward_col,
-                         bool header)
+History History::readCSV(const std::string& path, const std::vector<int>& state_cols,
+                         const std::vector<int>& action_cols, int reward_col, bool header)
 {
   return readCSV(path, -1, -1, state_cols, action_cols, reward_col, header)[0];
 }
 
-History History::readCSV(const std::string &path,
-                         const std::vector<int> &state_cols,
-                         const std::vector<int> &action_cols,
-                         Problem::RewardFunction compute_reward,
-                         bool header)
+History History::readCSV(const std::string& path, const std::vector<int>& state_cols,
+                         const std::vector<int>& action_cols, Problem::RewardFunction compute_reward, bool header)
 {
   return readCSV(path, -1, -1, state_cols, action_cols, compute_reward, header)[0];
 }
 
-}
+}  // namespace csa_mdp

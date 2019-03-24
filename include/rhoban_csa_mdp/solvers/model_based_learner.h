@@ -12,27 +12,25 @@
 
 namespace csa_mdp
 {
-
 /// Experimental algorithm
 ///
-/// Internal config can be learned by 
+/// Internal config can be learned by
 class ModelBasedLearner : public Learner
 {
 public:
-
   ModelBasedLearner();
 
   /// if no policy has been computed yet, return a random policy which
   /// corresponds to the action space
   const std::shared_ptr<const Policy> getPolicy() const;
 
-//  Problem::RewardFunction getRewardFunction();
+  //  Problem::RewardFunction getRewardFunction();
   Problem::ValueFunction getValueFunction();
 
-  Eigen::VectorXd getAction(const Eigen::VectorXd & state) override;
+  Eigen::VectorXd getAction(const Eigen::VectorXd& state) override;
   bool hasAvailablePolicy() override;
-  void savePolicy(const std::string & prefix) override;
-  void saveStatus(const std::string & prefix) override;
+  void savePolicy(const std::string& prefix) override;
+  void saveStatus(const std::string& prefix) override;
 
   void internalUpdate();
 
@@ -44,7 +42,7 @@ public:
 
   virtual std::string getClassName() const override;
   virtual Json::Value toJson() const override;
-  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+  virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
 
 private:
   /// The current state of the model
@@ -78,4 +76,4 @@ private:
   std::default_random_engine engine;
 };
 
-}
+}  // namespace csa_mdp

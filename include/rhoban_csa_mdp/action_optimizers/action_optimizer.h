@@ -11,7 +11,6 @@
 
 namespace csa_mdp
 {
-
 /// Describe the interface of an action optimizer
 class ActionOptimizer : public rhoban_utils::JsonSerializable
 {
@@ -24,16 +23,13 @@ public:
 
   /// Try to find the best action with the given parameters
   /// if engine is note provided, it should handle its own
-  virtual Eigen::VectorXd optimize(const Eigen::VectorXd & input,
-                                   const Eigen::MatrixXd & action_limits,
+  virtual Eigen::VectorXd optimize(const Eigen::VectorXd& input, const Eigen::MatrixXd& action_limits,
                                    std::shared_ptr<const Policy> current_policy,
-                                   Problem::ResultFunction result_function,
-                                   Problem::ValueFunction value_function,
-                                   double discount,
-                                   std::default_random_engine * engine = nullptr) const = 0;
+                                   Problem::ResultFunction result_function, Problem::ValueFunction value_function,
+                                   double discount, std::default_random_engine* engine = nullptr) const = 0;
 
 protected:
   int nb_threads;
 };
 
-}
+}  // namespace csa_mdp

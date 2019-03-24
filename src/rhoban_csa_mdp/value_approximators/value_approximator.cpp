@@ -4,11 +4,13 @@
 
 namespace csa_mdp
 {
+ValueApproximator::ValueApproximator() : nb_threads(1)
+{
+}
 
-ValueApproximator::ValueApproximator()
-  : nb_threads(1) {}
-
-ValueApproximator::~ValueApproximator() {}
+ValueApproximator::~ValueApproximator()
+{
+}
 
 void ValueApproximator::setNbThreads(int nb_threads_)
 {
@@ -22,11 +24,10 @@ Json::Value ValueApproximator::toJson() const
   return v;
 }
 
-void ValueApproximator::fromJson(const Json::Value & v, const std::string & dir_name)
+void ValueApproximator::fromJson(const Json::Value& v, const std::string& dir_name)
 {
   (void)dir_name;
   rhoban_utils::tryRead(v, "nb_threads", &nb_threads);
 }
 
-
-}
+}  // namespace csa_mdp

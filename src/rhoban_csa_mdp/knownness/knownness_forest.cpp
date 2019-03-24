@@ -4,9 +4,7 @@
 
 namespace csa_mdp
 {
-
-KnownnessForest::Config::Config()
-  : nb_trees(25), tree_conf()
+KnownnessForest::Config::Config() : nb_trees(25), tree_conf()
 {
 }
 
@@ -23,7 +21,7 @@ Json::Value KnownnessForest::Config::toJson() const
   return v;
 }
 
-void KnownnessForest::Config::fromJson(const Json::Value & v, const std::string & dir_name)
+void KnownnessForest::Config::fromJson(const Json::Value& v, const std::string& dir_name)
 {
   nb_trees = rhoban_utils::read<int>(v, "nb_trees");
   tree_conf.tryRead(v, "tree_conf", dir_name);
@@ -33,8 +31,7 @@ KnownnessForest::KnownnessForest()
 {
 }
 
-KnownnessForest::KnownnessForest(const Eigen::MatrixXd &space,
-                                 const Config &conf)
+KnownnessForest::KnownnessForest(const Eigen::MatrixXd& space, const Config& conf)
 {
   for (int tree = 0; tree < conf.nb_trees; tree++)
   {
@@ -42,9 +39,9 @@ KnownnessForest::KnownnessForest(const Eigen::MatrixXd &space,
   }
 }
 
-void KnownnessForest::push(const Eigen::VectorXd &point)
+void KnownnessForest::push(const Eigen::VectorXd& point)
 {
-  for (KnownnessTree &tree : trees)
+  for (KnownnessTree& tree : trees)
   {
     // Adding a point can throw a std::runtime_error in two cases:
     // 1. The point is outside of the tree space (in this case it will be refused by all trees)
@@ -54,7 +51,7 @@ void KnownnessForest::push(const Eigen::VectorXd &point)
     {
       tree.push(point);
     }
-    catch (const std::runtime_error & exc)
+    catch (const std::runtime_error& exc)
     {
       std::cerr << exc.what() << std::endl;
     }
@@ -62,10 +59,10 @@ void KnownnessForest::push(const Eigen::VectorXd &point)
 }
 
 /// Get the knownness value at the given point
-double KnownnessForest::getValue(const Eigen::VectorXd &point) const
+double KnownnessForest::getValue(const Eigen::VectorXd& point) const
 {
   double sum = 0;
-  for (const KnownnessTree &tree : trees)
+  for (const KnownnessTree& tree : trees)
   {
     double tree_value = tree.getValue(point);
     sum += tree_value;
@@ -76,7 +73,7 @@ double KnownnessForest::getValue(const Eigen::VectorXd &point) const
 std::unique_ptr<regression_forests::Forest> KnownnessForest::convertToRegressionForest() const
 {
   std::unique_ptr<regression_forests::Forest> forest(new regression_forests::Forest);
-  for (const KnownnessTree &tree : trees)
+  for (const KnownnessTree& tree : trees)
   {
     forest->push(tree.convertToRegTree());
   }
@@ -85,10 +82,10 @@ std::unique_ptr<regression_forests::Forest> KnownnessForest::convertToRegression
 
 void KnownnessForest::checkConsistency()
 {
-  for (KnownnessTree &tree : trees)
+  for (KnownnessTree& tree : trees)
   {
     tree.checkConsistency();
   }
 }
 
-}
+}  // namespace csa_mdp

@@ -11,14 +11,12 @@ using rhoban_random::MultivariateGaussian;
 
 namespace csa_mdp
 {
-
 FAPolicy::FAPolicy() : apply_noise(false)
 {
   engine = rhoban_random::getRandomEngine();
 }
 
-FAPolicy::FAPolicy(std::unique_ptr<rhoban_fa::FunctionApproximator> fa_)
-  : fa(std::move(fa_)), apply_noise(false)
+FAPolicy::FAPolicy(std::unique_ptr<rhoban_fa::FunctionApproximator> fa_) : fa(std::move(fa_)), apply_noise(false)
 {
   engine = rhoban_random::getRandomEngine();
 }
@@ -28,13 +26,12 @@ void FAPolicy::setRandomness(bool new_apply_noise)
   apply_noise = new_apply_noise;
 }
 
-Eigen::VectorXd FAPolicy::getRawAction(const Eigen::VectorXd &state)
+Eigen::VectorXd FAPolicy::getRawAction(const Eigen::VectorXd& state)
 {
   return getRawAction(state, &engine);
 }
 
-Eigen::VectorXd FAPolicy::getRawAction(const Eigen::VectorXd &state,
-                                       std::default_random_engine * external_engine) const
+Eigen::VectorXd FAPolicy::getRawAction(const Eigen::VectorXd& state, std::default_random_engine* external_engine) const
 {
   bool delete_engine = false;
   if (apply_noise && external_engine == nullptr)
@@ -47,14 +44,19 @@ Eigen::VectorXd FAPolicy::getRawAction(const Eigen::VectorXd &state,
   fa->predict(state, mean, covar);
 
   Eigen::VectorXd cmd;
-  if (apply_noise) {
+  if (apply_noise)
+  {
     cmd = MultivariateGaussian(mean, covar).getSample(external_engine);
   }
-  else {
+  else
+  {
     cmd = mean;
   }
 
-  if (delete_engine) { delete(external_engine); }
+  if (delete_engine)
+  {
+    delete (external_engine);
+  }
   return cmd;
 }
 
@@ -70,28 +72,36 @@ Json::Value FAPolicy::toJson() const
   throw std::logic_error("FAPolicy:toJson: not implemented");
 }
 
-void FAPolicy::fromJson(const Json::Value & v, const std::string & dir_name)
+void FAPolicy::fromJson(const Json::Value& v, const std::string& dir_name)
 {
   std::string abs_path, rel_path, path;
   rhoban_utils::tryRead<std::string>(v, "abs path", &abs_path);
   rhoban_utils::tryRead<std::string>(v, "rel path", &rel_path);
-  if (abs_path != "" && rel_path != "") {
+  if (abs_path != "" && rel_path != "")
+  {
     throw JsonParsingError("FAPolicy::fromJson: both 'abs path' and 'rel path' specified");
-  } else if (abs_path == "" && rel_path == "") {
+  }
+  else if (abs_path == "" && rel_path == "")
+  {
     throw JsonParsingError("FAPolicy::fromJson: no 'abs path' neither 'rel path' specified");
-  } else if (abs_path != "") {
+  }
+  else if (abs_path != "")
+  {
     path = abs_path;
-  } else {
+  }
+  else
+  {
     path = dir_name + rel_path;
   }
   FunctionApproximatorFactory().loadFromFile(path, fa);
   rhoban_utils::tryRead(v, "noise", &apply_noise);
 }
 
-void FAPolicy::saveFA(const std::string & filename) const
+void FAPolicy::saveFA(const std::string& filename) const
 {
-  if (!fa) return;
+  if (!fa)
+    return;
   fa->save(filename);
 }
 
-}
+}  // namespace csa_mdp

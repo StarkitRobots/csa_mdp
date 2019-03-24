@@ -6,13 +6,11 @@
 
 namespace csa_mdp
 {
-
 LearnerFactory::LearnerFactory()
 {
-  registerBuilder("FakeLearner", [](){return std::unique_ptr<Learner>(new FakeLearner);});
-  registerBuilder("ModelBasedLearner",
-                  [](){return std::unique_ptr<Learner>(new ModelBasedLearner);});
-  registerBuilder("MRE", [](){return std::unique_ptr<Learner>(new MRE);});
+  registerBuilder("FakeLearner", []() { return std::unique_ptr<Learner>(new FakeLearner); });
+  registerBuilder("ModelBasedLearner", []() { return std::unique_ptr<Learner>(new ModelBasedLearner); });
+  registerBuilder("MRE", []() { return std::unique_ptr<Learner>(new MRE); });
 }
 
-}
+}  // namespace csa_mdp

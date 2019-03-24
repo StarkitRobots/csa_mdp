@@ -3,11 +3,9 @@
 
 namespace csa_mdp
 {
-
 RewardPredictorFactory::RewardPredictorFactory()
 {
-  registerBuilder("MonteCarloPredictor",
-                  [](){return std::unique_ptr<RewardPredictor>(new MonteCarloPredictor);});
+  registerBuilder("MonteCarloPredictor", []() { return std::unique_ptr<RewardPredictor>(new MonteCarloPredictor); });
 }
 
-}
+}  // namespace csa_mdp

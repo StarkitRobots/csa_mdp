@@ -5,13 +5,13 @@
 
 #include "rhoban_fa/trainer.h"
 
-namespace rhoban_fa {
+namespace rhoban_fa
+{
 class FunctionApproximator;
 }
 
 namespace csa_mdp
 {
-
 class LPPI : public BlackBoxLearner
 {
 public:
@@ -22,38 +22,31 @@ public:
   /// - states  : each column will be a different state
   /// - actions : each column will be a different action
   /// - values  : each row is the sampled value for the state
-  void performRollout(Eigen::MatrixXd * states,
-                      Eigen::MatrixXd * actions,
-                      Eigen::VectorXd * values,
-                      std::default_random_engine * engine);
+  void performRollout(Eigen::MatrixXd* states, Eigen::MatrixXd* actions, Eigen::VectorXd* values,
+                      std::default_random_engine* engine);
 
   /// Perform the rollouts and store the results
   /// - states  : each column will be a different state
   /// - actions : each column will be a different action
   /// - values  : each row is the sampled value for a state
-  void performRollouts(Eigen::MatrixXd * states,
-                       Eigen::MatrixXd * actions,
-                       Eigen::VectorXd * values,
-                       std::default_random_engine * engine);
+  void performRollouts(Eigen::MatrixXd* states, Eigen::MatrixXd* actions, Eigen::VectorXd* values,
+                       std::default_random_engine* engine);
 
-  virtual void init(std::default_random_engine * engine) override;
+  virtual void init(std::default_random_engine* engine) override;
 
   /// Perform rollouts according to the OpenLoopPlanner
-  virtual void update(std::default_random_engine * engine) override;
+  virtual void update(std::default_random_engine* engine) override;
 
-
-  void updateValues(const Eigen::MatrixXd & states,
-                    const Eigen::VectorXd & values);
+  void updateValues(const Eigen::MatrixXd& states, const Eigen::VectorXd& values);
   /// Return the new policy_fa, but do not modify object
-  std::unique_ptr<rhoban_fa::FunctionApproximator>
-  updatePolicy(const Eigen::MatrixXd & states,
-               const Eigen::MatrixXd & actions) const;
+  std::unique_ptr<rhoban_fa::FunctionApproximator> updatePolicy(const Eigen::MatrixXd& states,
+                                                                const Eigen::MatrixXd& actions) const;
 
   virtual void setNbThreads(int nb_threads) override;
 
   virtual std::string getClassName() const override;
   virtual Json::Value toJson() const override;
-  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+  virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
 
 private:
   /// LPPI uses an open loop planner for optimization of actions
@@ -83,4 +76,4 @@ private:
   bool use_policy;
 };
 
-}
+}  // namespace csa_mdp

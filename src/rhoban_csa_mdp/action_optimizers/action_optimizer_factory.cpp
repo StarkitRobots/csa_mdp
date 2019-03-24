@@ -4,11 +4,9 @@
 
 namespace csa_mdp
 {
-
 ActionOptimizerFactory::ActionOptimizerFactory()
 {
-  registerBuilder("BasicOptimizer",
-                  [](){return std::unique_ptr<ActionOptimizer>(new BasicOptimizer);});
+  registerBuilder("BasicOptimizer", []() { return std::unique_ptr<ActionOptimizer>(new BasicOptimizer); });
 }
 
-}
+}  // namespace csa_mdp

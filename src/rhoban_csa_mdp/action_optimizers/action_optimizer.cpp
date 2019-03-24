@@ -2,14 +2,17 @@
 
 namespace csa_mdp
 {
+ActionOptimizer::ActionOptimizer() : nb_threads(1)
+{
+}
 
-ActionOptimizer::ActionOptimizer() : nb_threads(1) {}
-
-ActionOptimizer::~ActionOptimizer() {}
+ActionOptimizer::~ActionOptimizer()
+{
+}
 
 void ActionOptimizer::setNbThreads(int new_nb_threads)
 {
   nb_threads = new_nb_threads;
 }
 
-}
+}  // namespace csa_mdp

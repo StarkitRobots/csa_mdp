@@ -6,7 +6,6 @@
 
 namespace csa_mdp
 {
-
 class LearnerFactory : public rhoban_utils::Factory<Learner>
 {
 public:
@@ -14,4 +13,4 @@ public:
   LearnerFactory();
 };
 
-}
+}  // namespace csa_mdp

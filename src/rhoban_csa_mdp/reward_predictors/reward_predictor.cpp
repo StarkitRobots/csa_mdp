@@ -2,9 +2,12 @@
 
 namespace csa_mdp
 {
-
-RewardPredictor::RewardPredictor() : nb_threads(1) {}
-RewardPredictor::~RewardPredictor() {}
+RewardPredictor::RewardPredictor() : nb_threads(1)
+{
+}
+RewardPredictor::~RewardPredictor()
+{
+}
 
 void RewardPredictor::setNbThreads(int new_nb_threads)
 {
@@ -18,10 +21,10 @@ Json::Value RewardPredictor::toJson() const
   return v;
 }
 
-void RewardPredictor::fromJson(const Json::Value & v, const std::string & dir_name)
+void RewardPredictor::fromJson(const Json::Value& v, const std::string& dir_name)
 {
   (void)dir_name;
   rhoban_utils::tryRead(v, "nb_threads", &nb_threads);
 }
 
-}
+}  // namespace csa_mdp

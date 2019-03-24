@@ -24,9 +24,7 @@ using namespace regression_forests::Statistics;
 
 namespace csa_mdp
 {
-
-MRE::MRE()
-  : plan_period(-1)
+MRE::MRE() : plan_period(-1)
 {
   // Init random engine
   random_engine = rhoban_random::getRandomEngine();
@@ -38,12 +36,14 @@ void MRE::setNbThreads(int new_nb_threads)
   mrefpf_conf.nb_threads = new_nb_threads;
 }
 
-void MRE::feed(const Sample &s)
+void MRE::feed(const Sample& s)
 {
-  if (!knownness_forest) {
+  if (!knownness_forest)
+  {
     throw std::logic_error("MRE::feed: knownness_forest has not been initialized");
   }
-  if (getActionLimits().size() !=1) {
+  if (getActionLimits().size() != 1)
+  {
     throw std::runtime_error("MRE::feed: not implemented for multiple actions problems");
   }
 
@@ -53,7 +53,7 @@ void MRE::feed(const Sample &s)
   samples.push_back(s);
   // Adding last_point to knownness tree
   Eigen::VectorXd knownness_point(s_dim + a_dim);
-  knownness_point.segment(    0, s_dim) = s.state;
+  knownness_point.segment(0, s_dim) = s.state;
   knownness_point.segment(s_dim, a_dim) = s.action;
   knownness_forest->push(knownness_point);
   // Update policy if required
@@ -63,23 +63,26 @@ void MRE::feed(const Sample &s)
   }
 }
 
-Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
+Eigen::VectorXd MRE::getAction(const Eigen::VectorXd& state)
 {
-  if (getActionLimits().size() !=1) {
+  if (getActionLimits().size() != 1)
+  {
     throw std::runtime_error("MRE::getAction: not implemented for multiple actions problems");
   }
-  const Eigen::MatrixXd & limits = getActionLimits()[0];
-  if (hasAvailablePolicy()) {
-
+  const Eigen::MatrixXd& limits = getActionLimits()[0];
+  if (hasAvailablePolicy())
+  {
     Eigen::VectorXd action(policies.size());
     for (size_t i = 0; i < policies.size(); i++)
     {
       action(i) = policies[i]->getRandomizedValue(state, random_engine);
-      double min = limits(i,0);
-      double max = limits(i,1);
+      double min = limits(i, 0);
+      double max = limits(i, 1);
       // Ensuring that action is in the given bounds
-      if (action(i) < min) action(i) = min;
-      if (action(i) > max) action(i) = max;
+      if (action(i) < min)
+        action(i) = min;
+      if (action(i) > max)
+        action(i) = max;
     }
     return action;
   }
@@ -88,19 +91,20 @@ Eigen::VectorXd MRE::getAction(const Eigen::VectorXd &state)
 
 void MRE::internalUpdate()
 {
-  if (getActionLimits().size() !=1) {
+  if (getActionLimits().size() != 1)
+  {
     throw std::runtime_error("MRE::getAction: not implemented for multiple actions problems");
   }
-  const Eigen::MatrixXd & limits = getActionLimits()[0];
+  const Eigen::MatrixXd& limits = getActionLimits()[0];
 
   // Updating the policy
   Benchmark::open("solver.solve");
   solver.solve(samples, terminal_function, mrefpf_conf);
-  Benchmark::close();//true, -1);
+  Benchmark::close();  // true, -1);
   policies.clear();
   for (int dim = 0; dim < limits.rows(); dim++)
   {
-    //TODO software design should really be improved
+    // TODO software design should really be improved
     policies.push_back(solver.stealPolicyForest(dim));
   }
   // Set time repartition
@@ -115,17 +119,18 @@ bool MRE::hasAvailablePolicy()
   return policies.size() > 0;
 }
 
-const regression_forests::Forest & MRE::getPolicy(int dim)
+const regression_forests::Forest& MRE::getPolicy(int dim)
 {
   return *(policies[dim]);
 }
 
-void MRE::savePolicy(const std::string &prefix)
+void MRE::savePolicy(const std::string& prefix)
 {
-  if (getActionLimits().size() !=1) {
+  if (getActionLimits().size() != 1)
+  {
     throw std::runtime_error("MRE::getAction: not implemented for multiple actions problems");
   }
-  const Eigen::MatrixXd & limits = getActionLimits()[0];
+  const Eigen::MatrixXd& limits = getActionLimits()[0];
 
   std::unique_ptr<ForestApproximator::Forests> forests(new ForestApproximator::Forests);
   for (int dim = 0; dim < limits.rows(); dim++)
@@ -133,7 +138,8 @@ void MRE::savePolicy(const std::string &prefix)
     forests->push_back(std::unique_ptr<Forest>(policies[dim]->clone()));
   }
 #ifdef RHOBAN_RF_USES_GP
-  if (mrefpf_conf.gp_policies) {
+  if (mrefpf_conf.gp_policies)
+  {
     throw std::logic_error("Saving gp_policies with MRE is not implemented yet");
   }
 #endif
@@ -141,12 +147,12 @@ void MRE::savePolicy(const std::string &prefix)
   fa.save(prefix + "policy.data");
 }
 
-void MRE::saveValue(const std::string &prefix)
+void MRE::saveValue(const std::string& prefix)
 {
   solver.getValueForest().save(prefix + "q_value.data");
 }
 
-void MRE::saveKnownnessTree(const std::string &prefix)
+void MRE::saveKnownnessTree(const std::string& prefix)
 {
   knownness_forest->checkConsistency();
   std::unique_ptr<regression_forests::Forest> forest;
@@ -154,23 +160,24 @@ void MRE::saveKnownnessTree(const std::string &prefix)
   forest->save(prefix + "knownness.data");
 }
 
-void MRE::saveStatus(const std::string &prefix)
+void MRE::saveStatus(const std::string& prefix)
 {
   savePolicy(prefix);
   saveValue(prefix);
   saveKnownnessTree(prefix);
 }
 
-void MRE::setStateLimits(const Eigen::MatrixXd & limits)
+void MRE::setStateLimits(const Eigen::MatrixXd& limits)
 {
   Learner::setStateLimits(limits);
   mrefpf_conf.setStateLimits(limits);
   updateQSpaceLimits();
 }
 
-void MRE::setActionLimits(const std::vector<Eigen::MatrixXd> & limits)
+void MRE::setActionLimits(const std::vector<Eigen::MatrixXd>& limits)
 {
-  if (limits.size() != 1) {
+  if (limits.size() != 1)
+  {
     throw std::runtime_error("MRE::setActionLimits: not implemented for multiple actions problems");
   }
 
@@ -182,8 +189,7 @@ void MRE::setActionLimits(const std::vector<Eigen::MatrixXd> & limits)
 void MRE::updateQSpaceLimits()
 {
   Eigen::MatrixXd q_space = mrefpf_conf.getInputLimits();
-  knownness_forest = std::shared_ptr<KnownnessForest>(new KnownnessForest(q_space,
-                                                                          knownness_conf));
+  knownness_forest = std::shared_ptr<KnownnessForest>(new KnownnessForest(q_space, knownness_conf));
   solver.setKnownnessFunc(knownness_forest);
 }
 
@@ -201,7 +207,7 @@ Json::Value MRE::toJson() const
   return v;
 }
 
-void MRE::fromJson(const Json::Value & v, const std::string & dir_name)
+void MRE::fromJson(const Json::Value& v, const std::string& dir_name)
 {
   (void)dir_name;
   rhoban_utils::tryRead(v, "plan_period", &plan_period);
@@ -209,4 +215,4 @@ void MRE::fromJson(const Json::Value & v, const std::string & dir_name)
   knownness_conf.tryRead(v, "knownness_conf");
 }
 
-}
+}  // namespace csa_mdp

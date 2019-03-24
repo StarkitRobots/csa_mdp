@@ -8,12 +8,10 @@
 
 namespace csa_mdp
 {
-
-
 /// An algorithm learning policies using mutation of the current policy, the
 /// policy is always a tree of linear approximators.
 ///
-/// At each mutation, the process is the following: 
+/// At each mutation, the process is the following:
 /// - Refine current leaf
 /// - Try to split current leaf
 ///
@@ -28,14 +26,15 @@ namespace csa_mdp
 ///
 /// Sampling of initial states is controled by:
 /// - use_visited_states
-class PML2 : public BlackBoxLearner {
+class PML2 : public BlackBoxLearner
+{
 protected:
-
   /// All the information relative to a mutation candidate are stored in this
   /// structure
-  struct MutationCandidate {
-//    /// Which  is concerned by the candidate
-//    Eigen::MatrixXd space;
+  struct MutationCandidate
+  {
+    //    /// Which  is concerned by the candidate
+    //    Eigen::MatrixXd space;
     /// Weight of the mutation in the random selection process
     double mutation_score;
     /// At which iteration was this mutation trained for the last time?
@@ -58,56 +57,49 @@ public:
   /// Return the number of calls to the reward function allowed for the optimizer
   int getOptimizerMaxCall() const;
 
-  virtual void init(std::default_random_engine * engine) override;
-  virtual void update(std::default_random_engine * engine) override;
+  virtual void init(std::default_random_engine* engine) override;
+  virtual void update(std::default_random_engine* engine) override;
 
   virtual void setNbThreads(int nb_threads) override;
 
   /// Choose a mutation among the available candidates according to their scores
-  int getMutationId(std::default_random_engine * engine);
+  int getMutationId(std::default_random_engine* engine);
 
   /// Evaluate policy and return average reward
   /// If required by internal coniguration, save visited states in
   /// mutation candidates
   /// TODO: complexity should be improved
-  double evalAndGetStates(std::default_random_engine * engine);
+  double evalAndGetStates(std::default_random_engine* engine);
 
   /// Update mutation scores according to their properties
   void updateMutationsScores();
 
   /// Root of the mutation process
-  void mutate(int mutation_id, std::default_random_engine * engine);
+  void mutate(int mutation_id, std::default_random_engine* engine);
 
   /// Mutate a leaf: there is several possibilities:
   /// 1: Refine FunctionApproximator for the leaf
   /// 2: Split the leaf
-  void mutateLeaf(int mutation_id, std::default_random_engine * engine);
+  void mutateLeaf(int mutation_id, std::default_random_engine* engine);
 
   /// Try to refine the function approximator for the given mutation id and the given action_id
-  void tryRefine(int mutation_id, int action_id,
-                 std::default_random_engine * engine);
+  void tryRefine(int mutation_id, int action_id, std::default_random_engine* engine);
 
   /// Try to split along every dimensions and keeps the best split
-  void applyBestSplit(int mutation_id, std::default_random_engine * engine);
+  void applyBestSplit(int mutation_id, std::default_random_engine* engine);
 
   /// Try to find the best split based on linear transformations
-  void applyBestLinearSplit(int mutation_id, std::default_random_engine * engine);
+  void applyBestLinearSplit(int mutation_id, std::default_random_engine* engine);
 
   /// Try to split along 'split_dim' at the given mutation.
   /// Return the FATree built to replace current approximator and update score
-  std::unique_ptr<rhoban_fa::FATree>
-  trySplit(int split_dim,
-           const std::vector<Eigen::VectorXd> & initial_states,
-           std::default_random_engine * engine,
-           double * score);
+  std::unique_ptr<rhoban_fa::FATree> trySplit(int split_dim, const std::vector<Eigen::VectorXd>& initial_states,
+                                              std::default_random_engine* engine, double* score);
 
   /// Try to split using a linear split and a new action 'action_id' at the given mutation.
   /// Return the FATree built to replace current approximator and update score
-  std::unique_ptr<rhoban_fa::FATree>
-  tryLinearSplit(int action_id,
-                 const std::vector<Eigen::VectorXd> & initial_states,
-                 std::default_random_engine * engine,
-                 double * score);
+  std::unique_ptr<rhoban_fa::FATree> tryLinearSplit(int action_id, const std::vector<Eigen::VectorXd>& initial_states,
+                                                    std::default_random_engine* engine, double* score);
 
   /// Return the parameters space for training a linear model given the
   /// refinement type
@@ -115,7 +107,7 @@ public:
 
   virtual std::string getClassName() const override;
   virtual Json::Value toJson() const override;
-  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+  virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
 
   /// Return the best candidate found
   /// rf: the reward function
@@ -123,31 +115,27 @@ public:
   /// guess: The initial candidate
   /// engine: Used to draw random numbers
   /// evaluation_gain: Multiplies the usual number of evaluations allowed to the optimizer
-  Eigen::VectorXd optimize(rhoban_bbo::Optimizer::RewardFunc rf,
-                           const Eigen::MatrixXd & space,
-                           const Eigen::VectorXd & guess,
-                           std::default_random_engine * engine,
+  Eigen::VectorXd optimize(rhoban_bbo::Optimizer::RewardFunc rf, const Eigen::MatrixXd& space,
+                           const Eigen::VectorXd& guess, std::default_random_engine* engine,
                            double evaluation_mult = 1);
 
   /// Clone the given tree and use it to build a policy. Also set the action
   /// limits
-  std::unique_ptr<Policy> buildPolicy(const rhoban_fa::FATree & tree);
+  std::unique_ptr<Policy> buildPolicy(const rhoban_fa::FATree& tree);
 
   /// If 'use_visited_states':
   /// - use states from mutation
   /// Else
   /// - Generate random states
-  std::vector<Eigen::VectorXd> getInitialStates(const MutationCandidate & mc,
-                                                std::default_random_engine * engine);
+  std::vector<Eigen::VectorXd> getInitialStates(const MutationCandidate& mc, std::default_random_engine* engine);
 
-  bool isMutationAllowed(const MutationCandidate & mc) const;
+  bool isMutationAllowed(const MutationCandidate& mc) const;
 
   /// Compare the new_tree with current tree. Replace the current tree if the
   /// new tree is better
   /// Return true if the tree has been replaced, false otherwise
-  bool submitTree(std::unique_ptr<rhoban_fa::FATree> new_tree,
-                  const std::vector<Eigen::VectorXd> & initial_states,
-                  std::default_random_engine * engine);
+  bool submitTree(std::unique_ptr<rhoban_fa::FATree> new_tree, const std::vector<Eigen::VectorXd>& initial_states,
+                  std::default_random_engine* engine);
 
   /// Update the mutation candidates after a split on given id
   /// - Apply appropriate offset on nodes with higher ids
@@ -158,7 +146,7 @@ public:
 
 protected:
   /// The list of mutations available
-  std::map<int,MutationCandidate> mutation_candidates;
+  std::map<int, MutationCandidate> mutation_candidates;
 
   /// The current version of the tree
   std::unique_ptr<rhoban_fa::FATree> policy_tree;
@@ -192,4 +180,4 @@ protected:
   bool use_linear_splits;
 };
 
-}
+}  // namespace csa_mdp

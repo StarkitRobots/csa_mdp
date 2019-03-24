@@ -11,7 +11,6 @@
 
 namespace csa_mdp
 {
-
 /// Represents the knownness by using a kd-tree
 class KnownnessTree : KnownnessFunction
 {
@@ -21,7 +20,10 @@ public:
   /// Random: Split are performed on random dimensions at a random position
   ///         while maximizing a criteria
   enum class Type
-  { MRE, Random };
+  {
+    MRE,
+    Random
+  };
 
   /// Config of the KnownnessTree
   class Config : public rhoban_utils::JsonSerializable
@@ -36,23 +38,21 @@ public:
 
     virtual std::string getClassName() const override;
     virtual Json::Value toJson() const override;
-    virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+    virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
   };
 
-  KnownnessTree(const Eigen::MatrixXd& space,
-                const Config &conf);
+  KnownnessTree(const Eigen::MatrixXd& space, const Config& conf);
 
   double getMu() const;
 
   // Implementations
-  virtual void push(const Eigen::VectorXd &point) override;
-  virtual double getValue(const Eigen::VectorXd &point) const override;
+  virtual void push(const Eigen::VectorXd& point) override;
+  virtual double getValue(const Eigen::VectorXd& point) const override;
 
-  double getValue(const Eigen::MatrixXd &space, int nb_points) const;
+  double getValue(const Eigen::MatrixXd& space, int nb_points) const;
 
   // Conversion tools
-  regression_forests::Node * convertToRegNode(const kd_trees::KdNode *node,
-                                              Eigen::MatrixXd &space) const;
+  regression_forests::Node* convertToRegNode(const kd_trees::KdNode* node, Eigen::MatrixXd& space) const;
   std::unique_ptr<regression_forests::Tree> convertToRegTree() const;
 
   /// Ensure that the number of points stored correspond to the total number
@@ -73,6 +73,6 @@ private:
 };
 
 std::string to_string(KnownnessTree::Type type);
-KnownnessTree::Type loadType(const std::string &type);
+KnownnessTree::Type loadType(const std::string& type);
 
-}
+}  // namespace csa_mdp

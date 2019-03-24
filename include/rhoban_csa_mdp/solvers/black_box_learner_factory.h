@@ -4,10 +4,10 @@
 
 namespace csa_mdp
 {
-
-class BlackBoxLearnerFactory : public rhoban_utils::Factory<BlackBoxLearner> {
+class BlackBoxLearnerFactory : public rhoban_utils::Factory<BlackBoxLearner>
+{
 public:
   BlackBoxLearnerFactory();
 };
 
-}
+}  // namespace csa_mdp

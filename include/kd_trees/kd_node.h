@@ -6,11 +6,11 @@
 
 namespace kd_trees
 {
-
-class KdNode {
+class KdNode
+{
 private:
-  KdNode * lChild;// point(splitDim) <= splitValue
-  KdNode * uChild;// point(splitDim)  > splitValue
+  KdNode* lChild;  // point(splitDim) <= splitValue
+  KdNode* uChild;  // point(splitDim)  > splitValue
   int splitDim;
   double splitValue;
   std::vector<Eigen::VectorXd> points;
@@ -21,20 +21,19 @@ public:
   bool isLeaf() const;
 
   /// Add the leaves of the given node to the provided vector
-  void addLeaves(std::vector<KdNode *> & leaves);
+  void addLeaves(std::vector<KdNode*>& leaves);
 
   // Get the leaf corresponding to the given point
-  KdNode * getLeaf(const Eigen::VectorXd &point);
-  const KdNode * getLeaf(const Eigen::VectorXd &point) const;
+  KdNode* getLeaf(const Eigen::VectorXd& point);
+  const KdNode* getLeaf(const Eigen::VectorXd& point) const;
 
-  const KdNode * getLowerChild() const;
-  const KdNode * getUpperChild() const;
+  const KdNode* getLowerChild() const;
+  const KdNode* getUpperChild() const;
   int getSplitDim() const;
   double getSplitVal() const;
-  
 
   // Add the point to the current tree
-  void push(const Eigen::VectorXd &point);
+  void push(const Eigen::VectorXd& point);
 
   // Remove the last point pushed into this node
   void pop_back();
@@ -45,9 +44,9 @@ public:
   // Update the given space to match the space of the leaf concerning the
   // provided point space is a N by 2 matrix where space(d,0) is the min and
   // space(d,1) is the max
-  void leafSpace(Eigen::MatrixXd &space, const Eigen::VectorXd &point) const;
+  void leafSpace(Eigen::MatrixXd& space, const Eigen::VectorXd& point) const;
 
-  const std::vector<Eigen::VectorXd> &getPoints() const;
+  const std::vector<Eigen::VectorXd>& getPoints() const;
 };
 
-}
+}  // namespace kd_trees

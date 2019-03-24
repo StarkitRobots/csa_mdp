@@ -7,16 +7,14 @@
 
 namespace csa_mdp
 {
-
-BlackBoxLearnerFactory::BlackBoxLearnerFactory() {
+BlackBoxLearnerFactory::BlackBoxLearnerFactory()
+{
   registerBuilder("TreePolicyIteration",
-                  [](){return std::unique_ptr<TreePolicyIteration>(new TreePolicyIteration);});
+                  []() { return std::unique_ptr<TreePolicyIteration>(new TreePolicyIteration); });
   registerBuilder("PolicyMutationLearner",
-                  [](){return std::unique_ptr<PolicyMutationLearner>(new PolicyMutationLearner);});
-  registerBuilder("PML2",
-                  [](){return std::unique_ptr<PML2>(new PML2);});
-  registerBuilder("LPPI",
-                  [](){return std::unique_ptr<LPPI>(new LPPI);});
+                  []() { return std::unique_ptr<PolicyMutationLearner>(new PolicyMutationLearner); });
+  registerBuilder("PML2", []() { return std::unique_ptr<PML2>(new PML2); });
+  registerBuilder("LPPI", []() { return std::unique_ptr<LPPI>(new LPPI); });
 }
 
-}
+}  // namespace csa_mdp

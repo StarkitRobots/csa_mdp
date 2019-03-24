@@ -12,7 +12,6 @@
 
 namespace csa_mdp
 {
-
 class Policy : public rhoban_utils::JsonSerializable
 {
 public:
@@ -22,29 +21,27 @@ public:
   virtual void init();
 
   /// Define the minimal and maximal limits for the policy along each dimensions
-  virtual void setActionLimits(const std::vector<Eigen::MatrixXd> & limits);
+  virtual void setActionLimits(const std::vector<Eigen::MatrixXd>& limits);
 
-  Eigen::VectorXd boundAction(const Eigen::VectorXd &raw_action) const;
-  
-  /// Retrieve the action corresponding to the given state
-  Eigen::VectorXd getAction(const Eigen::VectorXd &state);
+  Eigen::VectorXd boundAction(const Eigen::VectorXd& raw_action) const;
 
   /// Retrieve the action corresponding to the given state
-  Eigen::VectorXd getAction(const Eigen::VectorXd &state,
-                            std::default_random_engine * engine) const;
+  Eigen::VectorXd getAction(const Eigen::VectorXd& state);
+
+  /// Retrieve the action corresponding to the given state
+  Eigen::VectorXd getAction(const Eigen::VectorXd& state, std::default_random_engine* engine) const;
 
   /// Retrieve the raw action corresponding to the given state
-  virtual Eigen::VectorXd getRawAction(const Eigen::VectorXd &state);
+  virtual Eigen::VectorXd getRawAction(const Eigen::VectorXd& state);
 
   /// Retrieve the raw action corresponding to the given state
-  virtual Eigen::VectorXd getRawAction(const Eigen::VectorXd &state,
-                                       std::default_random_engine * engine) const = 0;
+  virtual Eigen::VectorXd getRawAction(const Eigen::VectorXd& state, std::default_random_engine* engine) const = 0;
 
   /// Return an approximation of the current policy as a FATree
   virtual std::unique_ptr<rhoban_fa::FATree> extractFATree() const;
 
   virtual Json::Value toJson() const override;
-  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+  virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
 
   /// Set number of threads allowed for computing the policy
   virtual void setNbThreads(int new_nb_threads);
@@ -59,4 +56,4 @@ protected:
   int nb_threads;
 };
 
-}
+}  // namespace csa_mdp

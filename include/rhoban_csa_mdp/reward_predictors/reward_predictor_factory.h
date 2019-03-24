@@ -6,11 +6,10 @@
 
 namespace csa_mdp
 {
-
 class RewardPredictorFactory : public rhoban_utils::Factory<RewardPredictor>
 {
 public:
   RewardPredictorFactory();
 };
 
-}
+}  // namespace csa_mdp

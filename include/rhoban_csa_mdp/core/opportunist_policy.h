@@ -7,21 +7,20 @@
 
 namespace csa_mdp
 {
-
 class OpportunistPolicy : public csa_mdp::Policy
 {
-public:  
+public:
   OpportunistPolicy();
 
-  void setActionLimits(const std::vector<Eigen::MatrixXd> & limits) override;
+  void setActionLimits(const std::vector<Eigen::MatrixXd>& limits) override;
 
   /// Get best action among policies according to rollout and given problem
-  Eigen::VectorXd getRawAction(const Eigen::VectorXd &state,
-                               std::default_random_engine * external_engine) const override;
-  
+  Eigen::VectorXd getRawAction(const Eigen::VectorXd& state,
+                               std::default_random_engine* external_engine) const override;
+
   std::string getClassName() const override;
   virtual Json::Value toJson() const override;
-  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+  virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
 
 private:
   /// Given problem
@@ -34,7 +33,7 @@ private:
   int nb_rollouts;
 
   /// Horizon used for the rollout
-  int horizon;  
+  int horizon;
 };
 
-}
+}  // namespace csa_mdp

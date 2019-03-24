@@ -8,27 +8,24 @@
 
 namespace csa_mdp
 {
-
-std::map<std::string,PolicyFactory::Builder> PolicyFactory::extra_builders;
+std::map<std::string, PolicyFactory::Builder> PolicyFactory::extra_builders;
 
 PolicyFactory::PolicyFactory()
 {
-  registerBuilder("FAPolicy",[](){return std::unique_ptr<Policy>(new FAPolicy);});
-  registerBuilder("ForestsPolicy",[](){return std::unique_ptr<Policy>(new ForestsPolicy);});
-  registerBuilder("MonteCarloPolicy",
-                  [](){return std::unique_ptr<Policy>(new MonteCarloPolicy );});
-  registerBuilder("OpportunistPolicy",
-                  [](){return std::unique_ptr<Policy>(new OpportunistPolicy);});
-  registerBuilder("RandomPolicy",[](){return std::unique_ptr<Policy>(new RandomPolicy );});
-  for (const auto & entry : extra_builders)
+  registerBuilder("FAPolicy", []() { return std::unique_ptr<Policy>(new FAPolicy); });
+  registerBuilder("ForestsPolicy", []() { return std::unique_ptr<Policy>(new ForestsPolicy); });
+  registerBuilder("MonteCarloPolicy", []() { return std::unique_ptr<Policy>(new MonteCarloPolicy); });
+  registerBuilder("OpportunistPolicy", []() { return std::unique_ptr<Policy>(new OpportunistPolicy); });
+  registerBuilder("RandomPolicy", []() { return std::unique_ptr<Policy>(new RandomPolicy); });
+  for (const auto& entry : extra_builders)
   {
     registerBuilder(entry.first, entry.second);
   }
 }
 
-void PolicyFactory::registerExtraBuilder(const std::string &name, Builder b)
+void PolicyFactory::registerExtraBuilder(const std::string& name, Builder b)
 {
   extra_builders[name] = b;
 }
 
-}
+}  // namespace csa_mdp

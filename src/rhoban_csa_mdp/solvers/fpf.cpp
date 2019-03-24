@@ -24,7 +24,6 @@ using regression_forests::TrainingSet;
 
 namespace csa_mdp
 {
-
 FPF::Config::Config()
 {
   nb_threads = 1;
@@ -35,9 +34,9 @@ FPF::Config::Config()
   max_action_tiles = 0;
   policy_samples = 0;
   q_training_set_time = 0;
-  q_extra_trees_time  = 0;
+  q_extra_trees_time = 0;
   p_training_set_time = 0;
-  p_extra_trees_time  = 0;
+  p_extra_trees_time = 0;
   auto_parameters = true;
 #ifdef RHOBAN_RF_USES_GP
   gp_values = false;
@@ -45,12 +44,12 @@ FPF::Config::Config()
 #endif
 }
 
-const Eigen::MatrixXd & FPF::Config::getStateLimits() const
+const Eigen::MatrixXd& FPF::Config::getStateLimits() const
 {
   return x_limits;
 }
 
-const Eigen::MatrixXd & FPF::Config::getActionLimits() const
+const Eigen::MatrixXd& FPF::Config::getActionLimits() const
 {
   return u_limits;
 }
@@ -60,18 +59,18 @@ Eigen::MatrixXd FPF::Config::getInputLimits() const
   int s_dim = getStateLimits().rows();
   int a_dim = getActionLimits().rows();
   Eigen::MatrixXd limits(s_dim + a_dim, 2);
-  limits.block(    0, 0, s_dim, 2) = getStateLimits();
+  limits.block(0, 0, s_dim, 2) = getStateLimits();
   limits.block(s_dim, 0, a_dim, 2) = getActionLimits();
   return limits;
 }
 
-void FPF::Config::setStateLimits(const Eigen::MatrixXd &new_limits)
+void FPF::Config::setStateLimits(const Eigen::MatrixXd& new_limits)
 {
   x_limits = new_limits;
   x_dim = x_limits.rows();
 }
 
-void FPF::Config::setActionLimits(const Eigen::MatrixXd &new_limits)
+void FPF::Config::setActionLimits(const Eigen::MatrixXd& new_limits)
 {
   u_limits = new_limits;
   u_dim = u_limits.rows();
@@ -89,12 +88,12 @@ Json::Value FPF::Config::toJson() const
   v["x_limits"] = rhoban_utils::matrix2Json(x_limits);
   v["u_limits"] = rhoban_utils::matrix2Json(u_limits);
   // Writing properties
-  v["horizon"         ] = (int)horizon         ;
-  v["nb_threads"      ] = nb_threads           ;
-  v["discount"        ] = discount             ;
-  v["policy_samples"  ] = policy_samples       ;
+  v["horizon"] = (int)horizon;
+  v["nb_threads"] = nb_threads;
+  v["discount"] = discount;
+  v["policy_samples"] = policy_samples;
   v["max_action_tiles"] = (int)max_action_tiles;
-  v["auto_parameters" ] = auto_parameters      ;
+  v["auto_parameters"] = auto_parameters;
   // If parameters are not auto, writing parameters for forests training
   if (!auto_parameters)
   {
@@ -102,43 +101,47 @@ Json::Value FPF::Config::toJson() const
     v["policy_conf"] = policy_conf.toJson();
   }
 #ifdef RHOBAN_RF_USES_GP
-  v["gp_values"       ] = gp_values            ;
-  v["gp_policies"     ] = gp_policies          ;
-  if (gp_values) {
+  v["gp_values"] = gp_values;
+  v["gp_policies"] = gp_policies;
+  if (gp_values)
+  {
     v["find_max_rprop_conf"] = find_max_rprop_conf.toJson();
   }
-  if (gp_values || gp_policies) {
+  if (gp_values || gp_policies)
+  {
     v["hyper_rprop_conf"] = hyper_rprop_conf.toJson();
   }
 #endif
   return v;
 }
 
-void FPF::Config::fromJson(const Json::Value & v, const std::string & dir_name)
+void FPF::Config::fromJson(const Json::Value& v, const std::string& dir_name)
 {
   // Reading limits of the problem
-  x_limits = rhoban_utils::readEigen<-1,-1>(v,"x_limits");
-  u_limits = rhoban_utils::readEigen<-1,-1>(v,"u_limits");
+  x_limits = rhoban_utils::readEigen<-1, -1>(v, "x_limits");
+  u_limits = rhoban_utils::readEigen<-1, -1>(v, "u_limits");
   // Reading mandatory properties
-  horizon          = rhoban_utils::read<int>   (v, "horizon"         );
-  discount         = rhoban_utils::read<double>(v, "discount"        );
-  max_action_tiles = rhoban_utils::read<int>   (v, "max_action_tiles");
+  horizon = rhoban_utils::read<int>(v, "horizon");
+  discount = rhoban_utils::read<double>(v, "discount");
+  max_action_tiles = rhoban_utils::read<int>(v, "max_action_tiles");
   // Reading optional properties
-  rhoban_utils::tryRead(v, "nb_threads"      , &nb_threads      );
-  rhoban_utils::tryRead(v, "policy_samples"  , &policy_samples  );
-  rhoban_utils::tryRead(v, "auto_parameters" , &auto_parameters );
+  rhoban_utils::tryRead(v, "nb_threads", &nb_threads);
+  rhoban_utils::tryRead(v, "policy_samples", &policy_samples);
+  rhoban_utils::tryRead(v, "auto_parameters", &auto_parameters);
   if (!auto_parameters)
   {
     q_value_conf.read(v, "q_value_conf", dir_name);
     policy_conf.read(v, "policy_conf", dir_name);
   }
 #ifdef RHOBAN_RF_USES_GP
-  rhoban_utils::tryRead(v, "gp_values"   , &gp_values);
-  rhoban_utils::tryRead(v, "gp_policies" , &gp_policies);
-  if (gp_values) {
+  rhoban_utils::tryRead(v, "gp_values", &gp_values);
+  rhoban_utils::tryRead(v, "gp_policies", &gp_policies);
+  if (gp_values)
+  {
     find_max_rprop_conf.tryRead(v, "find_max_rprop_conf", dir_name);
   }
-  if (gp_values || gp_policies) {
+  if (gp_values || gp_policies)
+  {
     hyper_rprop_conf.tryRead(v, "hyper_rprop_conf", dir_name);
   }
 #endif
@@ -165,10 +168,8 @@ std::unique_ptr<regression_forests::Forest> FPF::stealPolicyForest(int action_in
   return std::unique_ptr<regression_forests::Forest>(policies[action_index].release());
 }
 
-void FPF::updateQValue(const std::vector<Sample>& samples,
-                       std::function<bool(const Eigen::VectorXd&)> isTerminal,
-                       Config &conf,
-                       bool last_step)
+void FPF::updateQValue(const std::vector<Sample>& samples, std::function<bool(const Eigen::VectorXd&)> isTerminal,
+                       Config& conf, bool last_step)
 {
   regression_forests::ExtraTrees q_learner;
   if (conf.auto_parameters)
@@ -179,12 +180,11 @@ void FPF::updateQValue(const std::vector<Sample>& samples,
     appr_type = Approximation::ID::PWC;
 #ifdef RHOBAN_RF_USES_GP
     // Replacing by GP if required
-    if (conf.gp_values) appr_type = Approximation::ID::GP;
+    if (conf.gp_values)
+      appr_type = Approximation::ID::GP;
 #endif
     // Generating the configuration automatically
-    q_learner.conf = ExtraTrees::Config::generateAuto(conf.getInputLimits(),
-                                                      samples.size(),
-                                                      appr_type);
+    q_learner.conf = ExtraTrees::Config::generateAuto(conf.getInputLimits(), samples.size(), appr_type);
     q_learner.conf.nb_threads = conf.nb_threads;
 #ifdef RHOBAN_RF_USES_GP
     // If using GP, use the custom parameters for hyperparameters tuning
@@ -204,19 +204,19 @@ void FPF::updateQValue(const std::vector<Sample>& samples,
   conf.q_extra_trees_time += Benchmark::close();
 }
 
-void FPF::solve(const std::vector<Sample>& samples,
-                std::function<bool(const Eigen::VectorXd&)> isTerminal,
-                Config &conf)
+void FPF::solve(const std::vector<Sample>& samples, std::function<bool(const Eigen::VectorXd&)> isTerminal,
+                Config& conf)
 {
   // Resetting properties
-  //q_value.release();//Experimental
+  // q_value.release();//Experimental
   conf.q_training_set_time = 0;
-  conf.q_extra_trees_time  = 0;
+  conf.q_extra_trees_time = 0;
   conf.p_training_set_time = 0;
-  conf.p_extra_trees_time  = 0;
+  conf.p_extra_trees_time = 0;
   // Updating q-value
   Benchmark::open("Updating Q-Value");
-  for (size_t h = 1; h <= conf.horizon; h++) {
+  for (size_t h = 1; h <= conf.horizon; h++)
+  {
     bool last_step = (h == conf.horizon);
     updateQValue(samples, isTerminal, conf, last_step);
   }
@@ -241,10 +241,9 @@ void FPF::solve(const std::vector<Sample>& samples,
 #ifdef RHOBAN_RF_USES_GP
       Approximation::ID policy_appr_type = Approximation::ID::PWL;
       // Use GP if required
-      if (conf.gp_policies) policy_appr_type = Approximation::ID::GP;
-      policy_learner.conf = ExtraTrees::Config::generateAuto(conf.getStateLimits(),
-                                                             samples.size(),
-                                                             policy_appr_type);
+      if (conf.gp_policies)
+        policy_appr_type = Approximation::ID::GP;
+      policy_learner.conf = ExtraTrees::Config::generateAuto(conf.getStateLimits(), samples.size(), policy_appr_type);
       // If using GP, use the custom parameters for hyperparameters tuning
       policy_learner.conf.gp_conf = conf.hyper_rprop_conf;
 #endif
@@ -271,8 +270,7 @@ void FPF::solve(const std::vector<Sample>& samples,
 }
 
 TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
-                                std::function<bool(const Eigen::VectorXd&)> is_terminal,
-                                const Config &conf)
+                                std::function<bool(const Eigen::VectorXd&)> is_terminal, const Config& conf)
 {
   std::vector<std::thread> threads;
   std::mutex ts_mutex;
@@ -285,21 +283,16 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
     // Compute samples in [start, end[
     int start = intervals[thread_no].first;
     int end = intervals[thread_no].second;
-    threads.push_back(std::thread([&, start, end]()
-                                  {
-                                    TrainingSet thread_ts = this->getTrainingSet(samples,
-                                                                                 is_terminal,
-                                                                                 conf,
-                                                                                 start,
-                                                                                 end);
-                                    // Only one thread at a time can push its collection
-                                    ts_mutex.lock();
-                                    for (size_t sample = 0; sample < thread_ts.size(); sample++)
-                                    {
-                                      ts.push(thread_ts(sample));
-                                    }
-                                    ts_mutex.unlock();
-                                  }));
+    threads.push_back(std::thread([&, start, end]() {
+      TrainingSet thread_ts = this->getTrainingSet(samples, is_terminal, conf, start, end);
+      // Only one thread at a time can push its collection
+      ts_mutex.lock();
+      for (size_t sample = 0; sample < thread_ts.size(); sample++)
+      {
+        ts.push(thread_ts(sample));
+      }
+      ts_mutex.unlock();
+    }));
   }
   for (size_t thread_no = 0; thread_no < intervals.size(); thread_no++)
   {
@@ -308,15 +301,15 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
   return ts;
 }
 
-TrainingSet FPF::getTrainingSet(const std::vector<Sample> &samples,
-                                std::function<bool(const Eigen::VectorXd&)> is_terminal,
-                                const Config &conf,
+TrainingSet FPF::getTrainingSet(const std::vector<Sample>& samples,
+                                std::function<bool(const Eigen::VectorXd&)> is_terminal, const Config& conf,
                                 int start_idx, int end_idx)
 {
   int x_dim = conf.getStateLimits().rows();
   int u_dim = conf.getActionLimits().rows();
   TrainingSet ls(x_dim + u_dim);
-  for (int i = start_idx; i < end_idx; i++) {
+  for (int i = start_idx; i < end_idx; i++)
+  {
     const Sample& sample = samples[i];
     int x_dim = sample.state.rows();
     int u_dim = sample.action.rows();
@@ -325,32 +318,29 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample> &samples,
     input.segment(x_dim, u_dim) = sample.action;
     Eigen::VectorXd next_state = sample.next_state;
     double reward = sample.reward;
-    if (q_value && !is_terminal(next_state)) {
+    if (q_value && !is_terminal(next_state))
+    {
       // Establishing limits for projection
       Eigen::MatrixXd limits(x_dim + u_dim, 2);
-      limits.block(    0, 0, x_dim, 1) = next_state;
-      limits.block(    0, 1, x_dim, 1) = next_state;
+      limits.block(0, 0, x_dim, 1) = next_state;
+      limits.block(0, 1, x_dim, 1) = next_state;
       limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
       double best_reward;
 #ifdef RHOBAN_RF_USES_GP
-      if (conf.gp_values) {
+      if (conf.gp_values)
+      {
         // Preparing functions
         std::function<Eigen::VectorXd(const Eigen::VectorXd)> gradient_func;
-        gradient_func = [this](const Eigen::VectorXd & input)
-          {
-            return this->q_value->getGradient(input);
-          };
+        gradient_func = [this](const Eigen::VectorXd& input) { return this->q_value->getGradient(input); };
         std::function<double(const Eigen::VectorXd)> scoring_func;
-        scoring_func = [this](const Eigen::VectorXd & guess)
-          {
-            return this->q_value->getValue(guess);
-          };
+        scoring_func = [this](const Eigen::VectorXd& guess) { return this->q_value->getValue(guess); };
         // Performing multiple rProp and conserving the best candidate
         Eigen::VectorXd best_guess;
-        best_guess = rhoban_gp::RandomizedRProp::run(gradient_func, scoring_func,
-                                                     limits, conf.find_max_rprop_conf);
+        best_guess = rhoban_gp::RandomizedRProp::run(gradient_func, scoring_func, limits, conf.find_max_rprop_conf);
         best_reward = scoring_func(best_guess);
-      } else {
+      }
+      else
+      {
 #else
       {
 #endif
@@ -365,8 +355,7 @@ TrainingSet FPF::getTrainingSet(const std::vector<Sample> &samples,
   return ls;
 }
 
-std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Sample>& samples,
-                                                          const Config &conf)
+std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Sample>& samples, const Config& conf)
 {
   if (conf.policy_samples > 0)
   {
@@ -374,15 +363,14 @@ std::vector<Eigen::VectorXd> FPF::getPolicyTrainingStates(const std::vector<Samp
   }
   std::vector<Eigen::VectorXd> result;
   result.reserve(samples.size());
-  for (const Sample & s : samples)
+  for (const Sample& s : samples)
   {
     result.push_back(s.state);
   }
   return result;
 }
 
-std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::VectorXd> &states,
-                                                   const Config &conf)
+std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::VectorXd>& states, const Config& conf)
 {
   MultiCore::Intervals intervals = MultiCore::buildIntervals(states.size(), conf.nb_threads);
   // Each thread has its own vector of actions
@@ -393,27 +381,22 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
     // Compute samples in [start, end[
     int start = intervals[thread_no].first;
     int end = intervals[thread_no].second;
-    threads.push_back(std::thread([&, thread_no, start, end]()
-                                  {
-                                    thread_actions[thread_no]= this->getPolicyActions(states,
-                                                                                      conf,
-                                                                                      start,
-                                                                                      end);
-                                  }));
+    threads.push_back(std::thread([&, thread_no, start, end]() {
+      thread_actions[thread_no] = this->getPolicyActions(states, conf, start, end);
+    }));
   }
   // Gathering all actions in the right order
   std::vector<Eigen::VectorXd> actions;
   for (size_t thread_no = 0; thread_no < intervals.size(); thread_no++)
   {
     threads[thread_no].join();
-    const std::vector<Eigen::VectorXd> & to_add = thread_actions[thread_no];
+    const std::vector<Eigen::VectorXd>& to_add = thread_actions[thread_no];
     actions.insert(actions.end(), to_add.begin(), to_add.end());
   }
-  return actions;  
+  return actions;
 }
 
-std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::VectorXd> &states,
-                                                   const Config &conf,
+std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::VectorXd>& states, const Config& conf,
                                                    int start_idx, int end_idx)
 {
   int x_dim = conf.getStateLimits().rows();
@@ -422,27 +405,23 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
   for (int i = start_idx; i < end_idx; i++)
   {
     Eigen::MatrixXd limits(x_dim + u_dim, 2);
-    limits.block(    0, 0, x_dim, 1) = states[i];
-    limits.block(    0, 1, x_dim, 1) = states[i];
+    limits.block(0, 0, x_dim, 1) = states[i];
+    limits.block(0, 1, x_dim, 1) = states[i];
     limits.block(x_dim, 0, u_dim, 2) = conf.getActionLimits();
     Eigen::VectorXd best_input;
 #ifdef RHOBAN_RF_USES_GP
-    if (conf.gp_values) {
+    if (conf.gp_values)
+    {
       // Preparing functions
       std::function<Eigen::VectorXd(const Eigen::VectorXd)> gradient_func;
-      gradient_func = [this](const Eigen::VectorXd & input)
-        {
-          return this->q_value->getGradient(input);
-        };
+      gradient_func = [this](const Eigen::VectorXd& input) { return this->q_value->getGradient(input); };
       std::function<double(const Eigen::VectorXd)> scoring_func;
-      scoring_func = [this](const Eigen::VectorXd & guess)
-        {
-          return this->q_value->getValue(guess);
-        };
+      scoring_func = [this](const Eigen::VectorXd& guess) { return this->q_value->getValue(guess); };
       // Performing multiple rProp and conserving the best candidate
-      best_input = rhoban_gp::RandomizedRProp::run(gradient_func, scoring_func,
-                                                   limits, conf.find_max_rprop_conf);
-    } else {
+      best_input = rhoban_gp::RandomizedRProp::run(gradient_func, scoring_func, limits, conf.find_max_rprop_conf);
+    }
+    else
+    {
 #else
     {
 #endif
@@ -456,4 +435,4 @@ std::vector<Eigen::VectorXd> FPF::getPolicyActions(const std::vector<Eigen::Vect
   return actions;
 }
 
-}
+}  // namespace csa_mdp

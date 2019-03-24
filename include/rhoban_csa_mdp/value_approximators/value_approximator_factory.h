@@ -4,10 +4,10 @@
 
 namespace csa_mdp
 {
-
-class ValueApproximatorFactory : public rhoban_utils::Factory<ValueApproximator> {
+class ValueApproximatorFactory : public rhoban_utils::Factory<ValueApproximator>
+{
 public:
   ValueApproximatorFactory();
 };
 
-}
+}  // namespace csa_mdp

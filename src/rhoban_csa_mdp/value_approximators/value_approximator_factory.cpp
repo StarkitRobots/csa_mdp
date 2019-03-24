@@ -4,10 +4,10 @@
 
 namespace csa_mdp
 {
-
-ValueApproximatorFactory::ValueApproximatorFactory() {
+ValueApproximatorFactory::ValueApproximatorFactory()
+{
   registerBuilder("ExtraTreesApproximator",
-                  [](){return std::unique_ptr<ValueApproximator>(new ExtraTreesApproximator);});
+                  []() { return std::unique_ptr<ValueApproximator>(new ExtraTreesApproximator); });
 }
 
-}
+}  // namespace csa_mdp

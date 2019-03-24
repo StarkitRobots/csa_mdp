@@ -4,30 +4,28 @@
 
 namespace csa_mdp
 {
-
-class TreePolicyIteration : public BlackBoxLearner {
+class TreePolicyIteration : public BlackBoxLearner
+{
 public:
   TreePolicyIteration();
   virtual ~TreePolicyIteration();
 
-  virtual void init(std::default_random_engine * engine) override;
-  virtual void update(std::default_random_engine * engine) override;
+  virtual void init(std::default_random_engine* engine) override;
+  virtual void update(std::default_random_engine* engine) override;
 
   virtual void setNbThreads(int nb_threads) override;
 
   /// Update value function based on current policy
-  void updateValue(std::default_random_engine * engine);
+  void updateValue(std::default_random_engine* engine);
 
   /// Return a new policy based on current value function
-  std::unique_ptr<Policy> updatePolicy(std::default_random_engine * engine);
-
+  std::unique_ptr<Policy> updatePolicy(std::default_random_engine* engine);
 
   virtual std::string getClassName() const override;
   virtual Json::Value toJson() const override;
-  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+  virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
 
 protected:
-
   /// Best expected score reached by a policy at the moment
   double best_score;
 
@@ -49,7 +47,6 @@ protected:
 
   /// Does the learner use an approximation of the value
   bool use_value_approximator;
-
 };
 
-}
+}  // namespace csa_mdp

@@ -7,9 +7,8 @@
 
 namespace csa_mdp
 {
-
 /// In the MonteCarloPolicy, an optimization is performed on the first step
-/// to be taken, then several other steps are performed using the 
+/// to be taken, then several other steps are performed using the
 /// default_policy (provided by the user). This procedure allows to perform
 /// a local search while still benefiting of offline procedures for the
 /// long-term behaviors.
@@ -22,24 +21,20 @@ public:
 
   virtual void init() override;
 
-  Eigen::VectorXd getRawAction(const Eigen::VectorXd &state) override;
-  Eigen::VectorXd getRawAction(const Eigen::VectorXd &state,
-                               std::default_random_engine * engine) const override;
+  Eigen::VectorXd getRawAction(const Eigen::VectorXd& state) override;
+  Eigen::VectorXd getRawAction(const Eigen::VectorXd& state, std::default_random_engine* engine) const override;
 
   // Use the provided parameters for first action and then perform a rollout
-  double sampleReward(const Eigen::VectorXd & initial_state,
-                      const Eigen::VectorXd & action,
-                      std::default_random_engine * engine) const;
+  double sampleReward(const Eigen::VectorXd& initial_state, const Eigen::VectorXd& action,
+                      std::default_random_engine* engine) const;
 
-  /// Uses several rollouts to estimate 
-  double averageReward(const Eigen::VectorXd & initial_state,
-                       const Eigen::VectorXd & action,
-                       int rollouts,
-                       std::default_random_engine * engine) const;
+  /// Uses several rollouts to estimate
+  double averageReward(const Eigen::VectorXd& initial_state, const Eigen::VectorXd& action, int rollouts,
+                       std::default_random_engine* engine) const;
 
   std::string getClassName() const override;
   virtual Json::Value toJson() const override;
-  virtual void fromJson(const Json::Value & v, const std::string & dir_name) override;
+  virtual void fromJson(const Json::Value& v, const std::string& dir_name) override;
 
 private:
   /// Engine used when none is provided
@@ -75,4 +70,4 @@ private:
   std::unique_ptr<rhoban_bbo::Optimizer> optimizer;
 };
 
-}
+}  // namespace csa_mdp
