@@ -15,9 +15,9 @@
 
   <buildtool_depend>catkin</buildtool_depend>
 
-  <build_depend>rhoban_fa</build_depend> <!-- rhoban/function_approximators.git -->
+  <build_depend>starkit_fa</build_depend> <!--StarkitRobots/function_approximators.git -->
 
-  <run_depend>rhoban_fa</run_depend>
+  <run_depend>starkit_fa</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->
