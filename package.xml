@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-  <name>rhoban_csa_mdp</name>
+  <name>starkit_csa_mdp</name>
   <version>0.0.0</version>
   <description>This package provide tools to solve Continuous State and Action Markov Decision Processes</description>
 

@@ -1,24 +1,24 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(rhoban_csa_mdp)
+project(starkit_csa_mdp)
 
 find_package(catkin REQUIRED COMPONENTS
-  rhoban_fa
+  starkit_fa
 )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -std=c++17")
 
 catkin_package(
   INCLUDE_DIRS include
-  LIBRARIES rhoban_csa_mdp
-  CATKIN_DEPENDS rhoban_fa
+  LIBRARIES starkit_csa_mdp
+  CATKIN_DEPENDS starkit_fa
 )
 
 ## Gaussian Processes support
 # Currently, uses of GP in CSA_MDP is directly linked with the use of GP in
 # regression forests. It would be possible to separate those uses if necessary
 # in the future.
-if ("${catkin_LIBRARIES}" MATCHES "rhoban_gp")
-  add_definitions(-DRHOBAN_RF_USES_GP)
+if ("${catkin_LIBRARIES}" MATCHES "starkit_gp")
+  add_definitions(-DSTARKIT_RF_USES_GP)
 endif()
 
 
@@ -33,13 +33,13 @@ include_directories(
 
 # Directories containing sources files
 set(DIRECTORIES
-  src/rhoban_csa_mdp/action_optimizers
-  src/rhoban_csa_mdp/core
-  src/rhoban_csa_mdp/knownness
-  src/rhoban_csa_mdp/online_planners
-  src/rhoban_csa_mdp/reward_predictors
-  src/rhoban_csa_mdp/value_approximators
-  src/rhoban_csa_mdp/solvers
+  src/starkit_csa_mdp/action_optimizers
+  src/starkit_csa_mdp/core
+  src/starkit_csa_mdp/knownness
+  src/starkit_csa_mdp/online_planners
+  src/starkit_csa_mdp/reward_predictors
+  src/starkit_csa_mdp/value_approximators
+  src/starkit_csa_mdp/solvers
   src/kd_trees# Should be elsewhere...
   )
 
@@ -59,10 +59,10 @@ foreach (DIRECTORY ${DIRECTORIES})
 endforeach (DIRECTORY)
 
 # Declare a C++ library
-add_library(rhoban_csa_mdp
+add_library(starkit_csa_mdp
   ${ALL_SOURCES}
   )
 
-target_link_libraries(rhoban_csa_mdp
+target_link_libraries(starkit_csa_mdp
   ${catkin_LIBRARIES}
   )
